@@ -7,6 +7,7 @@ module LexHpl where
 
 
 import Data.Word (Word8)
+import Data.Char (ord)
 }
 
 
