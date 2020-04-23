@@ -21,6 +21,16 @@ initialConvertToProgramFormat :: Program -> ProgramFormat
 initialConvertToProgramFormat (ProgramB l) = SITList $ map absSITToSit l
 
 absSITToSit :: StructOrInterfaceOrType -> SIT
-absSITToSit (StructOrInterfaceOrTypeS s) = SITStruct FStruct
+absSITToSit (StructOrInterfaceOrTypeS s) = SITStruct $ convertStruct s
+
+convertStruct :: Struct -> FStruct
+convertStruct (StructB (Ident name) body) = FStructB name $ convertBody body
+
+convertBody :: StructBody -> FStructBody
+convertBody (StructBodyB structFieldList) = 
+  FStructBody $ map convertStructField structFieldList
+
+convertStructField :: StructField -> FStructField
+convertStructField = undefined
 
 setArithmetics = undefined
