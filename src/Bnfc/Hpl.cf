@@ -1,0 +1,144 @@
+-----Program------------------------------
+
+ProgramB. Program ::= [StructOrInterfaceOrType] ;
+
+StructOrInterfaceOrTypeS. StructOrInterfaceOrType ::= Struct ;
+StructOrInterfaceOrTypeI. StructOrInterfaceOrType ::= Interface ;
+StructOrInterfaceOrTypeT. StructOrInterfaceOrType ::= AlgType ;
+
+separator StructOrInterfaceOrType "" ;
+
+-----Struct--------------------------------
+
+StructB. Struct ::= "struct" Ident "{" StructBody "}" ";" ;
+StructI. Struct ::= "struct" Ident ":" [InterfaceId] "{" StructBody "}" ";" ;
+
+StructBodyB. StructBody ::= [StructField] ;
+
+StructFieldFunPr. StructField ::= "private" FunctionDef ;
+StructFieldFunPu. StructField ::= FunctionDef ;
+StructFieldRefPr. StructField ::= "private" RefDef ;
+StructFieldRefPu. StructField ::= RefDef ;
+
+separator StructField "" ;
+
+-----Interface----------------------------
+
+InterfaceIdB. InterfaceId ::= Ident ;
+
+separator nonempty InterfaceId "," ;
+
+InterfaceB. Interface ::= "interface" InterfaceId "{" InterfaceBody "}" ";" ;
+InterfaceBInh. Interface ::= "interface" InterfaceId ":" [InterfaceId] "{" InterfaceBody "}" ";" ;
+
+InterfaceBodyB. InterfaceBody ::= [FunOrRefDecl] ;
+
+FunOrRefDeclF. FunOrRefDecl ::= "fun" Type Ident ";" ;
+FunOrRefDeclSF. FunOrRefDecl ::= "sus" "fun" Type Ident ";" ;
+FunOrRefDeclR. FunOrRefDecl ::= "ref" Type Ident ";" ;
+
+separator FunOrRefDecl "" ;
+
+-----Functions----------------------------
+
+FunctionDefB. FunctionDef ::= "fun" Type Ident "(" [FunctionArg] ")" "=" ValueStatement ";" ;
+
+SusFunctionDef. FunctionDef ::= "sus" FunctionDef ;
+
+FunctionArgB. FunctionArg ::= PatternMatch ;
+
+separator FunctionArg "," ;
+
+-----Statements---------------------------
+
+ValueStatementB. ValueStatement ::= "let" [Assignment] "in" ValueStatement ;
+
+ForceValueStatement. ValueStatement ::= "force" "let" [Assignment] "in" ValueStatement ;
+
+IfValueStatement. ValueStatement ::= "if" ValueStatement "then" ValueStatement "else" ValueStatement ;
+
+LValueStatement. ValueStatement ::= ListValueStatementr ;
+TValueStatement. ValueStatement ::= TupleValueStatementr ;
+AValueStatement. ValueStatement ::= FunApplication ;
+IValueStatement. ValueStatement ::= Integer ;
+LitStrValueStatement. ValueStatement ::= String ;
+FValueStatement. ValueStatement ::= "{" Ident "->" ValueStatement "}" ;
+
+separator ValueStatement "," ;
+
+-----References---------------------------
+
+RefDefB. RefDef ::= "ref" Type Ident "=" ValueStatement ";" ;
+
+-----Type---------------------------------
+
+TypeB. Type ::= Ident "(" [Type] ")";
+FunType. Type ::= "(" Type "->" Type ")";
+TType. Type ::= "(" [Type] ")" ;
+
+separator Type "," ;
+
+-----Algebraic-types----------------------
+
+AlgTypeB. AlgType ::= "data" Ident "(" [TypeArg] ")" "=" [AlgTypeVal] ";" ;
+
+TypeArgB. TypeArg ::= Ident ;
+
+separator TypeArg "," ;
+
+AlgTypeValB. AlgTypeVal ::= Ident "(" Type ")" ;
+
+separator AlgTypeVal "|" ;
+
+-----Pattern-matching---------------------
+
+PatternMatchI. PatternMatch ::= Integer ;
+PatternMatchB. PatternMatch ::= Ident ;
+TPatternMatch. PatternMatch ::= "(" [PatternMatch] ")" ;
+CPatternMatch. PatternMatch ::= PatternMatch "(" [PatternMatch] ")" ;
+
+separator PatternMatch "," ;
+
+-----Assignment---------------------------
+
+AssignmentB. Assignment ::= Type "::" PatternMatch "=" ValueStatement ";" ;
+
+RefAssignment. Assignment ::= RefDef ;
+
+separator Assignment "" ;
+
+-----Application--------------------------
+
+SFunApplication. FunApplication ::= Ident "." FunApplication ;
+
+FunApplicationB. FunApplication ::= Ident "(" [FunctionArgAppl] ")" ;
+
+FunctionArgApplB. FunctionArgAppl ::= ValueStatement ;
+
+separator FunctionArgAppl "," ;
+
+-----ValueStatementExpressions--------------------------
+
+ListValueStatementB. ListValueStatementr ::= "[" [ValueStatement] "]" ;
+
+TupleValueStatementB. TupleValueStatementr ::= "(" [ValueStatement] ")" ;
+
+Expr. ValueStatement ::= ValueStatement ValueStatementExpr ;
+
+EAdd. ValueStatementExpr  ::= "+" ValueStatement ;
+ESub. ValueStatementExpr  ::= "-" ValueStatement ;
+EMod. ValueStatementExpr  ::= "%" ValueStatement ;
+EMul. ValueStatementExpr  ::= "*" ValueStatement ;
+EDiv. ValueStatementExpr  ::= "/" ValueStatement ;
+
+EL. ValueStatementExpr    ::= "<" ValueStatement ;
+ELQ. ValueStatementExpr   ::= "<=" ValueStatement ;
+EG. ValueStatementExpr    ::= ">" ValueStatement ;
+EGQ. ValueStatementExpr   ::= ">=" ValueStatement ;
+EEQ. ValueStatementExpr   ::= "==" ValueStatement ;
+ENE. ValueStatementExpr   ::= "!=" ValueStatement ;
+
+-----comments--------------------------------------------
+
+comment    "//" ;  
+comment    "/*" "*/" ;
