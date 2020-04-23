@@ -4,8 +4,10 @@ import Bnfc.LexHpl ( Token )
 import Bnfc.ParHpl
 import Bnfc.PrintHpl ( Print )
 import Bnfc.ErrM
+import Bnfc.AbsHpl
 import StaticCheck.StaticCheck ( staticCheck )
-import Run.Run ( actualRun )
+import StaticCheck.Format
+import Run.Run ( run )
 
 runFile :: FilePath -> IO ()
 runFile x = runFileAux pProgram x
@@ -14,24 +16,23 @@ type ParseFun a = [Token] -> Err a
 
 myLLexer = myLexer
 
-runFileAux :: (Print a, Show a) => ParseFun a -> FilePath -> IO ()
-runFileAux p f = putStrLn f >> readFile f >>= run p
+runFileAux :: ParseFun Program -> FilePath -> IO ()
+runFileAux p f = putStrLn f >> readFile f >>= runAux p
 
-run :: (Print a, Show a) => ParseFun a -> String -> IO ()
-run p s = let ts = myLLexer s in case p ts of
+runAux :: ParseFun Program -> String -> IO ()
+runAux p s = let ts = myLLexer s in case p ts of
          Bad s      -> do 
-                        putStrLn "\nParse Failed...\n"
-                        putStrLn "Tokens:"
+                        putStrLn "\nParse Failed... TODO\n"
                         putStrLn $ show ts
                         putStrLn s
          Ok tree    -> do
                         putStrLn "\nParse Successful!"
                         checkAndRunTree tree 
 
-checkAndRunTree x :: Program -> IO ()
+checkAndRunTree :: Program -> IO ()
 checkAndRunTree x = tryRun $ staticCheck x
 
-tryRun :: Err Program -> IO ()
+tryRun :: Err ProgramFormat -> IO ()
 tryRun (Left err) = putStrLn $ "TODO: make it nicer " ++ err
-tryRun (Right tree) = actualRun tree
+tryRun (Right tree) = run tree
                            
