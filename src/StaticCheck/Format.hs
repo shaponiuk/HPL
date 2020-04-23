@@ -45,3 +45,34 @@ data FPatternMatch =
   | FPatternMatchC FPatternMatch [FPatternMatch]
   deriving (Show)
 
+data FType =
+    TypeB String [FType]
+  | FunFType FType FType
+  | FTypeT [FType]
+  deriving (Show)
+
+data FValueStatement =
+    FValueStatementB [FAssignment] FValueStatement
+  | FForceValueStatement [FAssignment] FValueStatement
+  | FIfValueStatement FValueStatement FValueStatement FValueStatement
+  | FLValueStatement FListValueStatement
+  | FTValueStatement FTupleValueStatement
+  | FAValueStatement FFunApplication
+  | FIValueStatement Int
+  | FLitStrValueStatement String
+  | FFValueStatement String FValueStatement
+  | FExpr FValueStatement FValueStatementExpr
+  deriving (Show)
+
+data FListValueStatement = FListValueStatement [FValueStatement]
+  deriving (Show)
+
+data FTupleValueStatement = FTupleValueStatement [FValueStatement]
+  deriving (Show)
+
+data FFunApplication =
+    FSFunApplication String FFunApplication
+  | FFunApplicationB String [FFunctionArgAppl]
+  deriving (Show)
+
+data FFunctionARgAppl
