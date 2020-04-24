@@ -46,17 +46,17 @@ convertFunOrRefDecl (FunOrRefDeclSF t i) = FFunOrRefDeclSF (convertType t) (unwr
 convertFunOrRefDecl (FunOrRefDeclR t i) = FFunOrRefDeclR (convertType t) (unwrapIdent i)
 
 convertAlgType :: AlgType -> FAlgType
-convertAlgType (AlgTypeB i taList) = 
-  FAlgType (unwrapIdent i) (convertTypeArgList taList) convertAlgTypeValList
+convertAlgType (AlgTypeB i taList atvList) = 
+  FAlgType (unwrapIdent i) (convertTypeArgList taList) (convertAlgTypeValList atvList)
 
 convertTypeArg :: TypeArg -> String
-convertTypeArg TypeArgB = unwrapIdent
+convertTypeArg (TypeArgB i) = unwrapIdent i
 
 convertTypeArgList :: [TypeArg] -> [String]
 convertTypeArgList = map convertTypeArg
 
 convertAlgTypeVal :: AlgTypeVal -> FAlgTypeVal
-convertAlgTypeVal (AlgTypeValB i) = FAlgTypeVal (unwrapIdent i) convertType
+convertAlgTypeVal (AlgTypeValB i t) = FAlgTypeVal (unwrapIdent i) (convertType t)
 
 convertAlgTypeValList :: [AlgTypeVal] -> [FAlgTypeVal]
 convertAlgTypeValList = map convertAlgTypeVal
@@ -77,13 +77,13 @@ convertIdentList :: [Ident] -> [String]
 convertIdentList = map unwrapIdent
 
 convertBody :: StructBody -> FStructBody
-convertBody StructBodyB = FStructBody $ map convertStructField
+convertBody (StructBodyB l) = FStructBody $ map convertStructField l
 
 convertStructField :: StructField -> FStructField
-convertStructField StructFieldFunPr = FStructFieldFunPrivate convertFunctionDef
-convertStructField StructFieldFunPu = FStructFieldFunPublic convertFunctionDef
-convertStructField StructFieldRefPr = FStructFieldRefPrivate convertRefDef
-convertStructField StructFieldRefPu = FStructFieldRefPublic convertRefDef
+convertStructField (StructFieldFunPr fd) = FStructFieldFunPrivate $ convertFunctionDef fd
+convertStructField (StructFieldFunPu fd) = FStructFieldFunPublic $ convertFunctionDef fd
+convertStructField (StructFieldRefPr rd) = FStructFieldRefPrivate $ convertRefDef rd
+convertStructField (StructFieldRefPu rd) = FStructFieldRefPublic $ convertRefDef rd
 
 convertFunctionDef :: FunctionDef -> FFunctionDef
 convertFunctionDef (FunctionDefB t ident argList vs) = 
