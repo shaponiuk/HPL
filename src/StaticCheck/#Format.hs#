@@ -6,7 +6,7 @@ data ProgramFormat = SITList [SIT]
 data SIT = SITStruct FStruct | SITInterface FInterface | SITType FAlgType
   deriving (Show)
 
-data FStruct = FStructB String FStructBody | FStructI String [String] FStructBody
+data FStruct = FStructB String FStructBody | String  [String] FStructBody
   deriving (Show)
 
 data FInterface = 
