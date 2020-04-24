@@ -88,24 +88,26 @@ convertStructField (StructFieldRefPu rd) = FStructFieldRefPublic $ convertRefDef
 convertFunctionDef :: FunctionDef -> FFunctionDef
 convertFunctionDef (FunctionDefB t ident argList vs) = 
   NonSusFFunctionDef (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
-convertFunctionDef SusFunctionDef = SusFFunctionDef convertFunctionDef
+convertFunctionDef (SusFunctionDef fd) = SusFFunctionDef $ convertFunctionDef fd
 
 convertType :: Type -> FType
-convertType (TypeB i) = FTypeB (unwrapIdent i) convertTypeList
+convertType (TypeB i tl) = FTypeB (unwrapIdent i) (convertTypeList tl)
 convertType (FunType argType resType) = FunFType (convertType argType) (convertType resType)
-convertType TType = FTypeT convertTypeList
+convertType (TType tl) = FTypeT $ convertTypeList tl
 
 convertTypeList :: [Type] -> [FType]
 convertTypeList = map convertType
 
 convertFunctionArg :: FunctionArg -> FFunctionArg
-convertFunctionArg FunctionArgB = convertPatternMatch
+convertFunctionArg (FunctionArgB pm) = FFunctionArg $ convertPatternMatch pm
 
 convertPatternMatch :: PatternMatch -> FPatternMatch
-convertPatternMatch PatternMatchI = FPatternMatchI
-convertPatternMatch PatternMatchB = FPatternMatchB
-convertPatternMatch TPatternMatch = FPatternMatchT convertPatternMatchList
-convertPatternMatch (CPatternMatch pm) = FPatternMatchC (convertPatternMatch pm) convertPatternMatchList
+convertPatternMatch (PatternMatchI i) = FPatternMatchI $ fromIntegral i
+convertPatternMatch (PatternMatchB i) = FPatternMatchB $ unwrapIdent i
+convertPatternMatch (TPatternMatch l) = 
+  FPatternMatchT $ convertPatternMatchList l
+convertPatternMatch (CPatternMatch pm l) = 
+  FPatternMatchC (convertPatternMatch pm) (convertPatternMatchList l)
 
 convertPatternMatchList :: [PatternMatch] -> [FPatternMatch]
 convertPatternMatchList = map convertPatternMatch
@@ -126,16 +128,16 @@ convertValueStatement (TValueStatement (TupleValueStatementB l)) =
   FTValueStatement $ convertValueStatementList l
 convertValueStatement (AValueStatement funAppl) = 
   FAValueStatement $ convertFunctionAppl funAppl
-convertValueStatement (IValueStatement i) = FIValueStatement i
+convertValueStatement (IValueStatement i) = FIValueStatement $ fromIntegral i
 convertValueStatement (LitStrValueStatement str) = FLitStrValueStatement str
 convertValueStatement (FValueStatement ident vs) = 
   FFValueStatement (unwrapIdent ident) (convertValueStatement vs)
-convertValueStatement (Expr vs e) = exprFromLists . makeExprLists vs e
+convertValueStatement (Expr vs e) = exprFromLists (makeExprLists vs e)
 
 exprFromLists :: ([String], [ValueStatement]) -> FValueStatement
 exprFromLists (strs, vss) = let
     fvss = convertValueStatementList vss
-  in mergeCmpVss . mergeAddSubVss . mergeMulDivModVss (strs, fvss)
+  in mergeCmpVss $ mergeAddSubVss $ mergeMulDivModVss (strs, fvss)
 
 mergeMulDivModVss :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
 mergeMulDivModVss x = let
@@ -143,7 +145,6 @@ mergeMulDivModVss x = let
   in if x == xaux then x else mergeMulDivModVss xaux
 
 mergeMulDivModVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
-mergeMulDivModVssAux ([], [x]) = ([], [x])
 mergeMulDivModVssAux ("*":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEMul x x2):nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
 mergeMulDivModVssAux ("/":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEDiv x x2):nxs) where
@@ -152,6 +153,7 @@ mergeMulDivModVssAux ("%":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEMod x x2):nxs) w
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
 mergeMulDivModVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
+mergeMulDivModVssAux x = x
 
 mergeAddSubVss :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
 mergeAddSubVss x = let
@@ -159,13 +161,13 @@ mergeAddSubVss x = let
   in if x == xaux then x else mergeAddSubVss xaux
 
 mergeAddSubVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
-mergeAddSubVssAux ([], [x]) = ([], [x])
 mergeAddSubVssAux ("+":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEAdd x x2):nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
 mergeAddSubVssAux ("-":strs, (x:x2:xs)) = (nstrs, (FExpr $ FESub x x2):nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
 mergeAddSubVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
+mergeAddSubVssAux x = x
 
 mergeCmpVss :: ([String], [FValueStatement]) -> FValueStatement
 mergeCmpVss ([], [x]) = x

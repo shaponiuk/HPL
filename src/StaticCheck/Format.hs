@@ -1,55 +1,55 @@
 module StaticCheck.Format where
 
 data ProgramFormat = SITList [SIT]
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data SIT = SITStruct FStruct | SITInterface FInterface | SITType FAlgType
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FStruct = FStructB String FStructBody | FStructI String [String] FStructBody
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FInterface = 
     FInterfaceB String FInterfaceBody 
   | FInterfaceI String [String] FInterfaceBody
-  deriving (Show)
+  deriving (Eq,Ord,Show)
  
 data FAlgType = FAlgType String [String] [FAlgTypeVal]
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FStructBody = FStructBody [FStructField]
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FStructField = 
     FStructFieldFunPrivate FFunctionDef
   | FStructFieldFunPublic FFunctionDef
   | FStructFieldRefPrivate FRefDef
   | FStructFieldRefPublic FRefDef
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FFunctionDef =
     NonSusFFunctionDef FType String [FFunctionArg] FValueStatement
   | SusFFunctionDef FFunctionDef
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FRefDef = FRefDef FType String FValueStatement
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FFunctionArg = FFunctionArg FPatternMatch
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FPatternMatch =
     FPatternMatchI Int
   | FPatternMatchB String
   | FPatternMatchT [FPatternMatch]
   | FPatternMatchC FPatternMatch [FPatternMatch]
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FType =
     FTypeB String [FType]
   | FunFType FType FType
   | FTypeT [FType]
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FValueStatement =
     FValueStatementB [FAssignment] FValueStatement
@@ -62,32 +62,32 @@ data FValueStatement =
   | FLitStrValueStatement String
   | FFValueStatement String FValueStatement
   | FExpr FValueStatementExpr
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FFunApplication =
     FSFunApplication String FFunApplication
   | FFunApplicationB String [FFunctionArgAppl]
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FFunctionArgAppl = FFunctionArgAppl FValueStatement
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FInterfaceBody = FInterfaceBody [FFunOrRefDecl]
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FFunOrRefDecl =
     FFunOrRefDeclF FType String
   | FFunOrRefDeclSF FType String
   | FFunOrRefDeclR FType String
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FAssignment =
     FAssignmentB FType FPatternMatch FValueStatement
   | FRefAssignment FRefDef
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FAlgTypeVal = FAlgTypeVal String FType
-  deriving (Show)
+  deriving (Eq,Ord,Show)
 
 data FValueStatementExpr =
     FEAdd FValueStatement FValueStatement
@@ -101,4 +101,4 @@ data FValueStatementExpr =
   | FEGQ FValueStatement FValueStatement
   | FEEQ FValueStatement FValueStatement
   | FENE FValueStatement FValueStatement
-  deriving (Show)
+  deriving (Eq,Ord,Show)
