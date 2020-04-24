@@ -114,6 +114,75 @@ convertArgList :: [FunctionArg] -> [FFunctionArg]
 convertArgList = map convertFunctionArg
 
 convertValueStatement :: ValueStatement -> FValueStatement
+convertValueStatement (ValueStatementB assignments) = 
+  FValueStatementB (convertAssignmentList assignments) convertValueStatement
+convertValueStatement (ForceValueStatement assignements) =
+  FForceValueStatement (convertAssignmentList assignements) convertValueStatement
+convertValueStatement (IfValueStatement condvs ifvs elsevs) =
+  FIfValueStatement (convertValueStatement condvs) (convertValueStatement ifvs) (convertValueStatement elsevs)
+convertValueStatement (LValueStatement ListValueStatementB) = 
+  FLValueStatement convertValueStatementList
+convertValueStatement (TValueStatement TupleValueStatementB) = 
+  FTValueStatement convertValueStatementList
+convertValueStatement AValueStatement = FAValueStatement convertFunctionAppl
+convertValueStatement (IValueStatement i) = FIValueStatement i
+convertValueStatement (LitStrValueStatement str) = FLitStrValueStatement str
+convertValueStatement (FValueStatement ident) = FFValueStatement (unwrapIdent ident) convertValueStatement
+convertValueStatement Expr = exprFromLists . makeExprLists
+
+exprFromLists :: ([String], [ValueStatement]) -> FValueStatement
+exprFromLists (strs, vss) = let
+    fvss = convertValueStatementList vss
+  in mergeCmpVss . mergeAddSubVss . mergeMulDivModVss fvss
+
+mergeMulDivModVss :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
+mergeMulDivModVss x = let
+    xaux = mergeMulDivModVssAux x
+  in if x == xaux then x else mergeMulDivModVssAux xaux
+
+mergeMulDivModVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
+
+mergeAddSubVss:: ([String], [FValueStatement]) -> ([String], [FValueStatement])
+
+mergeCmpVss :: ([String], [FValueStatement]) -> FValueStatement
+mergeCmpVss ([], [x]) = x
+mergeCmpVss (("<"):strs, x:xs) = FExpr $ FEL x $ mergeCmpVss (strs, xs)
+mergeCmpVss (("<="):strs, x:xs) = FExpr $ FELQ x $ mergeCmpVss (strs, xs)
+mergeCmpVss ((">"):strs, x:xs) = FExpr $ FEG $ mergeCmpVss (strs, xs)
+mergeCmpVss ((">="):strs, x:xs) = FExpr $ FEGQ x $ mergeCmpVss (strs, xs)
+mergeCmpVss (("=="):strs, x:xs) = FExpr $ FEEQ x $ mergeCmpVss (strs, xs)
+mergeCmpVss (("!="):strs, x:xs) = FExpr $ FENE x $ mergeCmpVss (strs, xs)
+
+makeExprLists :: ValueStatement -> ValueStatement -> ([String], [ValueStatement])
+makeExprLists vs1 vs2 = (signs, vs1:vss) where
+  (signs, vss) = makeExprListsAux vs2
+
+insertPairToList :: (a, b) -> ([a], [b]) -> ([a], [b])
+insertPairToList (a, b) (as, bs) = (a:as, b:bs)
+
+makeExprListsAux :: ValueStatement -> ([String], [ValueStatement])
+makeExprListsAux vs@(Expr (EAdd vs2)) = insertPairToList ("+", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (ESub vs2)) = insertPairToList ("-", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (EMod vs2)) = insertPairToList ("%", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (EMul vs2)) = insertPairToList ("*", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (EDiv vs2)) = insertPairToList ("/", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (EL vs2)) = insertPairToList ("<", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (ELQ vs2)) = insertPairToList ("<=", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (EG vs2)) = insertPairToList (">", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (EGQ vs2)) = insertPairToList (">=", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (EEQ vs2)) = insertPairToList ("==", vs) (makeExprListsAux vs2)
+makeExprListsAux vs@(Expr (ENE vs2)) = insertPairToList ("!=", vs) (makeExprListsAux vs2)
+makeExprListsAux _ = ([], [])
+
+convertFunctionAppl :: FunApplication -> FFunApplication
+
+convertValueStatementList :: [ValueStatement] -> [FValueStatement]
+convertValueStatementList = map convertValueStatement
+
+convertAssignment :: Assignment -> FAssignment
+
+convertAssignmentList :: [Assignment] -> FAssignment
+convertAssignmentList = map convertAssignement
 
 convertRefDef :: RefDef -> FRefDef
 convertRefDef = undefined

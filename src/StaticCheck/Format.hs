@@ -55,19 +55,13 @@ data FValueStatement =
     FValueStatementB [FAssignment] FValueStatement
   | FForceValueStatement [FAssignment] FValueStatement
   | FIfValueStatement FValueStatement FValueStatement FValueStatement
-  | FLValueStatement FListValueStatement
-  | FTValueStatement FTupleValueStatement
+  | FLValueStatement [FValueStatement]
+  | FTValueStatement [FValueStatement]
   | FAValueStatement FFunApplication
   | FIValueStatement Int
   | FLitStrValueStatement String
   | FFValueStatement String FValueStatement
   | FExpr FValueStatement FValueStatementExpr
-  deriving (Show)
-
-data FListValueStatement = FListValueStatement [FValueStatement]
-  deriving (Show)
-
-data FTupleValueStatement = FTupleValueStatement [FValueStatement]
   deriving (Show)
 
 data FFunApplication =
