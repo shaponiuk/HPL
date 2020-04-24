@@ -18,12 +18,12 @@ staticCheckEither p = do
   return pf
 
 initialConvertToProgramFormat :: Program -> ProgramFormat
-initialConvertToProgramFormat ProgramB = SITList $ map absSITToSit
+initialConvertToProgramFormat (ProgramB l) = SITList $ map absSITToSit l
 
 absSITToSit :: StructOrInterfaceOrType -> SIT
-absSITToSit StructOrInterfaceOrTypeS = SITStruct convertStruct
-absSITToSit StructOrInterfaceOrTypeI = SITInterface convertInterface
-absSITToSit StructOrInterfaceOrTypeT = SITType convertAlgType
+absSITToSit (StructOrInterfaceOrTypeS s) = SITStruct $ convertStruct s
+absSITToSit (StructOrInterfaceOrTypeI i) = SITInterface $ convertInterface i
+absSITToSit (StructOrInterfaceOrTypeT t) = SITType $ convertAlgType t
 
 convertStruct :: Struct -> FStruct
 convertStruct (StructB (Ident name) body) = 
@@ -32,18 +32,18 @@ convertStruct (StructI (Ident name) interfaceIdList body) =
   FStructI name (convertInterfaceIdList interfaceIdList) $ convertBody body
 
 convertInterface :: Interface -> FInterface
-convertInterface (InterfaceB iid) = 
-  FInterfaceB (convertInterfaceId iid) convertInterfaceBody
-convertInterface (InterfaceBIng iid iidList) = 
-  FInterfaceI (convertInterfaceId iid) (convertInterfaceIdList iid) convertInterfaceBody
+convertInterface (InterfaceB iid body) = 
+  FInterfaceB (convertInterfaceId iid) (convertInterfaceBody body)
+convertInterface (InterfaceBInh iid iidList body) = 
+  FInterfaceI (convertInterfaceId iid) (convertInterfaceIdList iidList) (convertInterfaceBody body)
 
 convertInterfaceBody :: InterfaceBody -> FInterfaceBody
-convertInterfaceBody InterfaceBodyB = FInterfaceBody $ map convertFunOrRefDecl
+convertInterfaceBody (InterfaceBodyB l) = FInterfaceBody $ map convertFunOrRefDecl l
 
 convertFunOrRefDecl :: FunOrRefDecl -> FFunOrRefDecl
-convertFunOrRefDecl (FunOrRefDeclF t) = FFunOrRefDeclF (convertType t) unwrapIdent
-convertFunOrRefDecl (FunOrRefDeclSF t) = FFunOrRefDeclSF (convertType t) unwrapIdent
-convertFunOrRefDecl (FunOrRefDeclR t) = FFunOrRefDeclR (convertType t) unwrapIdent
+convertFunOrRefDecl (FunOrRefDeclF t i) = FFunOrRefDeclF (convertType t) (unwrapIdent i)
+convertFunOrRefDecl (FunOrRefDeclSF t i) = FFunOrRefDeclSF (convertType t) (unwrapIdent i)
+convertFunOrRefDecl (FunOrRefDeclR t i) = FFunOrRefDeclR (convertType t) (unwrapIdent i)
 
 convertAlgType :: AlgType -> FAlgType
 convertAlgType (AlgTypeB i taList) = 
@@ -114,75 +114,121 @@ convertArgList :: [FunctionArg] -> [FFunctionArg]
 convertArgList = map convertFunctionArg
 
 convertValueStatement :: ValueStatement -> FValueStatement
-convertValueStatement (ValueStatementB assignments) = 
-  FValueStatementB (convertAssignmentList assignments) convertValueStatement
-convertValueStatement (ForceValueStatement assignements) =
-  FForceValueStatement (convertAssignmentList assignements) convertValueStatement
+convertValueStatement (ValueStatementB assignments vs) = 
+  FValueStatementB (convertAssignmentList assignments) (convertValueStatement vs)
+convertValueStatement (ForceValueStatement assignements vs) =
+  FForceValueStatement (convertAssignmentList assignements) (convertValueStatement vs)
 convertValueStatement (IfValueStatement condvs ifvs elsevs) =
   FIfValueStatement (convertValueStatement condvs) (convertValueStatement ifvs) (convertValueStatement elsevs)
-convertValueStatement (LValueStatement ListValueStatementB) = 
-  FLValueStatement convertValueStatementList
-convertValueStatement (TValueStatement TupleValueStatementB) = 
-  FTValueStatement convertValueStatementList
-convertValueStatement AValueStatement = FAValueStatement convertFunctionAppl
+convertValueStatement (LValueStatement (ListValueStatementB l)) = 
+  FLValueStatement $ convertValueStatementList l
+convertValueStatement (TValueStatement (TupleValueStatementB l)) = 
+  FTValueStatement $ convertValueStatementList l
+convertValueStatement (AValueStatement funAppl) = 
+  FAValueStatement $ convertFunctionAppl funAppl
 convertValueStatement (IValueStatement i) = FIValueStatement i
 convertValueStatement (LitStrValueStatement str) = FLitStrValueStatement str
-convertValueStatement (FValueStatement ident) = FFValueStatement (unwrapIdent ident) convertValueStatement
-convertValueStatement Expr = exprFromLists . makeExprLists
+convertValueStatement (FValueStatement ident vs) = 
+  FFValueStatement (unwrapIdent ident) (convertValueStatement vs)
+convertValueStatement (Expr vs e) = exprFromLists . makeExprLists vs e
 
 exprFromLists :: ([String], [ValueStatement]) -> FValueStatement
 exprFromLists (strs, vss) = let
     fvss = convertValueStatementList vss
-  in mergeCmpVss . mergeAddSubVss . mergeMulDivModVss fvss
+  in mergeCmpVss . mergeAddSubVss . mergeMulDivModVss (strs, fvss)
 
 mergeMulDivModVss :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
 mergeMulDivModVss x = let
     xaux = mergeMulDivModVssAux x
-  in if x == xaux then x else mergeMulDivModVssAux xaux
+  in if x == xaux then x else mergeMulDivModVss xaux
 
 mergeMulDivModVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
+mergeMulDivModVssAux ([], [x]) = ([], [x])
+mergeMulDivModVssAux ("*":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEMul x x2):nxs) where
+  (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
+mergeMulDivModVssAux ("/":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEDiv x x2):nxs) where
+  (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
+mergeMulDivModVssAux ("%":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEMod x x2):nxs) where
+  (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
+mergeMulDivModVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
+  (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
 
-mergeAddSubVss:: ([String], [FValueStatement]) -> ([String], [FValueStatement])
+mergeAddSubVss :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
+mergeAddSubVss x = let
+    xaux = mergeAddSubVssAux x
+  in if x == xaux then x else mergeAddSubVss xaux
+
+mergeAddSubVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
+mergeAddSubVssAux ([], [x]) = ([], [x])
+mergeAddSubVssAux ("+":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEAdd x x2):nxs) where
+  (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
+mergeAddSubVssAux ("-":strs, (x:x2:xs)) = (nstrs, (FExpr $ FESub x x2):nxs) where
+  (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
+mergeAddSubVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
+  (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
 
 mergeCmpVss :: ([String], [FValueStatement]) -> FValueStatement
 mergeCmpVss ([], [x]) = x
 mergeCmpVss (("<"):strs, x:xs) = FExpr $ FEL x $ mergeCmpVss (strs, xs)
 mergeCmpVss (("<="):strs, x:xs) = FExpr $ FELQ x $ mergeCmpVss (strs, xs)
-mergeCmpVss ((">"):strs, x:xs) = FExpr $ FEG $ mergeCmpVss (strs, xs)
+mergeCmpVss ((">"):strs, x:xs) = FExpr $ FEG x $ mergeCmpVss (strs, xs)
 mergeCmpVss ((">="):strs, x:xs) = FExpr $ FEGQ x $ mergeCmpVss (strs, xs)
 mergeCmpVss (("=="):strs, x:xs) = FExpr $ FEEQ x $ mergeCmpVss (strs, xs)
 mergeCmpVss (("!="):strs, x:xs) = FExpr $ FENE x $ mergeCmpVss (strs, xs)
 
-makeExprLists :: ValueStatement -> ValueStatement -> ([String], [ValueStatement])
+makeExprLists :: ValueStatement -> ValueStatementExpr -> ([String], [ValueStatement])
 makeExprLists vs1 vs2 = (signs, vs1:vss) where
   (signs, vss) = makeExprListsAux vs2
 
 insertPairToList :: (a, b) -> ([a], [b]) -> ([a], [b])
 insertPairToList (a, b) (as, bs) = (a:as, b:bs)
 
-makeExprListsAux :: ValueStatement -> ([String], [ValueStatement])
-makeExprListsAux vs@(Expr (EAdd vs2)) = insertPairToList ("+", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (ESub vs2)) = insertPairToList ("-", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (EMod vs2)) = insertPairToList ("%", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (EMul vs2)) = insertPairToList ("*", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (EDiv vs2)) = insertPairToList ("/", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (EL vs2)) = insertPairToList ("<", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (ELQ vs2)) = insertPairToList ("<=", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (EG vs2)) = insertPairToList (">", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (EGQ vs2)) = insertPairToList (">=", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (EEQ vs2)) = insertPairToList ("==", vs) (makeExprListsAux vs2)
-makeExprListsAux vs@(Expr (ENE vs2)) = insertPairToList ("!=", vs) (makeExprListsAux vs2)
-makeExprListsAux _ = ([], [])
+makeExprListsAux :: ValueStatementExpr -> ([String], [ValueStatement])
+makeExprListsAux (EAdd (Expr vs1 e)) = insertPairToList ("+", vs1) (makeExprListsAux e)
+makeExprListsAux (ESub (Expr vs1 e)) = insertPairToList ("-", vs1) (makeExprListsAux e)
+makeExprListsAux (EMod (Expr vs1 e)) = insertPairToList ("%", vs1) (makeExprListsAux e)
+makeExprListsAux (EMul (Expr vs1 e)) = insertPairToList ("*", vs1) (makeExprListsAux e)
+makeExprListsAux (EDiv (Expr vs1 e)) = insertPairToList ("/", vs1) (makeExprListsAux e)
+makeExprListsAux (EL (Expr vs1 e)) = insertPairToList ("<", vs1) (makeExprListsAux e)
+makeExprListsAux (ELQ (Expr vs1 e)) = insertPairToList ("<=", vs1) (makeExprListsAux e)
+makeExprListsAux (EG (Expr vs1 e)) = insertPairToList (">", vs1) (makeExprListsAux e)
+makeExprListsAux (EGQ (Expr vs1 e)) = insertPairToList (">=", vs1) (makeExprListsAux e)
+makeExprListsAux (EEQ (Expr vs1 e)) = insertPairToList ("==", vs1) (makeExprListsAux e)
+makeExprListsAux (ENE (Expr vs1 e)) = insertPairToList ("!=", vs1) (makeExprListsAux e)
+makeExprListsAux (EAdd vs) = (["+"], [vs])
+makeExprListsAux (ESub vs) = (["-"], [vs])
+makeExprListsAux (EMod vs) = (["%"], [vs])
+makeExprListsAux (EMul vs) = (["*"], [vs])
+makeExprListsAux (EDiv vs) = (["/"], [vs])
+makeExprListsAux (EL vs) = (["<"], [vs])
+makeExprListsAux (ELQ vs) = (["<="], [vs])
+makeExprListsAux (EG vs) = ([">"], [vs])
+makeExprListsAux (EGQ vs) = ([">="], [vs])
+makeExprListsAux (EEQ vs) = (["=="], [vs])
+makeExprListsAux (ENE vs) = (["!="], [vs])
 
 convertFunctionAppl :: FunApplication -> FFunApplication
+convertFunctionAppl (FunApplicationB i fArgApplList) = FFunApplicationB (unwrapIdent i) (convertFunctionArgApplList fArgApplList)
+convertFucntionAppl (SFunApplication i fAppl) = FSFunApplication (unwrapIdent i) (convertFunctionAppl fAppl)
+
+convertFunctionArgAppl :: FunctionArgAppl -> FFunctionArgAppl
+convertFunctionArgAppl (FunctionArgApplB vs) = FFunctionArgAppl $ convertValueStatement vs
+
+convertFunctionArgApplList :: [FunctionArgAppl] -> [FFunctionArgAppl]
+convertFunctionArgApplList = map convertFunctionArgAppl
+ 
+convertFunctionArgList :: [FunctionArg] -> [FFunctionArg]
+convertFunctionArgList = map convertFunctionArg
 
 convertValueStatementList :: [ValueStatement] -> [FValueStatement]
 convertValueStatementList = map convertValueStatement
 
 convertAssignment :: Assignment -> FAssignment
+convertAssignment (AssignmentB t pm vs) = FAssignmentB (convertType t) (convertPatternMatch pm) (convertValueStatement vs)
+convertAssignment (RefAssignment refdef) = FRefAssignment $ convertRefDef refdef
 
-convertAssignmentList :: [Assignment] -> FAssignment
-convertAssignmentList = map convertAssignement
+convertAssignmentList :: [Assignment] -> [FAssignment]
+convertAssignmentList = map convertAssignment
 
 convertRefDef :: RefDef -> FRefDef
-convertRefDef = undefined
+convertRefDef (RefDefB t i vs) = FRefDef (convertType t) (unwrapIdent i) (convertValueStatement vs)

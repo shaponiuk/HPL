@@ -61,7 +61,7 @@ data FValueStatement =
   | FIValueStatement Int
   | FLitStrValueStatement String
   | FFValueStatement String FValueStatement
-  | FExpr FValueStatement FValueStatementExpr
+  | FExpr FValueStatementExpr
   deriving (Show)
 
 data FFunApplication =
