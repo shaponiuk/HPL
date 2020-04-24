@@ -46,7 +46,7 @@ data FPatternMatch =
   deriving (Show)
 
 data FType =
-    TypeB String [FType]
+    FTypeB String [FType]
   | FunFType FType FType
   | FTypeT [FType]
   deriving (Show)
