@@ -1,9 +1,6 @@
 module StaticCheck.Format where
 
-data ProgramFormat = SITList [SIT]
-  deriving (Eq,Ord,Show)
-
-data SIT = SITStruct FStruct | SITInterface FInterface | SITType FAlgType
+data ProgramFormat = SITList [FStruct] [FInterface] [FAlgType]
   deriving (Eq,Ord,Show)
 
 data FStruct = FStructB String FStructBody | FStructI String [String] FStructBody
