@@ -1,6 +1,46 @@
 module StaticCheck.Format where
+  
+import Data.Map
+
+data S = S {
+  vars :: Map String (Type, FValueStatement),
+  runQueue :: [RunFunT]
+}
+
+data NProgramFormat = NSIT (Map String NFStruct) (Map String FInterface) (Map String FAlgType)
+  deriving (Eq,Ord,Show)
+
+data NFStruct = NFStruct String [String] NFStructBody
+  deriving (Eq,Ord,Show)
+
+-- private,public,private,public,private,public
+data NFStructBody = 
+  NFStructBody 
+    [NFNonSusFunDef] 
+    [NFNonSusFunDef] 
+    [NFSusFunDef] 
+    [NFSusFunDef] 
+    [NFRefDef] 
+    [NFRefDef]
+  
+data NFNonSusFunDef = NFNonSusFunDef FunRunT
+
+type FunRunT = S -> [FValueStatement] -> IO (S)
+
+data NFSusFunDef = TODO1
+
+data NFRefDef = TODO2
 
 data ProgramFormat = SITList [FStruct] [FInterface] [FAlgType]
+  deriving (Eq,Ord,Show)
+
+data ATProgramFormat = ATSIT [FStruct] [FInterface] (Map String FAlgType)
+  deriving (Eq,Ord,Show)
+
+data SATProgramFormat = SATSIT (Map String FStruct) [FInterface] (Map String FAlgType)
+  deriving (Eq,Ord,Show)
+
+data ISATProgramFormat = ISATSIT (Map String FStruct) (Map String FInterface) (Map String FAlgType)
   deriving (Eq,Ord,Show)
 
 data FStruct = FStructB String FStructBody | FStructI String [String] FStructBody

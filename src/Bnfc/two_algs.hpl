@@ -1,0 +1,9 @@
+struct Main {
+  fun (List (String ()) -> Int ()) main (argv) =
+    force let
+        () :: () = print ("Hello, world!");
+    in 0;
+};
+
+data Alg1 () = Alg1 (());
+data Alg2 () = Alg2 (Alg1 ()) | Alg2 (());

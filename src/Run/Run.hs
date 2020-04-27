@@ -2,5 +2,5 @@ module Run.Run where
 
 import StaticCheck.Format
 
-run :: ProgramFormat -> IO ()
+run :: a -> IO ()
 run = undefined
