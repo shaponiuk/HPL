@@ -1,18 +1,20 @@
 module StaticCheck.NConvert where
 
-import Data.Map
 import StaticCheck.Format
+import Debug.Trace
 
-convertToNPF :: ISATProgramFormat -> NProgramFormat
-convertToNPF (ISATSIT structMap interfaceMap algTypeMap) =
-    NSIT nfStructMap interfaceMap algTypeMap state where
-    (nfStructMap, state) = getStates $ Data.Map.map fstructConvert structMap
+convertToNPF :: ProgramFormat -> NProgramFormat
+convertToNPF (SITList structs interfaces algTypes) =
+    trace (show $ length nfStructs) $ NSIT nfStructs interfaces algTypes state where
+    (nfStructs, state) = 
+        foldl (\(nfstrcts, st) strct ->
+            let 
+                (nfstrct, newState) = fstructConvert st strct
+            in (nfstrct:nfstrcts, newState)
+        ) ([], getNewState) structs
 
-getStates :: Map String (NFStruct, S) -> (Map String NFStruct, S)
-getStates = undefined
-
-fstructConvert :: FStruct -> (NFStruct, S)
-fstructConvert (FStructB name (FStructBody body)) =
+fstructConvert :: S -> FStruct -> (NFStruct, S)
+fstructConvert s (FStructB name (FStructBody body)) =
     (NFStruct name [] (
         NFStructBody
         []
@@ -22,39 +24,39 @@ fstructConvert (FStructB name (FStructBody body)) =
         []
         []),
     state) where
-    (publicNonSus, state) = convertPublicNonSusFuns name body
+    (publicNonSus, state) = convertPublicNonSusFuns body s
 
-convertPublicNonSusFuns :: String -> [FStructField] -> ([NFNonSusFunDef], S)
-convertPublicNonSusFuns name fields =
-    let env = makeStructEnv name fields
-    in (Prelude.map (convertFStructFieldPublic env) fields, registerStates env name fields)
+getNewState :: S
+getNewState = undefined
 
-convertFStructFieldPublic :: E -> FStructField -> NFNonSusFunDef
-convertFStructFieldPublic env (FStructFieldFunPublic (NonSusFFunctionDef typ name args vs)) =
+getNewEnv :: E
+getNewEnv = undefined
+
+convertPublicNonSusFuns :: [FStructField] -> S -> ([NFNonSusFunDef], S)
+convertPublicNonSusFuns structFields state =
     let
-        newEnv = registerArgs args env
-    in let 
-        f = (\state argVs ->
-            let newState = putInState args argVs newEnv state
-            in runValueStatement newEnv newState vs
-            )
-    in NFNonSusFunDef f
+        publicFields = extractPublicNonSusFunFields structFields
+    in let
+        (inStructEnv, newState) = makeInStructEnv getNewEnv structFields state
+    in (convertPublicNonSusFunFields structFields inStructEnv newState)
 
-makeStructEnv :: String -> [FStructField] -> S -> (E, S)
-makeStructEnv fStructName fields state =
-    Prelude.foldl registerField (E empty, state) fields
+makeInStructEnv :: E -> [FStructField] -> S -> (E, S)
+makeInStructEnv = undefined
 
-registerField :: (E, S) -> FStructField -> (E, S)
-registerField = undefined
+extractPublicNonSusFunFields :: [FStructField] -> [FStructField]
+extractPublicNonSusFunFields = filter checkPublicNonSusFunctionField
 
-runValueStatement :: E -> S -> FValueStatement -> Maybe (IO((S, FValueStatement)))
-runValueStatement = undefined
+checkPublicNonSusFunctionField :: FStructField -> Bool
+checkPublicNonSusFunctionField (FStructFieldFunPublic (NonSusFFunctionDef _ _ _ _)) = True
+checkPublicNonSusFunctionField _ = False
 
-putInState :: [FFunctionArg] -> [FValueStatement] -> E -> S -> S
-putInState = undefined
+convertPublicNonSusFunFields :: [FStructField] -> E -> S -> ([NFNonSusFunDef], S)
+convertPublicNonSusFunFields fields env state = foldl (\(l, s) field ->
+    let 
+        (nf, ns) = (convertPublicNonSusFunField field env state)
+    in (nf:l, ns)
 
-registerArgs :: [FFunctionArg] -> E -> E
-registerArgs = undefined
-
-registerStates :: E -> String -> [FStructField] -> S
-registerStates = undefined
+convertPublicNonSusFunField :: FStructField -> E -> S -> (NFNonSusFunDef, S)
+convertPublicNonSusFunField (FStructFieldFunPublic (NonSusFFunctionDef t name args vs)) env state =
+    (NFNonSusFunDef name args, newState) where
+        

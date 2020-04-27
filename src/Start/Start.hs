@@ -8,6 +8,7 @@ import Bnfc.AbsHpl
 import StaticCheck.StaticCheck ( staticCheck )
 import StaticCheck.Format
 import Run.Run ( run )
+import Debug.Trace ( trace )
 
 runFile :: FilePath -> IO ()
 runFile x = runFileAux pProgram x
@@ -30,7 +31,7 @@ runAux p s = let ts = myLLexer s in case p ts of
                         checkAndRunTree tree 
 
 checkAndRunTree :: Program -> IO ()
-checkAndRunTree x = tryRun $ staticCheck x
+checkAndRunTree x = trace (show $ staticCheck x) $ tryRun $ staticCheck x
 
 tryRun :: Err a -> IO ()
 tryRun (Left err) = putStrLn $ "TODO: make it nicer " ++ err

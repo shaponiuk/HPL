@@ -3,18 +3,32 @@ module StaticCheck.Format where
 import Data.Map
 
 data E = E {
-    names :: Map String String
-}
+    names :: Map String [Int]
+} deriving (Show)
 
 data S = S {
-  vars :: Map String (FType, E, FValueStatement),
-  runQueue :: [FunRunT],
+  vars :: Map Int (FType, E, FValueStatement),
   newInt :: Int
-}
+} deriving (Show)
 
-data NProgramFormat = NSIT (Map String NFStruct) (Map String FInterface) (Map String FAlgType) S
+getNewLoc :: S -> (Int, S)
+getNewLoc (S vars loc) = (loc + 1, S vars (loc + 1))
+
+registerLoc :: E -> String -> Int -> E
+registerLoc (E names) name loc =
+  if member name names 
+    then
+      E (insert name [loc] names)
+    else 
+      let
+        locs = names ! name
+      in E (insert name (loc:locs) names)
+
+data NProgramFormat = NSIT [NFStruct] [FInterface] [FAlgType] S
+  deriving (Show)
 
 data NFStruct = NFStruct String [String] NFStructBody
+  deriving (Show)
 
 -- private,public,private,public,private,public
 data NFStructBody = 
@@ -25,25 +39,20 @@ data NFStructBody =
     [NFSusFunDef] 
     [NFRefDef] 
     [NFRefDef]
+    deriving (Show)
   
-data NFNonSusFunDef = NFNonSusFunDef FunRunT
+data NFNonSusFunDef = NFNonSusFunDef String [FFunctionArg]
+  deriving (Show)
 
 type FunRunT = S -> [FValueStatement] -> Maybe (IO ((S, FValueStatement)))
 
 data NFSusFunDef = TODO1
+  deriving (Show)
 
 data NFRefDef = TODO2
+  deriving (Show)
 
 data ProgramFormat = SITList [FStruct] [FInterface] [FAlgType]
-  deriving (Eq,Ord,Show)
-
-data ATProgramFormat = ATSIT [FStruct] [FInterface] (Map String FAlgType)
-  deriving (Eq,Ord,Show)
-
-data SATProgramFormat = SATSIT (Map String FStruct) [FInterface] (Map String FAlgType)
-  deriving (Eq,Ord,Show)
-
-data ISATProgramFormat = ISATSIT (Map String FStruct) (Map String FInterface) (Map String FAlgType)
   deriving (Eq,Ord,Show)
 
 data FStruct = FStructB String FStructBody | FStructI String [String] FStructBody

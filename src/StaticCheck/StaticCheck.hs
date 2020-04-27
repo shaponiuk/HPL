@@ -2,9 +2,6 @@ module StaticCheck.StaticCheck where
 
 import StaticCheck.Format
 import StaticCheck.InitialConvertToProgramFormat (initialConvertToProgramFormat)
-import StaticCheck.CheckAlgTypes (checkAlgTypes)
-import StaticCheck.CheckStructs (checkStructs)
-import StaticCheck.CheckInterfaces (checkInterfaces)
 import StaticCheck.NConvert (convertToNPF)
 import Bnfc.AbsHpl
 import Bnfc.ErrM
@@ -19,9 +16,6 @@ staticCheckErrPack (Right r) = Ok r
 staticCheckEither :: Program -> Either String NProgramFormat
 staticCheckEither p = do
   let pf = initialConvertToProgramFormat p
-  at <- checkAlgTypes pf
-  sat <- checkStructs at
-  isat <- checkInterfaces sat
-  let npf = convertToNPF isat
+  let npf = convertToNPF pf
   return npf
 
