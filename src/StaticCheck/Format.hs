@@ -2,16 +2,19 @@ module StaticCheck.Format where
   
 import Data.Map
 
-data S = S {
-  vars :: Map String (Type, FValueStatement),
-  runQueue :: [RunFunT]
+data E = E {
+    names :: Map String String
 }
 
-data NProgramFormat = NSIT (Map String NFStruct) (Map String FInterface) (Map String FAlgType)
-  deriving (Eq,Ord,Show)
+data S = S {
+  vars :: Map String (FType, E, FValueStatement),
+  runQueue :: [FunRunT],
+  newInt :: Int
+}
+
+data NProgramFormat = NSIT (Map String NFStruct) (Map String FInterface) (Map String FAlgType) S
 
 data NFStruct = NFStruct String [String] NFStructBody
-  deriving (Eq,Ord,Show)
 
 -- private,public,private,public,private,public
 data NFStructBody = 
@@ -25,7 +28,7 @@ data NFStructBody =
   
 data NFNonSusFunDef = NFNonSusFunDef FunRunT
 
-type FunRunT = S -> [FValueStatement] -> IO (S)
+type FunRunT = S -> [FValueStatement] -> Maybe (IO ((S, FValueStatement)))
 
 data NFSusFunDef = TODO1
 

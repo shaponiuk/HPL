@@ -9,7 +9,7 @@ import StaticCheck.NConvert (convertToNPF)
 import Bnfc.AbsHpl
 import Bnfc.ErrM
 
-staticCheck :: Program -> Err ISATProgramFormat
+staticCheck :: Program -> Err NProgramFormat
 staticCheck p = staticCheckErrPack $ staticCheckEither p
 
 staticCheckErrPack :: Either String a -> Err a
@@ -22,7 +22,6 @@ staticCheckEither p = do
   at <- checkAlgTypes pf
   sat <- checkStructs at
   isat <- checkInterfaces sat
-  let = npf convertToNPF isat
-  fail $ show npf
+  let npf = convertToNPF isat
   return npf
 
