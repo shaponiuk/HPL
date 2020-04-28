@@ -14,15 +14,25 @@ data S = S {
 getNewLoc :: S -> (Int, S)
 getNewLoc (S vars loc) = (loc + 1, S vars (loc + 1))
 
+putInLoc :: Int -> (FType, E, FValueStatement) -> S -> S
+putInLoc loc thing (S vars newInt) =
+  S (insert loc thing vars) newInt
+
 registerLoc :: E -> String -> Int -> E
 registerLoc (E names) name loc =
   if member name names 
     then
-      E (insert name [loc] names)
-    else 
       let
         locs = names ! name
       in E (insert name (loc:locs) names)
+    else 
+      E (insert name [loc] names)
+
+lookupLoc :: String -> E -> [Int]
+lookupLoc name (E names) = names ! name
+
+lookupFirstLoc :: String -> E -> Int
+lookupFirstLoc name env = head $ lookupLoc name env
 
 data NProgramFormat = NSIT [NFStruct] [FInterface] [FAlgType] S
   deriving (Show)
@@ -45,6 +55,8 @@ data NFNonSusFunDef = NFNonSusFunDef String [FFunctionArg]
   deriving (Show)
 
 type FunRunT = S -> [FValueStatement] -> Maybe (IO ((S, FValueStatement)))
+
+type FunRunQuickT = S -> Maybe (IO ((S, FValueStatement)))
 
 data NFSusFunDef = TODO1
   deriving (Show)
