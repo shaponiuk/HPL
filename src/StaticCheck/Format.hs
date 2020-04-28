@@ -8,18 +8,19 @@ data E = E {
 
 data S = S {
   vars :: Map Int (FType, FValueStatement),
-  newInt :: Int
+  newInt :: Int,
+  functionArgs :: Map Int [String]
 } deriving (Show)
 
 getNewLoc :: S -> (Int, S)
-getNewLoc (S vars loc) = (loc + 1, S vars (loc + 1))
+getNewLoc (S vars loc funArgs) = (loc + 1, S vars (loc + 1) funArgs)
 
 putInLoc :: Int -> (FType, FValueStatement) -> S -> S
-putInLoc loc thing (S vars newInt) =
-  S (insert loc thing vars) newInt
+putInLoc loc thing (S vars newInt funArgs) =
+  S (insert loc thing vars) newInt funArgs
 
 stateLookup :: Int -> S -> (FType, FValueStatement)
-stateLookup loc (S varsMap _) = varsMap ! loc
+stateLookup loc (S varsMap _ _) = varsMap ! loc
 
 registerLoc :: E -> String -> Int -> E
 registerLoc (E names) name loc =
@@ -36,6 +37,12 @@ lookupLoc name (E names) = names ! name
 
 lookupFirstLoc :: String -> E -> Int
 lookupFirstLoc name env = head $ lookupLoc name env
+
+funArgNamesLookup :: S -> String -> [String]
+funArgNamesLookup (S _ _ funArgs) funName = funArgs ! funName
+
+putArgNames :: S -> String -> [String] -> S
+
 
 data NProgramFormat = NSIT [NFStruct] [FInterface] [FAlgType] S
   deriving (Show)

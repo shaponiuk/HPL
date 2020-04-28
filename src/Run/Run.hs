@@ -57,10 +57,11 @@ runVS (FForceValueStatement assignments vs) env state = do
     (newState, newEnv) <- forceRegisterAssignments assignments state env
     seq newState $ runVS vs newEnv newState
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
-runVS (FFunApplicationB funName funArgVss) env state = do
+runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
     let loc = lookupFirstLoc funName env
     let (t, vs) = stateLookup loc state
-    
+    let funArgNames = funArgNamesLookup state funName
+    interpretVS vs env funArgNames state funArgVss
 
 forceRegisterAssignments :: [FAssignment] -> S -> E -> IO (S, E)
 forceRegisterAssignments assignments state env =

@@ -28,7 +28,7 @@ fstructConvert s (FStructB name (FStructBody body)) =
     (publicNonSus, state) = convertPublicNonSusFuns body s
 
 getNewState :: S
-getNewState = S M.empty 0
+getNewState = S M.empty 0 M.empty
 
 getNewEnv :: E
 getNewEnv = E M.empty
