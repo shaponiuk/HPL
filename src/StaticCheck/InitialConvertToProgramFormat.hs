@@ -237,10 +237,10 @@ convertFunctionAppl :: FunApplication -> FFunApplication
 convertFunctionAppl (FunApplicationB i fArgApplList) = FFunApplicationB (unwrapIdent i) (convertFunctionArgApplList fArgApplList)
 convertFucntionAppl (SFunApplication i fAppl) = FSFunApplication (unwrapIdent i) (convertFunctionAppl fAppl)
 
-convertFunctionArgAppl :: FunctionArgAppl -> FFunctionArgAppl
-convertFunctionArgAppl (FunctionArgApplB vs) = FFunctionArgAppl $ convertValueStatement vs
+convertFunctionArgAppl :: FunctionArgAppl -> FValueStatement
+convertFunctionArgAppl (FunctionArgApplB vs) = convertValueStatement vs
 
-convertFunctionArgApplList :: [FunctionArgAppl] -> [FFunctionArgAppl]
+convertFunctionArgApplList :: [FunctionArgAppl] -> [FValueStatement]
 convertFunctionArgApplList = map convertFunctionArgAppl
  
 convertFunctionArgList :: [FunctionArg] -> [FFunctionArg]

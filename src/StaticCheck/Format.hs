@@ -7,16 +7,19 @@ data E = E {
 } deriving (Show)
 
 data S = S {
-  vars :: Map Int (FType, E, FValueStatement),
+  vars :: Map Int (FType, FValueStatement),
   newInt :: Int
 } deriving (Show)
 
 getNewLoc :: S -> (Int, S)
 getNewLoc (S vars loc) = (loc + 1, S vars (loc + 1))
 
-putInLoc :: Int -> (FType, E, FValueStatement) -> S -> S
+putInLoc :: Int -> (FType, FValueStatement) -> S -> S
 putInLoc loc thing (S vars newInt) =
   S (insert loc thing vars) newInt
+
+stateLookup :: Int -> S -> (FType, FValueStatement)
+stateLookup loc (S varsMap _) = varsMap ! loc
 
 registerLoc :: E -> String -> Int -> E
 registerLoc (E names) name loc =
@@ -51,12 +54,12 @@ data NFStructBody =
     [NFRefDef]
     deriving (Show)
   
-data NFNonSusFunDef = NFNonSusFunDef String [FFunctionArg]
+data NFNonSusFunDef = NFNonSusFunDef String [FFunctionArg] E
   deriving (Show)
 
-type FunRunT = S -> [FValueStatement] -> Maybe (IO ((S, FValueStatement)))
+type FunRunT = S -> [FValueStatement] -> (IO (Maybe (S, FValueStatement)))
 
-type FunRunQuickT = S -> Maybe (IO ((S, FValueStatement)))
+type FunRunQuickT = S -> IO (Maybe (S, FValueStatement))
 
 data NFSusFunDef = TODO1
   deriving (Show)
@@ -127,10 +130,7 @@ data FValueStatement =
 
 data FFunApplication =
     FSFunApplication String FFunApplication
-  | FFunApplicationB String [FFunctionArgAppl]
-  deriving (Eq,Ord,Show)
-
-data FFunctionArgAppl = FFunctionArgAppl FValueStatement
+  | FFunApplicationB String [FValueStatement]
   deriving (Eq,Ord,Show)
 
 data FInterfaceBody = FInterfaceBody [FFunOrRefDecl]

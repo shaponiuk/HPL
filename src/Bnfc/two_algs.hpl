@@ -1,5 +1,5 @@
 struct Main {
-  fun (List (String ()) -> Int ()) main (argv) =
+  fun (() -> Int ()) main () =
     force let
         () :: () = print ("Hello, world!");
     in 0;
