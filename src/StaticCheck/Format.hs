@@ -21,20 +21,20 @@ putInLoc loc thing (S vars newInt funArgs) =
   S (insert loc thing vars) newInt funArgs
 
 stateLookup :: Int -> S -> (FType, FValueStatement)
-stateLookup loc (S varsMap _ _) = trace ("here7") $ varsMap ! loc
+stateLookup loc (S varsMap _ _) = varsMap ! loc
 
 registerLoc :: E -> String -> Int -> E
 registerLoc (E names) name loc =
   if member name names 
     then
       let
-        locs = trace ("here10: " ++ name) $ names ! name
+        locs = names ! name
       in E (insert name (loc:locs) names)
     else 
       E (insert name [loc] names)
 
 lookupLoc :: String -> E -> [Int]
-lookupLoc name (E names) = trace ("here8: " ++ name ++ (show names)) $ if member name names then names ! name else []
+lookupLoc name (E names) = names ! name
 
 lookupFirstLoc :: String -> E -> Int
 lookupFirstLoc name env = head $ lookupLoc name env
@@ -42,7 +42,7 @@ lookupFirstLoc name env = head $ lookupLoc name env
 funArgNamesLookup :: S -> Int -> [FPatternMatch]
 funArgNamesLookup (S _ _ funArgs) loc =
   if member loc funArgs
-    then trace "here9" $ funArgs ! loc
+    then funArgs ! loc
     else []
 
 putArgNames :: S -> Int -> [FPatternMatch] -> S

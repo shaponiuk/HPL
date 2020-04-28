@@ -21,7 +21,6 @@ getMainFunction (NFStruct _ _ (NFStructBody _ l _ _ _ _)) =
 
 runFunction :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> IO (S, FValueStatement)
 runFunction p@(name, args, env) vss state = do
-    print "heeree"
     let locs = lookupLoc name env in tryLocs p vss state locs
 
 tryLocs :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> [Int] -> IO (S, FValueStatement)
@@ -46,12 +45,9 @@ runMaybeIOFunInt (Just x) = do
     return x
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> FunRunT
-interpretVS vs env argNames s vss = do
-    print "interpretVS enter"
-    print argNames
-    print vss
+interpretVS vs env argNames s vss =
     let (newEnv, newState) = registerArgs env s argNames vss in 
-        trace ("\n\ninterpretVS with env " ++ (show newEnv) ++ (show newState)) $ runVS vs newEnv newState
+        runVS vs newEnv newState
 
 runVS :: FValueStatement -> E -> FunRunQuickT
 runVS (FForceValueStatement assignments vs) env state = do
@@ -60,13 +56,13 @@ runVS (FForceValueStatement assignments vs) env state = do
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
 runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
     let loc = lookupFirstLoc funName env
-    let (t, vs) = trace ("aaawww") $ stateLookup loc state
+    let (t, vs) = stateLookup loc state
     let funArgNames = funArgNamesLookup state loc
-    trace ("uuuwww" ++ (show vs)) $ seq funArgNames $ interpretVS vs env funArgNames state funArgVss
+    interpretVS vs env funArgNames state funArgVss
 runVS (FExpr (FEMul vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
-    return $ Just (newerState, FIValueStatement (i1 + i2))
+    return $ Just (newerState, FIValueStatement (i1 * i2))
 
 forceRegisterAssignments :: [FAssignment] -> S -> E -> IO (S, E)
 forceRegisterAssignments assignments state env =
@@ -109,7 +105,7 @@ forceRunFunApplication (FFunApplicationB "print" [str]) state env = do
     interpretedArgMaybe <- interpretVS str env [] state []
     let (s, r)  = forceUnwrapMaybe interpretedArgMaybe
     print "watch out, printing"
-    print ("hehe" ++ (show r))
+    print ("hehe " ++ (show r))
     return (FTValueStatement [], state, env)
 forceRunFunApplication _ _ _ = undefined
 
