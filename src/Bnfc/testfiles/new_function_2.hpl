@@ -2,7 +2,7 @@ struct Main {
     fun (Int () -> Int ()) another_two (x) = x () * 2;
 
     fun (Int () -> Int ()) not_main (val) =
-        val () * 2 * another_two();
+        val () * 2 * another_two(2);
 
     fun (() -> Int ()) main () =
         force let

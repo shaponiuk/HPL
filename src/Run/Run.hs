@@ -58,7 +58,11 @@ runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
     let loc = lookupFirstLoc funName env
     let (t, vs) = stateLookup loc state
     let funArgNames = funArgNamesLookup state loc
-    interpretVS vs env funArgNames state funArgVss
+    if length funArgVss < length  funArgNames
+        then 
+            -- gets new locs as ids and wraps the function in lambdas so that (number of args -- lambda wraps) == (length funArgVss)
+        else 
+            interpretVS vs env funArgNames state funArgVss
 runVS (FExpr (FEMul vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
