@@ -46,7 +46,6 @@ makeInStructEnv env fields state =
     Prelude.foldl (\(e, s) (FStructFieldFunPublic (NonSusFFunctionDef _ name _ _)) ->
         let
             (loc, newState) = getNewLoc s
-        in let
             newEnv = registerLoc e name loc
         in (newEnv, newState)
     ) (env, state) fields
@@ -62,13 +61,15 @@ convertPublicNonSusFunFields :: [FStructField] -> E -> S -> ([NFNonSusFunDef], S
 convertPublicNonSusFunFields fields env state = 
     Prelude.foldl (\(l, s) field ->
         let 
-            (nf, ns) = (convertPublicNonSusFunField field env state)
+            (nf, ns) = convertPublicNonSusFunField field env s
         in (nf:l, ns)
     ) ([], state) fields
 
 convertPublicNonSusFunField :: FStructField -> E -> S -> (NFNonSusFunDef, S)
 convertPublicNonSusFunField (FStructFieldFunPublic (NonSusFFunctionDef t name args vs)) env state =
-    (NFNonSusFunDef name args env, newState) where
+    (NFNonSusFunDef name args env, newerState) where
         loc = lookupFirstLoc name env
         newState = putInLoc loc newThing state
+        newerState = putArgNames newState loc args
         newThing = (t, vs)
+convertPublicNonSusFunField _ _ _ = undefined

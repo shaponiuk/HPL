@@ -1,6 +1,7 @@
 module StaticCheck.Format where
   
 import Data.Map
+import Debug.Trace
 
 data E = E {
     names :: Map String [Int]
@@ -9,7 +10,7 @@ data E = E {
 data S = S {
   vars :: Map Int (FType, FValueStatement),
   newInt :: Int,
-  functionArgs :: Map Int [String]
+  functionArgs :: Map Int [FPatternMatch]
 } deriving (Show)
 
 getNewLoc :: S -> (Int, S)
@@ -20,29 +21,33 @@ putInLoc loc thing (S vars newInt funArgs) =
   S (insert loc thing vars) newInt funArgs
 
 stateLookup :: Int -> S -> (FType, FValueStatement)
-stateLookup loc (S varsMap _ _) = varsMap ! loc
+stateLookup loc (S varsMap _ _) = trace ("here7") $ varsMap ! loc
 
 registerLoc :: E -> String -> Int -> E
 registerLoc (E names) name loc =
   if member name names 
     then
       let
-        locs = names ! name
+        locs = trace ("here10: " ++ name) $ names ! name
       in E (insert name (loc:locs) names)
     else 
       E (insert name [loc] names)
 
 lookupLoc :: String -> E -> [Int]
-lookupLoc name (E names) = names ! name
+lookupLoc name (E names) = trace ("here8: " ++ name ++ (show names)) $ if member name names then names ! name else []
 
 lookupFirstLoc :: String -> E -> Int
 lookupFirstLoc name env = head $ lookupLoc name env
 
-funArgNamesLookup :: S -> String -> [String]
-funArgNamesLookup (S _ _ funArgs) funName = funArgs ! funName
+funArgNamesLookup :: S -> Int -> [FPatternMatch]
+funArgNamesLookup (S _ _ funArgs) loc =
+  if member loc funArgs
+    then trace "here9" $ funArgs ! loc
+    else []
 
-putArgNames :: S -> String -> [String] -> S
-
+putArgNames :: S -> Int -> [FPatternMatch] -> S
+putArgNames (S vars newInt functionArgs) loc strs = 
+  S vars newInt (insert loc strs functionArgs)
 
 data NProgramFormat = NSIT [NFStruct] [FInterface] [FAlgType] S
   deriving (Show)
@@ -61,7 +66,7 @@ data NFStructBody =
     [NFRefDef]
     deriving (Show)
   
-data NFNonSusFunDef = NFNonSusFunDef String [FFunctionArg] E
+data NFNonSusFunDef = NFNonSusFunDef String [FPatternMatch] E
   deriving (Show)
 
 type FunRunT = S -> [FValueStatement] -> (IO (Maybe (S, FValueStatement)))
@@ -79,6 +84,12 @@ data ProgramFormat = SITList [FStruct] [FInterface] [FAlgType]
 
 data FStruct = FStructB String FStructBody | FStructI String [String] FStructBody
   deriving (Eq,Ord,Show)
+
+convertStringToPM :: String -> FPatternMatch
+convertStringToPM str = FPatternMatchB str
+
+convertStringsToPMs :: [String] -> [FPatternMatch]
+convertStringsToPMs = Prelude.map convertStringToPM
 
 data FInterface = 
     FInterfaceB String FInterfaceBody 
@@ -99,14 +110,11 @@ data FStructField =
   deriving (Eq,Ord,Show)
 
 data FFunctionDef =
-    NonSusFFunctionDef FType String [FFunctionArg] FValueStatement
+    NonSusFFunctionDef FType String [FPatternMatch] FValueStatement
   | SusFFunctionDef FFunctionDef
   deriving (Eq,Ord,Show)
 
 data FRefDef = FRefDef FType String FValueStatement
-  deriving (Eq,Ord,Show)
-
-data FFunctionArg = FFunctionArg FPatternMatch
   deriving (Eq,Ord,Show)
 
 data FPatternMatch =

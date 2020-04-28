@@ -122,8 +122,8 @@ convertType (TType tl) = FTypeT $ convertTypeList tl
 convertTypeList :: [Type] -> [FType]
 convertTypeList = map convertType
 
-convertFunctionArg :: FunctionArg -> FFunctionArg
-convertFunctionArg (FunctionArgB pm) = FFunctionArg $ convertPatternMatch pm
+convertFunctionArg :: FunctionArg -> FPatternMatch
+convertFunctionArg (FunctionArgB pm) = convertPatternMatch pm
 
 convertPatternMatch :: PatternMatch -> FPatternMatch
 convertPatternMatch (PatternMatchI i) = FPatternMatchI $ fromIntegral i
@@ -136,7 +136,7 @@ convertPatternMatch (CPatternMatch pm l) =
 convertPatternMatchList :: [PatternMatch] -> [FPatternMatch]
 convertPatternMatchList = map convertPatternMatch
 
-convertArgList :: [FunctionArg] -> [FFunctionArg]
+convertArgList :: [FunctionArg] -> [FPatternMatch]
 convertArgList = map convertFunctionArg
 
 convertValueStatement :: ValueStatement -> FValueStatement
@@ -243,7 +243,7 @@ convertFunctionArgAppl (FunctionArgApplB vs) = convertValueStatement vs
 convertFunctionArgApplList :: [FunctionArgAppl] -> [FValueStatement]
 convertFunctionArgApplList = map convertFunctionArgAppl
  
-convertFunctionArgList :: [FunctionArg] -> [FFunctionArg]
+convertFunctionArgList :: [FunctionArg] -> [FPatternMatch]
 convertFunctionArgList = map convertFunctionArg
 
 convertValueStatementList :: [ValueStatement] -> [FValueStatement]

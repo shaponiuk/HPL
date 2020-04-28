@@ -1,11 +1,12 @@
 module Run.Run where
 
 import StaticCheck.Format
+import Debug.Trace
 
 run :: NProgramFormat -> IO ()
 run (NSIT structs interfaces algTypes state) = do
+    print $ functionArgs state
     print structs
-    print state
     let mainStruct = getMainStruct structs
     let (mainName, mainArgs, env) = getMainFunction mainStruct
     s <- runFunction (mainName, mainArgs, env) [] state
@@ -14,16 +15,16 @@ run (NSIT structs interfaces algTypes state) = do
 getMainStruct :: [NFStruct] -> NFStruct
 getMainStruct = head . (filter (\(NFStruct name _ _) -> name == "Main"))
 
-getMainFunction :: NFStruct -> (String, [FFunctionArg], E)
+getMainFunction :: NFStruct -> (String, [FPatternMatch], E)
 getMainFunction (NFStruct _ _ (NFStructBody _ l _ _ _ _)) =
     (\(NFNonSusFunDef name args env) -> (name, args, env)) $ head $ filter (\(NFNonSusFunDef name _ _) -> name == "main") l
 
-runFunction :: (String, [FFunctionArg], E) -> [FValueStatement] -> S -> IO (S, FValueStatement)
+runFunction :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> IO (S, FValueStatement)
 runFunction p@(name, args, env) vss state = do
     print "heeree"
     let locs = lookupLoc name env in tryLocs p vss state locs
 
-tryLocs :: (String, [FFunctionArg], E) -> [FValueStatement] -> S -> [Int] -> IO (S, FValueStatement)
+tryLocs :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> [Int] -> IO (S, FValueStatement)
 tryLocs _ _ _ [] = fail "EEE"
 tryLocs (name, _, env) vss state (loc:_) =
     let
@@ -44,13 +45,13 @@ runMaybeIOFunInt (Just x) = do
     print "HAHAHAHAHA"
     return x
 
-interpretVS :: FValueStatement -> E -> [String] -> FunRunT
-interpretVS vs env argNames =
-    (\s vss ->
-        let
-            (newEnv, newState) = registerArgs env s argNames vss
-        in runVS vs newEnv newState
-    )
+interpretVS :: FValueStatement -> E -> [FPatternMatch] -> FunRunT
+interpretVS vs env argNames s vss = do
+    print "interpretVS enter"
+    print argNames
+    print vss
+    let (newEnv, newState) = registerArgs env s argNames vss in 
+        trace ("\n\ninterpretVS with env " ++ (show newEnv) ++ (show newState)) $ runVS vs newEnv newState
 
 runVS :: FValueStatement -> E -> FunRunQuickT
 runVS (FForceValueStatement assignments vs) env state = do
@@ -59,9 +60,13 @@ runVS (FForceValueStatement assignments vs) env state = do
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
 runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
     let loc = lookupFirstLoc funName env
-    let (t, vs) = stateLookup loc state
-    let funArgNames = funArgNamesLookup state funName
-    interpretVS vs env funArgNames state funArgVss
+    let (t, vs) = trace ("aaawww") $ stateLookup loc state
+    let funArgNames = funArgNamesLookup state loc
+    trace ("uuuwww" ++ (show vs)) $ seq funArgNames $ interpretVS vs env funArgNames state funArgVss
+runVS (FExpr (FEMul vs1 vs2)) env state = do
+    Just (newState, FIValueStatement i1) <- runVS vs1 env state
+    Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
+    return $ Just (newerState, FIValueStatement (i1 + i2))
 
 forceRegisterAssignments :: [FAssignment] -> S -> E -> IO (S, E)
 forceRegisterAssignments assignments state env =
@@ -102,8 +107,9 @@ forceGetTupleVSS _ _ _ = undefined
 forceRunFunApplication :: FFunApplication -> S -> E -> IO (FValueStatement, S, E)
 forceRunFunApplication (FFunApplicationB "print" [str]) state env = do
     interpretedArgMaybe <- interpretVS str env [] state []
-    let interpretedArg = forceUnwrapMaybe interpretedArgMaybe
-    print interpretedArg
+    let (s, r)  = forceUnwrapMaybe interpretedArgMaybe
+    print "watch out, printing"
+    print ("hehe" ++ (show r))
     return (FTValueStatement [], state, env)
 forceRunFunApplication _ _ _ = undefined
 
@@ -111,14 +117,18 @@ forceUnwrapMaybe :: Maybe a -> a
 forceUnwrapMaybe (Just x) = x
 forceUnwrapMaybe Nothing = undefined
 
-registerArgs :: E -> S -> [String] -> [FValueStatement] -> (E, S)
+registerArgs :: E -> S -> [FPatternMatch] -> [FValueStatement] -> (E, S)
 registerArgs env state argNames vss = 
-    foldl (\(e, s) (str, vs) ->
-        let
-            (newLoc, newState) = getNewLoc s
-            newEnv = registerLoc e str newLoc
-        in (newEnv, newState)
-    ) (env, state) $ dList argNames vss
+    trace ("\nresult " ++ (show result)) result where
+        result = foldl registerArgsInFoldF (env, state) $ dList argNames vss
+
+registerArgsInFoldF :: (E, S) -> (FPatternMatch, FValueStatement) -> (E, S)
+registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
+    let
+        (newLoc, newState) = trace ("uuu" ++ str) $ getNewLoc s
+        newEnv = registerLoc e str newLoc
+        newerState = putInLoc newLoc (FTypeT [], vs) newState
+    in (newEnv, newerState)
 
 dList :: [a] -> [b] -> [(a, b)]
 dList [] [] = []

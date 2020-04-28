@@ -9,6 +9,6 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [] -> printNoFile
-    [x] -> runFile x
+    [] -> runFile "Bnfc/testfiles/new_function.hpl"
+    [x] -> runFile x 
     otherwise -> printTooManyFiles
