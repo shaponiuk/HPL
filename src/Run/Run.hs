@@ -1,32 +1,31 @@
 module Run.Run where
 
 import StaticCheck.Format
-import Debug.Trace
+import Util.Util
+import Util.Env
+import Util.State
 
 run :: NProgramFormat -> IO ()
 run (NSIT structs interfaces algTypes state) = do
-    print $ functionArgs state
-    print structs
     let mainStruct = getMainStruct structs
     let (mainName, mainArgs, env) = getMainFunction mainStruct
     s <- runFunction (mainName, mainArgs, env) [] state
     print s
 
 getMainStruct :: [NFStruct] -> NFStruct
-getMainStruct = head . (filter (\(NFStruct name _ _) -> name == "Main"))
+getMainStruct = head . filter (\(NFStruct name _ _) -> name == "Main")
 
 getMainFunction :: NFStruct -> (String, [FPatternMatch], E)
 getMainFunction (NFStruct _ _ (NFStructBody _ l _ _ _ _)) =
     (\(NFNonSusFunDef name args env) -> (name, args, env)) $ head $ filter (\(NFNonSusFunDef name _ _) -> name == "main") l
 
 runFunction :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> IO (S, FValueStatement)
-runFunction p@(name, args, env) vss state = do
-    print ("runFunction" ++ name)
+runFunction p@(name, args, env) vss state =
     let locs = lookupLoc name env in tryLocs p vss state locs
 
 tryLocs :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> [Int] -> IO (S, FValueStatement)
 tryLocs _ _ _ [] = fail "EEE"
-tryLocs (name, _, env) vss state (loc:_) =
+tryLocs (_, _, env) _ state (loc:_) =
     let
         (t, vs) = stateLookup loc state
     in let
@@ -47,11 +46,6 @@ runMaybeIOFunInt (Just x) = do
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> FunRunT
 interpretVS vs env argNames s vss = do
-    print vs
-    --print env
-    print argNames
-    --print s
-    print vss
     if length vss < length argNames
         then
             return $ Just $ wrapFunction vs argNames vss env s
@@ -66,7 +60,7 @@ runVS (FForceValueStatement assignments vs) env state = do
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
 runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
     let loc = lookupFirstLoc funName env
-    let (t, vs) = stateLookup loc state
+    let (_, vs) = stateLookup loc state
     let funArgNames = funArgNamesLookup state loc
     if length funArgVss < length funArgNames
         then 
@@ -98,8 +92,6 @@ forceRegisterAssignments assignments state env =
 
 forceRegisterAssignmentsInFoldF :: IO (S, E) -> FAssignment -> IO (S, E)
 forceRegisterAssignmentsInFoldF acc assignment = do
-    print "assignment"
-    print assignment
     (s, e) <- acc
     registerAssignment assignment s e
 
@@ -117,6 +109,7 @@ setPM t (FPatternMatchB x) vs state env = do
     let newEnv = registerLoc env x loc
     let newerState = putInLoc loc (t, vs) newState
     return (newerState, newEnv)
+setPM _ _ _ _ _ = undefined
 
 setPMInFoldF :: IO (S, E) -> (FType, FPatternMatch, FValueStatement) -> IO (S, E)
 setPMInFoldF acc (t, pm, vs) = do
@@ -132,13 +125,10 @@ forceGetTupleVSS _ _ _ = undefined
 
 forceRunFunApplication :: FFunApplication -> S -> E -> IO (FValueStatement, S, E)
 forceRunFunApplication (FFunApplicationB "print" [str]) state env = do
-    print "noooww"
-    print str
     interpretedArgMaybe <- interpretVS str env [] state []
     let (s, r)  = forceUnwrapMaybe interpretedArgMaybe
-    print "watch out, printing"
-    print ("hehe " ++ (show r))
-    return (FTValueStatement [], state, env)
+    print $ "hehe " ++ show r
+    return (FTValueStatement [], s, env)
 forceRunFunApplication _ _ _ = undefined
 
 forceUnwrapMaybe :: Maybe a -> a
@@ -153,16 +143,8 @@ registerArgs env state argNames vss =
 registerArgsInFoldF :: (E, S) -> (FPatternMatch, FValueStatement) -> (E, S)
 registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
     let
-        (newLoc, newState) = trace ("uuu" ++ str) $ getNewLoc s
+        (newLoc, newState) = getNewLoc s
         newEnv = registerLoc e str newLoc
         newerState = putInLoc newLoc (FTypeT [], vs) newState
     in (newEnv, newerState)
-
-dList :: (Show a, Show b) => [a] -> [b] -> [(a, b)]
-dList [] [] = []
-dList (x:xs) (y:ys) = (x, y):(dList xs ys)
-dList x y = trace ((show x) ++ (show y)) undefined
-
-tList :: [a] -> [b] -> [c] -> [(a, b, c)]
-tList [] [] [] = []
-tList (x:xs) (y:ys) (z:zs) = (x, y, z):(tList xs ys zs)
+registerArgsInFoldF _ _ = undefined

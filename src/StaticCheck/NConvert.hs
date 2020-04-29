@@ -1,7 +1,8 @@
 module StaticCheck.NConvert where
 
 import StaticCheck.Format
-import Debug.Trace
+import Util.State
+import Util.Env
 import Data.Map as M
 
 convertToNPF :: ProgramFormat -> NProgramFormat

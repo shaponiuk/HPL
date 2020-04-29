@@ -1,11 +1,6 @@
 module StaticCheck.Format where
-  
-import Data.Map
-import Debug.Trace
 
-data E = E {
-    names :: Map String [Int]
-} deriving (Show)
+import Data.Map
 
 data S = S {
   vars :: Map Int (FType, FValueStatement),
@@ -13,41 +8,9 @@ data S = S {
   functionArgs :: Map Int [FPatternMatch]
 } deriving (Show)
 
-getNewLoc :: S -> (Int, S)
-getNewLoc (S vars loc funArgs) = (loc + 1, S vars (loc + 1) funArgs)
-
-putInLoc :: Int -> (FType, FValueStatement) -> S -> S
-putInLoc loc thing (S vars newInt funArgs) =
-  S (insert loc thing vars) newInt funArgs
-
-stateLookup :: Int -> S -> (FType, FValueStatement)
-stateLookup loc (S varsMap _ _) = varsMap ! loc
-
-registerLoc :: E -> String -> Int -> E
-registerLoc (E names) name loc =
-  if member name names 
-    then
-      let
-        locs = names ! name
-      in E (insert name (loc:locs) names)
-    else 
-      E (insert name [loc] names)
-
-lookupLoc :: String -> E -> [Int]
-lookupLoc name (E names) = names ! name
-
-lookupFirstLoc :: String -> E -> Int
-lookupFirstLoc name env = head $ lookupLoc name env
-
-funArgNamesLookup :: S -> Int -> [FPatternMatch]
-funArgNamesLookup (S _ _ funArgs) loc =
-  if member loc funArgs
-    then funArgs ! loc
-    else []
-
-putArgNames :: S -> Int -> [FPatternMatch] -> S
-putArgNames (S vars newInt functionArgs) loc strs = 
-  S vars newInt (insert loc strs functionArgs)
+newtype E = E {
+    names :: Map String [Int]
+} deriving (Show)
 
 data NProgramFormat = NSIT [NFStruct] [FInterface] [FAlgType] S
   deriving (Show)
@@ -69,7 +32,7 @@ data NFStructBody =
 data NFNonSusFunDef = NFNonSusFunDef String [FPatternMatch] E
   deriving (Show)
 
-type FunRunT = S -> [FValueStatement] -> (IO (Maybe (S, FValueStatement)))
+type FunRunT = S -> [FValueStatement] -> IO (Maybe (S, FValueStatement))
 
 type FunRunQuickT = S -> IO (Maybe (S, FValueStatement))
 
