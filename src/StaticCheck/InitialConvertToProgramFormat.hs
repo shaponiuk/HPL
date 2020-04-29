@@ -100,8 +100,8 @@ unwrapIdent (Ident str) = str
 convertIdentList :: [Ident] -> [String]
 convertIdentList = map unwrapIdent
 
-convertBody :: StructBody -> FStructBody
-convertBody (StructBodyB l) = FStructBody $ map convertStructField l
+convertBody :: StructBody -> [FStructField]
+convertBody (StructBodyB l) = map convertStructField l
 
 convertStructField :: StructField -> FStructField
 convertStructField (StructFieldFunPr fd) = FStructFieldFunPrivate $ convertFunctionDef fd

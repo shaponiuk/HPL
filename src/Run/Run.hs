@@ -59,20 +59,28 @@ runVS (FForceValueStatement assignments vs) env state = do
     (newState, newEnv) <- forceRegisterAssignments assignments state env
     seq newState $ runVS vs newEnv newState
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
-runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
+runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env oldState = do
+    print ("eee" ++ funName ++ show funArgVss)
     let loc = lookupFirstLoc funName env
-    let (_, vs) = stateLookup loc state
-    let funArgNames = funArgNamesLookup state loc
+    let (_, vs) = stateLookup loc oldState
+    let funArgNames = funArgNamesLookup oldState loc
+    let (state, computedVss) = (oldState, funArgVss)
+    -- (state, computedVss) <- foldl (runVSInFoldF  env) (return (oldState, [])) funArgVss
+    print vs
+    print funArgNames
+    print funArgVss
+    print state
+    print env
     if length funArgVss < length funArgNames
         then 
-            return $ Just $ wrapFunction vs funArgNames funArgVss env state
+            return $ Just $ wrapFunction vs funArgNames computedVss env state
         else 
             if length funArgVss > length funArgNames
                 then do
-                    let updatedVS = appendFAVS vs funArgVss
+                    let updatedVS = appendFAVS vs computedVss
                     runVS updatedVS env state
                 else
-                    interpretVS vs env funArgNames state funArgVss
+                    interpretVS vs env funArgNames state computedVss
 runVS (FExpr (FEMul vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
@@ -86,7 +94,21 @@ runVS (FExpr (FEEQ vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
     return $ Just (newerState, FIValueStatement $ if i1 == i2 then 1 else 0)
+runVS (FExpr (FESub vs1 vs2)) env state = do
+    Just (newState, FIValueStatement i1) <- runVS vs1 env state
+    Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
+    return $ Just (newerState, FIValueStatement (i1 - i2))
+runVS (FExpr (FEAdd vs1 vs2)) env state = do
+    Just (newState, FIValueStatement i1) <- runVS vs1 env state
+    Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
+    return $ Just (newerState, FIValueStatement (i1 + i2))
 runVS vs _ _ = trace (show vs) undefined
+
+runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
+runVSInFoldF env acc vs = do
+    (s, vsl) <- acc
+    Just (ns, nvs) <- runVS vs env s
+    return (ns, nvs:vsl)
 
 appendFAVS :: FValueStatement -> [FValueStatement] -> FValueStatement
 appendFAVS (FAValueStatement (FFunApplicationB funName vss)) addVss = FAValueStatement $ FFunApplicationB funName (vss ++ addVss)
@@ -115,7 +137,7 @@ setPM (FTypeT types) (FPatternMatchT pmL) vs state env = do
     foldl setPMInFoldF (return (newState, newEnv)) $ tList types pmL vss
 setPM t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
-    let newEnv = registerLoc env x loc
+    let newEnv = registerLoc False env x loc
     let newerState = putInLoc loc (t, vs) newState
     return (newerState, newEnv)
 setPM _ _ _ _ _ = undefined
@@ -153,7 +175,7 @@ registerArgsInFoldF :: (E, S) -> (FPatternMatch, FValueStatement) -> (E, S)
 registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
     let
         (newLoc, newState) = getNewLoc s
-        newEnv = registerLoc e str newLoc
+        newEnv = registerLoc False e str newLoc
         newerState = putInLoc newLoc (FTypeT [], vs) newState
     in (newEnv, newerState)
 registerArgsInFoldF _ _ = undefined

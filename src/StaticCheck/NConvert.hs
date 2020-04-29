@@ -16,7 +16,7 @@ convertToNPF (SITList structs interfaces algTypes) =
         ) ([], getNewState) structs
 
 fstructConvert :: S -> FStruct -> (NFStruct, S)
-fstructConvert s (FStructB name (FStructBody body)) =
+fstructConvert s (FStructB name body) =
     (NFStruct name [] (
         NFStructBody
         []
@@ -47,7 +47,7 @@ makeInStructEnv env fields state =
     Prelude.foldl (\(e, s) (FStructFieldFunPublic (NonSusFFunctionDef _ name _ _)) ->
         let
             (loc, newState) = getNewLoc s
-            newEnv = registerLoc e name loc
+            newEnv = registerLoc True e name loc
         in (newEnv, newState)
     ) (env, state) fields
 

@@ -4,14 +4,15 @@ import Data.Map
 import StaticCheck.Format
 import Debug.Trace
 
-registerLoc :: E -> String -> Int -> E
-registerLoc (E nameMap) name loc =
-  if member name nameMap
+-- bool - only if it is an instance of a pm function
+registerLoc :: Bool -> E -> String -> Int -> E
+registerLoc b (E nameMap) name loc =
+  if b && member name nameMap
     then
       let
         locs = nameMap ! name
       in E (insert name (loc:locs) nameMap)
-    else 
+    else
       E (insert name [loc] nameMap)
 
 lookupLoc :: String -> E -> [Int]

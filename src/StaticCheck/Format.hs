@@ -45,11 +45,11 @@ data NFRefDef = TODO2
 data ProgramFormat = SITList [FStruct] [FInterface] [FAlgType]
   deriving (Eq,Ord,Show)
 
-data FStruct = FStructB String FStructBody | FStructI String [String] FStructBody
+data FStruct = FStructB String [FStructField] | FStructI String [String] [FStructField]
   deriving (Eq,Ord,Show)
 
 convertStringToPM :: String -> FPatternMatch
-convertStringToPM str = FPatternMatchB str
+convertStringToPM = FPatternMatchB
 
 convertStringsToPMs :: [String] -> [FPatternMatch]
 convertStringsToPMs = Prelude.map convertStringToPM
@@ -60,9 +60,6 @@ data FInterface =
   deriving (Eq,Ord,Show)
  
 data FAlgType = FAlgType String [String] [FAlgTypeVal]
-  deriving (Eq,Ord,Show)
-
-data FStructBody = FStructBody [FStructField]
   deriving (Eq,Ord,Show)
 
 data FStructField = 
