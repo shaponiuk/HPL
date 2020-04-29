@@ -21,6 +21,7 @@ getMainFunction (NFStruct _ _ (NFStructBody _ l _ _ _ _)) =
 
 runFunction :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> IO (S, FValueStatement)
 runFunction p@(name, args, env) vss state = do
+    print ("runFunction" ++ name)
     let locs = lookupLoc name env in tryLocs p vss state locs
 
 tryLocs :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> [Int] -> IO (S, FValueStatement)
@@ -45,9 +46,18 @@ runMaybeIOFunInt (Just x) = do
     return x
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> FunRunT
-interpretVS vs env argNames s vss =
-    let (newEnv, newState) = registerArgs env s argNames vss in 
-        runVS vs newEnv newState
+interpretVS vs env argNames s vss = do
+    print vs
+    --print env
+    print argNames
+    --print s
+    print vss
+    if length vss < length argNames
+        then
+            return $ Just $ wrapFunction vs argNames vss env s
+        else
+            let (newEnv, newState) = registerArgs env s argNames vss in 
+                runVS vs newEnv newState
 
 runVS :: FValueStatement -> E -> FunRunQuickT
 runVS (FForceValueStatement assignments vs) env state = do
@@ -58,15 +68,29 @@ runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
     let loc = lookupFirstLoc funName env
     let (t, vs) = stateLookup loc state
     let funArgNames = funArgNamesLookup state loc
-    if length funArgVss < length  funArgNames
+    if length funArgVss < length funArgNames
         then 
             -- gets new locs as ids and wraps the function in lambdas so that (number of args -- lambda wraps) == (length funArgVss)
+            return $ Just $ wrapFunction vs funArgNames funArgVss env state
         else 
-            interpretVS vs env funArgNames state funArgVss
+            if length funArgVss > length funArgNames
+                then do
+                    print "heeereee"
+                    print funArgNames
+                    print funArgVss
+                    print vs
+                    -- here need to do some trickery to swap eg. the x for an original function and interpretVS it again recursively, until it is done right
+                    interpretVS vs env funArgNames state funArgVss
+                else
+                    interpretVS vs env funArgNames state funArgVss
 runVS (FExpr (FEMul vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
     return $ Just (newerState, FIValueStatement (i1 * i2))
+runVS _ _ _ = undefined
+
+wrapFunction :: FValueStatement -> [FPatternMatch] -> [FValueStatement] -> E -> S -> (S, FValueStatement)
+wrapFunction = undefined
 
 forceRegisterAssignments :: [FAssignment] -> S -> E -> IO (S, E)
 forceRegisterAssignments assignments state env =
@@ -74,6 +98,8 @@ forceRegisterAssignments assignments state env =
 
 forceRegisterAssignmentsInFoldF :: IO (S, E) -> FAssignment -> IO (S, E)
 forceRegisterAssignmentsInFoldF acc assignment = do
+    print "assignment"
+    print assignment
     (s, e) <- acc
     registerAssignment assignment s e
 
@@ -106,6 +132,8 @@ forceGetTupleVSS _ _ _ = undefined
 
 forceRunFunApplication :: FFunApplication -> S -> E -> IO (FValueStatement, S, E)
 forceRunFunApplication (FFunApplicationB "print" [str]) state env = do
+    print "noooww"
+    print str
     interpretedArgMaybe <- interpretVS str env [] state []
     let (s, r)  = forceUnwrapMaybe interpretedArgMaybe
     print "watch out, printing"
@@ -119,7 +147,7 @@ forceUnwrapMaybe Nothing = undefined
 
 registerArgs :: E -> S -> [FPatternMatch] -> [FValueStatement] -> (E, S)
 registerArgs env state argNames vss = 
-    trace ("\nresult " ++ (show result)) result where
+    result where
         result = foldl registerArgsInFoldF (env, state) $ dList argNames vss
 
 registerArgsInFoldF :: (E, S) -> (FPatternMatch, FValueStatement) -> (E, S)
@@ -130,9 +158,10 @@ registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
         newerState = putInLoc newLoc (FTypeT [], vs) newState
     in (newEnv, newerState)
 
-dList :: [a] -> [b] -> [(a, b)]
+dList :: (Show a, Show b) => [a] -> [b] -> [(a, b)]
 dList [] [] = []
 dList (x:xs) (y:ys) = (x, y):(dList xs ys)
+dList x y = trace ((show x) ++ (show y)) undefined
 
 tList :: [a] -> [b] -> [c] -> [(a, b, c)]
 tList [] [] [] = []
