@@ -4,9 +4,10 @@ import StaticCheck.Format
 import Util.Util
 import Util.Env
 import Util.State
+import Debug.Trace
 
 run :: NProgramFormat -> IO ()
-run (NSIT structs interfaces algTypes state) = do
+run (NSIT structs _ algTypes state) = do
     let mainStruct = getMainStruct structs
     let (mainName, mainArgs, env) = getMainFunction mainStruct
     s <- runFunction (mainName, mainArgs, env) [] state
@@ -27,7 +28,7 @@ tryLocs :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> [Int] -> IO
 tryLocs _ _ _ [] = fail "EEE"
 tryLocs (_, _, env) _ state (loc:_) =
     let
-        (t, vs) = stateLookup loc state
+        (_, vs) = stateLookup loc state
     in let
         maybeIOFun = interpretVS vs env [] state []
     in runMaybeIOFun maybeIOFun
@@ -45,7 +46,7 @@ runMaybeIOFunInt (Just x) = do
     return x
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> FunRunT
-interpretVS vs env argNames s vss = do
+interpretVS vs env argNames s vss =
     if length vss < length argNames
         then
             return $ Just $ wrapFunction vs argNames vss env s
@@ -64,18 +65,11 @@ runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
     let funArgNames = funArgNamesLookup state loc
     if length funArgVss < length funArgNames
         then 
-            -- gets new locs as ids and wraps the function in lambdas so that (number of args -- lambda wraps) == (length funArgVss)
             return $ Just $ wrapFunction vs funArgNames funArgVss env state
         else 
             if length funArgVss > length funArgNames
                 then do
-                    print "heeereee"
-                    print funArgNames
-                    print funArgVss
-                    print vs
                     let updatedVS = appendFAVS vs funArgVss
-                    -- here need to do some trickery to swap eg. the x for an original function and interpretVS it again recursively, until it is done right
-                    -- interpretVS vs env funArgNamesNew state funArgVss
                     runVS updatedVS env state
                 else
                     interpretVS vs env funArgNames state funArgVss
@@ -83,7 +77,16 @@ runVS (FExpr (FEMul vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
     return $ Just (newerState, FIValueStatement (i1 * i2))
-runVS _ _ _ = undefined
+runVS (FIfValueStatement condvs res1vs res2vs) env state = do
+    Just (newState, FIValueStatement condVal) <- runVS condvs env state
+    if condVal /= 0
+        then runVS res1vs env newState
+        else runVS res2vs env newState
+runVS (FExpr (FEEQ vs1 vs2)) env state = do
+    Just (newState, FIValueStatement i1) <- runVS vs1 env state
+    Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
+    return $ Just (newerState, FIValueStatement $ if i1 == i2 then 1 else 0)
+runVS vs _ _ = trace (show vs) undefined
 
 appendFAVS :: FValueStatement -> [FValueStatement] -> FValueStatement
 appendFAVS (FAValueStatement (FFunApplicationB funName vss)) addVss = FAValueStatement $ FFunApplicationB funName (vss ++ addVss)

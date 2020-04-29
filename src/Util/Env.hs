@@ -2,6 +2,7 @@ module Util.Env where
 
 import Data.Map
 import StaticCheck.Format
+import Debug.Trace
 
 registerLoc :: E -> String -> Int -> E
 registerLoc (E nameMap) name loc =
