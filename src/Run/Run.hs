@@ -73,8 +73,10 @@ runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env state = do
                     print funArgNames
                     print funArgVss
                     print vs
+                    let updatedVS = appendFAVS vs funArgVss
                     -- here need to do some trickery to swap eg. the x for an original function and interpretVS it again recursively, until it is done right
-                    interpretVS vs env funArgNames state funArgVss
+                    -- interpretVS vs env funArgNamesNew state funArgVss
+                    runVS updatedVS env state
                 else
                     interpretVS vs env funArgNames state funArgVss
 runVS (FExpr (FEMul vs1 vs2)) env state = do
@@ -82,6 +84,10 @@ runVS (FExpr (FEMul vs1 vs2)) env state = do
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
     return $ Just (newerState, FIValueStatement (i1 * i2))
 runVS _ _ _ = undefined
+
+appendFAVS :: FValueStatement -> [FValueStatement] -> FValueStatement
+appendFAVS (FAValueStatement (FFunApplicationB funName vss)) addVss = FAValueStatement $ FFunApplicationB funName (vss ++ addVss)
+appendFAVS _ _ = undefined
 
 wrapFunction :: FValueStatement -> [FPatternMatch] -> [FValueStatement] -> E -> S -> (S, FValueStatement)
 wrapFunction = undefined
