@@ -55,8 +55,8 @@ convertStringsToPMs :: [String] -> [FPatternMatch]
 convertStringsToPMs = Prelude.map convertStringToPM
 
 data FInterface = 
-    FInterfaceB String FInterfaceBody 
-  | FInterfaceI String [String] FInterfaceBody
+    FInterfaceB String [FFunOrRefDecl] 
+  | FInterfaceI String [String] [FFunOrRefDecl]
   deriving (Eq,Ord,Show)
  
 data FAlgType = FAlgType String [String] [FAlgTypeVal]
@@ -106,9 +106,7 @@ data FValueStatement =
 data FFunApplication =
     FSFunApplication String FFunApplication
   | FFunApplicationB String [FValueStatement]
-  deriving (Eq,Ord,Show)
-
-data FInterfaceBody = FInterfaceBody [FFunOrRefDecl]
+  | FFunApplicationR [Int] [FValueStatement]
   deriving (Eq,Ord,Show)
 
 data FFunOrRefDecl =

@@ -46,7 +46,8 @@ runMaybeIOFunInt (Just x) = do
     return x
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> FunRunT
-interpretVS vs env argNames s vss =
+interpretVS vs env argNames s vss = do
+    -- print ("aaaa")
     if length vss < length argNames
         then
             return $ Just $ wrapFunction vs argNames vss env s
@@ -60,17 +61,11 @@ runVS (FForceValueStatement assignments vs) env state = do
     seq newState $ runVS vs newEnv newState
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
 runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env oldState = do
-    print ("eee" ++ funName ++ show funArgVss)
     let loc = lookupFirstLoc funName env
     let (_, vs) = stateLookup loc oldState
     let funArgNames = funArgNamesLookup oldState loc
-    let (state, computedVss) = (oldState, funArgVss)
-    -- (state, computedVss) <- foldl (runVSInFoldF  env) (return (oldState, [])) funArgVss
-    print vs
-    print funArgNames
-    print funArgVss
-    print state
-    print env
+    (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
+    let computedVss = reverse almostComputedVss
     if length funArgVss < length funArgNames
         then 
             return $ Just $ wrapFunction vs funArgNames computedVss env state
@@ -102,13 +97,30 @@ runVS (FExpr (FEAdd vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
     return $ Just (newerState, FIValueStatement (i1 + i2))
+runVS (FAValueStatement (FFunApplicationR loc args)) env state = do
+    let (_, vs) = stateLookup loc state
+    let argNames = funArgNamesLookup state loc
+    interpretVS vs env argNames state args
+runVS vs@(FLitStrValueStatement str) _ s = return $ Just (s, vs)
+
 runVS vs _ _ = trace (show vs) undefined
 
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runVSInFoldF env acc vs = do
     (s, vsl) <- acc
-    Just (ns, nvs) <- runVS vs env s
-    return (ns, nvs:vsl)
+    -- Just (ns, nvs) <- runVS vs env s
+    let nvs = convertBApplicationsToRApplications vs env
+    return (s, nvs:vsl)
+
+convertBApplicationsToRApplications :: FValueStatement -> E -> FValueStatement
+convertBApplicationsToRApplications (FExpr (FESub vs1 vs2)) e =
+    FExpr $ FESub nvs1 nvs2 where
+        nvs1 = convertBApplicationsToRApplications vs1 e
+        nvs2 = convertBApplicationsToRApplications vs2 e
+convertBApplicationsToRApplications (FAValueStatement (FFunApplicationB funName funArgs)) e =
+    FAValueStatement $ FFunApplicationR loc funArgs where
+        loc = lookupFirstLoc funName e
+convertBApplicationsToRApplications a@(FIValueStatement i) _ = a
 
 appendFAVS :: FValueStatement -> [FValueStatement] -> FValueStatement
 appendFAVS (FAValueStatement (FFunApplicationB funName vss)) addVss = FAValueStatement $ FFunApplicationB funName (vss ++ addVss)
@@ -160,7 +172,13 @@ forceRunFunApplication (FFunApplicationB "print" [str]) state env = do
     let (s, r)  = forceUnwrapMaybe interpretedArgMaybe
     print $ "hehe " ++ show r
     return (FTValueStatement [], s, env)
-forceRunFunApplication _ _ _ = undefined
+forceRunFunApplication a@(FFunApplicationB name args) state env = do
+    Just (s, vs) <- runVS (FAValueStatement a) env state
+    return (vs, s, env)
+forceRunFunApplication a@(FFunApplicationR loc [args]) state env = do
+    Just (s, vs) <- runVS (FAValueStatement a) env state
+    return (vs, s, env)
+forceRunFunApplication a _ _ = trace (show a) undefined
 
 forceUnwrapMaybe :: Maybe a -> a
 forceUnwrapMaybe (Just x) = x

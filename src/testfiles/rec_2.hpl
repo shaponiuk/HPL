@@ -1,0 +1,9 @@
+struct Main {
+    fun (Int ()) e () = e ();
+    fun (Int () -> (Int () -> Int ())) sil (x, y) = if x () == 0 then 1 else x () * sil (x () - 1, y ());
+
+    fun (() -> Int ()) main () =
+        force let
+            () :: () = print (sil (10, e ()));
+        in 0;
+};

@@ -61,8 +61,8 @@ convertInterface (InterfaceB iid body) =
 convertInterface (InterfaceBInh iid iidList body) = 
   FInterfaceI (convertInterfaceId iid) (convertInterfaceIdList iidList) (convertInterfaceBody body)
 
-convertInterfaceBody :: InterfaceBody -> FInterfaceBody
-convertInterfaceBody (InterfaceBodyB l) = FInterfaceBody $ map convertFunOrRefDecl l
+convertInterfaceBody :: InterfaceBody -> [FFunOrRefDecl]
+convertInterfaceBody (InterfaceBodyB l) = map convertFunOrRefDecl l
 
 convertFunOrRefDecl :: FunOrRefDecl -> FFunOrRefDecl
 convertFunOrRefDecl (FunOrRefDeclF t i) = FFunOrRefDeclF (convertType t) (unwrapIdent i)

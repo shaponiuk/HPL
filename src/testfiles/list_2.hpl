@@ -1,0 +1,7 @@
+struct Main {
+    fun (Int ()) main () =
+        force let
+            List (Int ()) :: list = make_list();
+            () :: () = print (list);
+        in 0;
+};
