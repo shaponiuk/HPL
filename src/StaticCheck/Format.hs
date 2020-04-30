@@ -12,7 +12,12 @@ newtype E = E {
     names :: Map String [Int]
 } deriving (Show)
 
-data NProgramFormat = NSIT [NFStruct] [FInterface] [FAlgType] S
+-- constructor name -> arity
+newtype ATStore = ATStore {
+  store :: Map String Int
+}
+
+data NProgramFormat = NSIT [NFStruct] [FInterface] ATStore S
   deriving (Show)
 
 data NFStruct = NFStruct String [String] NFStructBody
