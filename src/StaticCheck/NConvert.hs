@@ -7,13 +7,17 @@ import Data.Map as M
 
 convertToNPF :: ProgramFormat -> NProgramFormat
 convertToNPF (SITList structs interfaces algTypes) =
-    NSIT nfStructs interfaces algTypes state where
+    NSIT nfStructs new_state where
     (nfStructs, state) = 
         Prelude.foldl (\(nfstrcts, st) strct ->
             let 
                 (nfstrct, newState) = fstructConvert st strct
             in (nfstrct:nfstrcts, newState)
         ) ([], getNewState) structs
+    new_state = convertAlgTypes state algTypes
+    
+convertAlgTypes :: S -> [FAlgType] -> S
+convertAlgTypes = undefined
 
 fstructConvert :: S -> FStruct -> (NFStruct, S)
 fstructConvert s (FStructB name body) =
@@ -29,7 +33,7 @@ fstructConvert s (FStructB name body) =
     (publicNonSus, state) = convertPublicNonSusFuns body s
 
 getNewState :: S
-getNewState = S M.empty 0 M.empty
+getNewState = S M.empty 0 M.empty M.empty
 
 getNewEnv :: E
 getNewEnv = E M.empty

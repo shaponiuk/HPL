@@ -61,7 +61,7 @@ runVS (FForceValueStatement assignments vs) env state = do
     seq newState $ runVS vs newEnv newState
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
 runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env oldState = do
-    let loc = lookupFirstLoc funName env
+    let locs = lookupLoc funName env
     let (_, vs) = stateLookup loc oldState
     let funArgNames = funArgNamesLookup oldState loc
     (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
@@ -118,8 +118,8 @@ convertBApplicationsToRApplications (FExpr (FESub vs1 vs2)) e =
         nvs1 = convertBApplicationsToRApplications vs1 e
         nvs2 = convertBApplicationsToRApplications vs2 e
 convertBApplicationsToRApplications (FAValueStatement (FFunApplicationB funName funArgs)) e =
-    FAValueStatement $ FFunApplicationR loc funArgs where
-        loc = lookupFirstLoc funName e
+    FAValueStatement $ FFunApplicationR locs funArgs where
+        locs = lookupLoc funName e
 convertBApplicationsToRApplications a@(FIValueStatement i) _ = a
 
 appendFAVS :: FValueStatement -> [FValueStatement] -> FValueStatement
@@ -150,7 +150,7 @@ setPM (FTypeT types) (FPatternMatchT pmL) vs state env = do
 setPM t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
-    let newerState = putInLoc loc (t, vs) newState
+    let newerState = putInLoc loc (newEnv, t, vs) newState
     return (newerState, newEnv)
 setPM _ _ _ _ _ = undefined
 
@@ -194,6 +194,6 @@ registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
     let
         (newLoc, newState) = getNewLoc s
         newEnv = registerLoc False e str newLoc
-        newerState = putInLoc newLoc (FTypeT [], vs) newState
+        newerState = putInLoc newLoc (newEnv, FTypeT [], vs) newState
     in (newEnv, newerState)
 registerArgsInFoldF _ _ = undefined
