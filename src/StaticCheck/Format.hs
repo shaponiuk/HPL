@@ -5,19 +5,16 @@ import Data.Map
 data S = S {
   vars :: Map Int (E, FType, FValueStatement),
   newInt :: Int,
-  functionArgs :: Map Int [FPatternMatch]
+  functionArgs :: Map Int [FPatternMatch],
+  atStore :: Map String Int
+-- constructor name -> arity
 } deriving (Show)
 
 newtype E = E {
     names :: Map String [Int]
 } deriving (Show)
 
--- constructor name -> arity
-newtype ATStore = ATStore {
-  store :: Map String Int
-}
-
-data NProgramFormat = NSIT [NFStruct] [FInterface] ATStore S
+data NProgramFormat = NSIT [NFStruct] S
   deriving (Show)
 
 data NFStruct = NFStruct String [String] NFStructBody
