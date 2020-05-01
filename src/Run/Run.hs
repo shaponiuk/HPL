@@ -61,8 +61,6 @@ runVS (FForceValueStatement assignments vs) env state = do
     seq newState $ runVS vs newEnv newState
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
 runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env oldState = do
-    print "hereFA"
-    print funName
     let firstLoc = lookupFirstLoc funName env
     let locs = lookupLoc funName env
     let funArgNames = funArgNamesLookup oldState firstLoc
@@ -96,8 +94,6 @@ runVS (FExpr (FEAdd vs1 vs2)) env state = do
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
     return $ Just (newerState, FIValueStatement (i1 + i2))
 runVS (FAValueStatement (FFunApplicationR locs args)) _ state = do
-    print "hereFC"
-    print locs
     tryRunVSFunApplR locs args state
 runVS vs@(FLitStrValueStatement _) _ s = return $ Just (s, vs)
 runVS (FCValueStatement name vss) e s = do
@@ -119,9 +115,6 @@ tryRunVSFunApplR [] _ _ = undefined
 tryRunVSFunApplR (x:xs) args state = do
     let (env, _, vs) = stateLookup x state
     let argNames = funArgNamesLookup state x
-    print "here"
-    print argNames
-    print args
     if fitPatternMatchs argNames args
         then do
             interpretVS vs env argNames state args
@@ -136,8 +129,8 @@ fitPatternMatch (FPatternMatchI i1, FIValueStatement i2) = i1 == i2
 fitPatternMatch a@(FPatternMatchC (FPatternMatchB name1) pms, FCValueStatement name2 vss) =
     trace (show a) $ name1 == name2 && fitPatternMatchs pms vss
 fitPatternMatch (FPatternMatchB _, _) = True
-fitPatternMatch (FPatternMatchC (FPatternMatchB name1) pms, FAValueStatement (FFunApplicationR loc argVss)) = -- do one step evaluation and try to fit again
-fitPatternMatch a = trace ("fitPatternMatch undefined " ++ show a) undefined
+-- fitPatternMatch (FPatternMatchC (FPatternMatchB name1) pms, FAValueStatement (FFunApplicationR loc argVss)) = -- do one step evaluation and try to fit again
+-- fitPatternMatch a = trace ("fitPatternMatch undefined " ++ show a) undefined
 
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runVSInFoldF env acc vs = do
@@ -250,6 +243,6 @@ registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
 registerArgsInFoldF acc (FPatternMatchI _, _) = acc
 registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FCValueStatement _ vss) = 
     registerArgs e s pms vss
-registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FAValueStatement (FFunApplicationR loc argVss)) = do
+-- registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FAValueStatement (FFunApplicationR loc argVss)) = do
     -- one step evaluation, do every step until registerArgs matches
 registerArgsInFoldF _ el = trace ("registerArgsInFoldF " ++ show el) undefined
