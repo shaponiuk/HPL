@@ -24,17 +24,17 @@ getMainFunction (NFStruct _ _ (NFStructBody _ l _ _ _ _)) =
     (\(NFNonSusFunDef name args env) -> (name, args, env)) $ head $ filter (\(NFNonSusFunDef name _ _) -> name == "main") l
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> Int -> FunRunT
-interpretVS vs env argNames loc s vss = do
-    Just (ns, nvs) <- if length vss < length argNames
+interpretVS vs env argNames loc s vss =
+    if length vss < length argNames
         then
             let (s_, vs) = wrapFunction vs argNames vss env s in
                 runVS vs env s_
-        else
-            let (newEnv, newState) = registerArgs env s argNames vss in 
+        else do
+            Just (ns, nvs) <- let (newEnv, newState) = registerArgs env s argNames vss in 
                 runVS vs newEnv newState
-    let (b, t, e, _) = stateLookup loc ns
-    let nns = putInLoc loc (b, t, e, nvs) ns
-    return $ Just (nns, nvs)
+            let (b, t, e, _) = stateLookup loc ns
+            let nns = putInLoc loc (b, t, e, nvs) ns
+            return $ Just (nns, nvs)
 
 runVS :: FValueStatement -> E -> FunRunQuickT
 runVS (FForceValueStatement assignments vs) env state = do
@@ -56,7 +56,14 @@ runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env oldState = do
                     runVS updatedVS e state
                 else
                     tryRunVSFunApplR locs computedVss state
-        else interpretVS vs env funArgNames firstLoc oldState funArgVss
+        else if length funArgVss > length funArgNames
+            then do
+                (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
+                let computedVss = reverse almostComputedVss
+                let (e, updatedVS) = forceUnwrapMaybe $ appendFAVS locs computedVss state
+                runVS updatedVS e state
+            else
+                interpretVS vs env funArgNames firstLoc oldState funArgVss
 runVS (FExpr (FEMul vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
