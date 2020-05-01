@@ -6,8 +6,7 @@ import Data.Map
 data S = S {
   vars :: Map Int (Bool, E, FType, FValueStatement),
   newInt :: Int,
-  functionArgs :: Map Int [FPatternMatch],
-  atStore :: Map String Int
+  functionArgs :: Map Int [FPatternMatch]
 -- constructor name -> arity
 } deriving (Show)
 

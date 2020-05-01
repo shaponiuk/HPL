@@ -15,8 +15,6 @@ run (NSIT structs state) = do
     let nnstate = putInLoc nloc (False, nenv, t, vs) nstate
     Just (s, vsf) <- interpretVS vs nenv [] nloc nnstate []
     print "Finish"
-    print s
-    print vsf
 
 getMainStruct :: [NFStruct] -> NFStruct
 getMainStruct = head . filter (\(NFStruct name _ _) -> name == "Main")
@@ -152,17 +150,16 @@ fitPatternMatchs s e pms vss = all (fitPatternMatch s e) $ dList pms vss
 fitPatternMatch :: S -> E -> (FPatternMatch, FValueStatement) -> Bool
 fitPatternMatch _ _ (FPatternMatchI i1, FIValueStatement i2) = i1 == i2
 fitPatternMatch s e a@(FPatternMatchC (FPatternMatchB name1) pms, FCValueStatement name2 vss) =
-    trace (show a) $ name1 == name2 && fitPatternMatchs s e pms vss
+    name1 == name2 && fitPatternMatchs s e pms vss
 fitPatternMatch _ _ (FPatternMatchB _, _) = True
 fitPatternMatch s e (FPatternMatchC (FPatternMatchB name1) pms, FAValueStatement (FFunApplicationR loc argVss)) =
     fitPatternMatch ns ne (FPatternMatchC (FPatternMatchB name1) pms, nvs) where
         (ns, ne, nvs) = oneStepEvaluation s e $ FAValueStatement (FFunApplicationR loc argVss)
--- fitPatternMatch a = trace ("fitPatternMatch undefined " ++ show a) undefined
+fitPatternMatch _ _ a = trace ("fitPatternMatch undefined " ++ show a) undefined
 
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runVSInFoldF env acc vs = do
     (s, vsl) <- acc
-    -- Just (ns, nvs) <- runVS vs env s
     let nvs = convertBApplicationsToRApplications vs env
     return (s, nvs:vsl)
 
@@ -179,7 +176,7 @@ convertBApplicationsToRApplications (FCValueStatement name vss) env =
     FCValueStatement name $ map (`convertBApplicationsToRApplications` env) vss
 convertBApplicationsToRApplications (FTValueStatement vss) env =
     FTValueStatement $ map (`convertBApplicationsToRApplications` env) vss
-convertBApplicationsToRApplications a b = trace (show a) undefined
+convertBApplicationsToRApplications a b = trace ("convertBApplicationsToRApplications " ++ show a) undefined
 
 appendFAVS :: [Int] -> [FValueStatement] -> S -> Maybe (E, FValueStatement)
 appendFAVS [] vss state = undefined -- todo: error
@@ -257,7 +254,7 @@ forceRunFunApplication a@(FFunApplicationB name args) state env = do
 forceRunFunApplication a@(FFunApplicationR loc [args]) state env = do
     Just (s, vs) <- runVS (FAValueStatement a) env state
     return (vs, s, env)
-forceRunFunApplication a _ _ = trace ("elelelele " ++ show a) undefined
+forceRunFunApplication a _ _ = trace ("forceRunFunApplication " ++ show a) undefined
 
 forceUnwrapMaybe :: Maybe a -> a
 forceUnwrapMaybe (Just x) = x

@@ -14,21 +14,8 @@ convertToNPF (SITList structs interfaces algTypes) =
             let 
                 (nfstrct, newState) = fstructConvert st strct
             in (nfstrct:nfstrcts, newState)
-        ) ([], state) structs
-    state = convertAlgTypes getNewState algTypes
+        ) ([], getNewState) structs
     
-convertAlgTypes :: S -> [FAlgType] -> S
-convertAlgTypes = Prelude.foldl registerAlgType
-
-registerAlgType :: S -> FAlgType -> S
-registerAlgType s (FAlgType _ _ fAlgTypeVals) = registerFAlgTypeVals s fAlgTypeVals
-
-registerFAlgTypeVals :: S -> [FAlgTypeVal] -> S
-registerFAlgTypeVals = Prelude.foldl registerFAlgTypeVal
-
-registerFAlgTypeVal :: S -> FAlgTypeVal -> S
-registerFAlgTypeVal s (FAlgTypeVal name (FTypeT types)) = addTypeConstructor name (length types) s
-
 fstructConvert :: S -> FStruct -> (NFStruct, S)
 fstructConvert s (FStructB name body) =
     (NFStruct name [] (
@@ -43,7 +30,7 @@ fstructConvert s (FStructB name body) =
     (publicNonSus, state) = convertPublicNonSusFuns body s
 
 getNewState :: S
-getNewState = S M.empty 0 M.empty M.empty
+getNewState = S M.empty 0 M.empty
 
 getNewEnv :: E
 getNewEnv = E M.empty
@@ -53,7 +40,7 @@ convertPublicNonSusFuns structFields state =
     let
         publicFields = extractPublicNonSusFunFields structFields
     in let
-        (inStructEnv, newState) = trace ("******************" ++ show publicFields) $ makeInStructEnv getNewEnv publicFields state
+        (inStructEnv, newState) = makeInStructEnv getNewEnv publicFields state
     in convertPublicNonSusFunFields publicFields inStructEnv newState
 
 makeInStructEnv :: E -> [FStructField] -> S -> (E, S)
