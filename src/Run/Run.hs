@@ -80,7 +80,7 @@ runVS (FExpr (FEAdd vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
     return $ Just (newerState, FIValueStatement (i1 + i2))
-runVS (FAValueStatement (FFunApplicationR locs args)) _ state = do
+runVS (FAValueStatement (FFunApplicationR locs args)) _ state =
     tryRunVSFunApplR locs args state
 runVS vs@(FLitStrValueStatement _) _ s = return $ Just (s, vs)
 runVS (FCValueStatement name vss) e s = do
@@ -91,6 +91,9 @@ runVS (FTValueStatement xss) e s = do
     return $ Just (ns, FTValueStatement xssc)
 
 runVS vs _ _ = trace ("??? " ++ show vs) undefined
+
+oneStepEvaluation :: FValueStatement -> E -> S -> FValueStatement
+oneStepEvaluation = undefined
 
 runTVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runTVSInFoldF env acc vs = do
@@ -186,7 +189,11 @@ registerAssignment _ _ _ = undefined
 
 setPM :: FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPM (FTypeT types) (FPatternMatchT pmL) vs state env = do
+    print "heeeerrreeeee"
     (vss, newState, newEnv) <- forceGetTupleVSS vs state env
+    print "heeeeerrrreeeee"
+    print pmL
+    print vss
     foldl setPMInFoldF (return (newState, newEnv)) $ tList types pmL vss
 setPM t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
@@ -200,10 +207,18 @@ setPMInFoldF acc (t, pm, vs) = do
     (s, e) <- acc
     setPM t pm vs s e
 
+unwrapSingleTuples :: FValueStatement -> [FValueStatement]
+unwrapSingleTuples (FTValueStatement [vs]) = unwrapSingleTuples vs
+unwrapSingleTuples (FTValueStatement vss) = vss
+unwrapSingleTuples a = [a]
+
 forceGetTupleVSS :: FValueStatement -> S -> E -> IO ([FValueStatement], S, E)
 forceGetTupleVSS a@(FTValueStatement vss) s e = do
-    Just (ns, FTValueStatement nvss) <- runVS a e s
-    return (nvss, ns, e)
+    Just (_, e_) <- runVS a e s
+    print "watch_out"
+    print e_
+    Just (ns, tvs) <- runVS a e s
+    return (unwrapSingleTuples tvs, ns, e)
 forceGetTupleVSS (FAValueStatement funApplication) state env = do
     (vs, s, e) <- forceRunFunApplication funApplication state env
     forceGetTupleVSS vs s e
