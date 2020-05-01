@@ -92,8 +92,28 @@ runVS (FTValueStatement xss) e s = do
 
 runVS vs _ _ = trace ("??? " ++ show vs) undefined
 
-oneStepEvaluation :: FValueStatement -> E -> S -> FValueStatement
-oneStepEvaluation = undefined
+oneStepEvaluation :: S -> E -> FValueStatement -> (S, E, FValueStatement)
+oneStepEvaluation s e (FAValueStatement (FFunApplicationR locs argVss)) = oneStepTryRunVSFunApplR locs argVss s
+oneStepEvaluation s e vs = trace (show s ++ show vs) undefined
+
+oneStepTryRunVSFunApplR :: [Int] -> [FValueStatement] -> S -> (S, E, FValueStatement)
+    -- todo: here might fail
+oneStepTryRunVSFunApplR [] _ _ = undefined
+-- todo: hard to find the function name, probably unneeded, only one at the time
+oneStepTryRunVSFunApplR (x:xs) args state = do
+    let (ifFunction, env, _, vs) = stateLookup x state
+    let argNames = funArgNamesLookup state x
+    if fitPatternMatchs state env argNames args
+        then
+            if length args > length argNames
+                then do
+                    let (e, updatedVS) = forceUnwrapMaybe $ appendFAVS [x] args state
+                    (state, e, updatedVS)
+                else
+                    let (newEnv, newState) = registerArgs env state argNames args in 
+                        (newState, newEnv, vs)
+        else 
+            oneStepTryRunVSFunApplR xs args state
 
 runTVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runTVSInFoldF env acc vs = do
@@ -114,22 +134,29 @@ tryRunVSFunApplR [] _ _ = undefined
 tryRunVSFunApplR (x:xs) args state = do
     let (ifFunction, env, _, vs) = stateLookup x state
     let argNames = funArgNamesLookup state x
-    if fitPatternMatchs argNames args
+    if fitPatternMatchs state env argNames args
         then
-            let (newEnv, newState) = registerArgs env state argNames args in 
-                runVS vs newEnv newState
+            if length args > length argNames
+                then do
+                    let (e, updatedVS) = forceUnwrapMaybe $ appendFAVS [x] args state
+                    runVS updatedVS e state
+                else
+                    let (newEnv, newState) = registerArgs env state argNames args in 
+                        runVS vs newEnv newState
         else 
             tryRunVSFunApplR xs args state
 
-fitPatternMatchs :: [FPatternMatch] -> [FValueStatement] -> Bool
-fitPatternMatchs pms vss = all fitPatternMatch $ dList pms vss
+fitPatternMatchs :: S -> E -> [FPatternMatch] -> [FValueStatement] -> Bool
+fitPatternMatchs s e pms vss = all (fitPatternMatch s e) $ dList pms vss
 
-fitPatternMatch :: (FPatternMatch, FValueStatement) -> Bool
-fitPatternMatch (FPatternMatchI i1, FIValueStatement i2) = i1 == i2
-fitPatternMatch a@(FPatternMatchC (FPatternMatchB name1) pms, FCValueStatement name2 vss) =
-    trace (show a) $ name1 == name2 && fitPatternMatchs pms vss
-fitPatternMatch (FPatternMatchB _, _) = True
--- fitPatternMatch (FPatternMatchC (FPatternMatchB name1) pms, FAValueStatement (FFunApplicationR loc argVss)) = -- do one step evaluation and try to fit again
+fitPatternMatch :: S -> E -> (FPatternMatch, FValueStatement) -> Bool
+fitPatternMatch _ _ (FPatternMatchI i1, FIValueStatement i2) = i1 == i2
+fitPatternMatch s e a@(FPatternMatchC (FPatternMatchB name1) pms, FCValueStatement name2 vss) =
+    trace (show a) $ name1 == name2 && fitPatternMatchs s e pms vss
+fitPatternMatch _ _ (FPatternMatchB _, _) = True
+fitPatternMatch s e (FPatternMatchC (FPatternMatchB name1) pms, FAValueStatement (FFunApplicationR loc argVss)) =
+    fitPatternMatch ns ne (FPatternMatchC (FPatternMatchB name1) pms, nvs) where
+        (ns, ne, nvs) = oneStepEvaluation s e $ FAValueStatement (FFunApplicationR loc argVss)
 -- fitPatternMatch a = trace ("fitPatternMatch undefined " ++ show a) undefined
 
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
@@ -160,7 +187,7 @@ appendFAVS (loc:xs) addVss state =
     let
         argNames = funArgNamesLookup state loc
         (f, e, _, vs) = stateLookup loc state
-    in if fitPatternMatchs argNames addVss
+    in if fitPatternMatchs state e argNames addVss
         then
             let
                 appendedVS = appendFAVSInt vs addVss
@@ -189,11 +216,7 @@ registerAssignment _ _ _ = undefined
 
 setPM :: FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPM (FTypeT types) (FPatternMatchT pmL) vs state env = do
-    print "heeeerrreeeee"
     (vss, newState, newEnv) <- forceGetTupleVSS vs state env
-    print "heeeeerrrreeeee"
-    print pmL
-    print vss
     foldl setPMInFoldF (return (newState, newEnv)) $ tList types pmL vss
 setPM t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
@@ -215,8 +238,6 @@ unwrapSingleTuples a = [a]
 forceGetTupleVSS :: FValueStatement -> S -> E -> IO ([FValueStatement], S, E)
 forceGetTupleVSS a@(FTValueStatement vss) s e = do
     Just (_, e_) <- runVS a e s
-    print "watch_out"
-    print e_
     Just (ns, tvs) <- runVS a e s
     return (unwrapSingleTuples tvs, ns, e)
 forceGetTupleVSS (FAValueStatement funApplication) state env = do
@@ -236,7 +257,7 @@ forceRunFunApplication a@(FFunApplicationB name args) state env = do
 forceRunFunApplication a@(FFunApplicationR loc [args]) state env = do
     Just (s, vs) <- runVS (FAValueStatement a) env state
     return (vs, s, env)
-forceRunFunApplication a _ _ = trace (show a) undefined
+forceRunFunApplication a _ _ = trace ("elelelele " ++ show a) undefined
 
 forceUnwrapMaybe :: Maybe a -> a
 forceUnwrapMaybe (Just x) = x
@@ -257,6 +278,7 @@ registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
 registerArgsInFoldF acc (FPatternMatchI _, _) = acc
 registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FCValueStatement _ vss) = 
     registerArgs e s pms vss
--- registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FAValueStatement (FFunApplicationR loc argVss)) = do
-    -- one step evaluation, do every step until registerArgs matches
+registerArgsInFoldF (e, s) (FPatternMatchC cname pms, FAValueStatement (FFunApplicationR loc argVss)) = 
+    registerArgsInFoldF (ne, ns) (FPatternMatchC cname pms, nvs) where
+        (ns, ne, nvs) = oneStepEvaluation s e $ FAValueStatement (FFunApplicationR loc argVss)
 registerArgsInFoldF _ el = trace ("registerArgsInFoldF " ++ show el) undefined
