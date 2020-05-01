@@ -1,9 +1,10 @@
 struct Main {
-    fun (List (Int ())) make_list () = EmptyListC (());
+    fun (List (Int ())) make_list () = ListC ((1, EmptyListC (())));
+    fun (List (Int ())) make_list_2 () = ListC((2, make_list ()));
     
     fun (Int ()) main () =
         force let
-            List (Int ()) :: list = make_list ();
+            List (Int ()) :: list = make_list_2 ();
             () :: () = print (list ());
         in 0;
 };

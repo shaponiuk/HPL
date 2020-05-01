@@ -29,3 +29,7 @@ addTypeConstructor name arity (S varsMap nextLoc funArgsMap atStoreMap) =
 
 getTypeConstructorArity :: String -> S -> Int
 getTypeConstructorArity = undefined
+
+getUnsetLoc :: S -> [Int] -> Int
+getUnsetLoc _ [] = undefined
+getUnsetLoc s (x:xs) = if member x (vars s) then getUnsetLoc s xs else x

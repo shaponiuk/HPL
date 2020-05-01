@@ -4,6 +4,7 @@ import StaticCheck.Format
 import Util.State
 import Util.Env
 import Data.Map as M
+import Debug.Trace
 
 convertToNPF :: ProgramFormat -> NProgramFormat
 convertToNPF (SITList structs interfaces algTypes) =
@@ -52,7 +53,7 @@ convertPublicNonSusFuns structFields state =
     let
         publicFields = extractPublicNonSusFunFields structFields
     in let
-        (inStructEnv, newState) = makeInStructEnv getNewEnv publicFields state
+        (inStructEnv, newState) = trace ("******************" ++ show publicFields) $ makeInStructEnv getNewEnv publicFields state
     in convertPublicNonSusFunFields publicFields inStructEnv newState
 
 makeInStructEnv :: E -> [FStructField] -> S -> (E, S)
@@ -81,8 +82,9 @@ convertPublicNonSusFunFields fields env state =
 
 convertPublicNonSusFunField :: FStructField -> E -> S -> (NFNonSusFunDef, S)
 convertPublicNonSusFunField (FStructFieldFunPublic (NonSusFFunctionDef t name args vs)) env state =
-    (NFNonSusFunDef name args env, newerState) where
-        loc = lookupFirstLoc name env
+    trace (show name ++ show newerState) (NFNonSusFunDef name args env, newerState) where
+        locs = lookupLoc name env
+        loc = getUnsetLoc state locs 
         newState = putInLoc loc newThing state
         newerState = putArgNames newState loc args
         newThing = (env, t, vs)
