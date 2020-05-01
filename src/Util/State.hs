@@ -6,11 +6,11 @@ import StaticCheck.Format
 getNewLoc :: S -> (Int, S)
 getNewLoc (S varsMap loc funArgs atStoreMap) = (loc + 1, S varsMap (loc + 1) funArgs atStoreMap)
 
-putInLoc :: Int -> (E, FType, FValueStatement) -> S -> S
+putInLoc :: Int -> (Bool, E, FType, FValueStatement) -> S -> S
 putInLoc loc thing (S varsMap newIntLoc funArgs atStoreMap) =
   S (insert loc thing varsMap) newIntLoc funArgs atStoreMap
 
-stateLookup :: Int -> S -> (E, FType, FValueStatement)
+stateLookup :: Int -> S -> (Bool, E, FType, FValueStatement)
 stateLookup loc (S varsMap _ _ _) = varsMap ! loc
 
 funArgNamesLookup :: S -> Int -> [FPatternMatch]

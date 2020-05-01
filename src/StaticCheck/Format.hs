@@ -2,8 +2,9 @@ module StaticCheck.Format where
 
 import Data.Map
 
+  -- if function (bool in vars)
 data S = S {
-  vars :: Map Int (E, FType, FValueStatement),
+  vars :: Map Int (Bool, E, FType, FValueStatement),
   newInt :: Int,
   functionArgs :: Map Int [FPatternMatch],
   atStore :: Map String Int

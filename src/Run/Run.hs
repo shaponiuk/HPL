@@ -8,11 +8,15 @@ import Debug.Trace
 
 run :: NProgramFormat -> IO ()
 run (NSIT structs state) = do
-    print state
-    let mainStruct = getMainStruct structs
-    let (mainName, mainArgs, env) = getMainFunction mainStruct
-    s <- runFunction (mainName, mainArgs, env) [] state
+    let (nloc, nstate) = getNewLoc state
+    let (_, _, env) = getMainFunction $ getMainStruct structs
+    let mainloc = lookupFirstLoc "main" env
+    let (_, nenv, t, vs) = stateLookup mainloc nstate
+    let nnstate = putInLoc nloc (False, nenv, t, vs) nstate
+    Just (s, vsf) <- interpretVS vs nenv [] nloc nnstate []
+    print "Finish"
     print s
+    print vsf
 
 getMainStruct :: [NFStruct] -> NFStruct
 getMainStruct = head . filter (\(NFStruct name _ _) -> name == "Main")
@@ -21,39 +25,18 @@ getMainFunction :: NFStruct -> (String, [FPatternMatch], E)
 getMainFunction (NFStruct _ _ (NFStructBody _ l _ _ _ _)) =
     (\(NFNonSusFunDef name args env) -> (name, args, env)) $ head $ filter (\(NFNonSusFunDef name _ _) -> name == "main") l
 
-runFunction :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> IO (S, FValueStatement)
-runFunction p@(name, args, env) vss state =
-    let locs = lookupLoc name env in tryLocs p vss state locs
-
-tryLocs :: (String, [FPatternMatch], E) -> [FValueStatement] -> S -> [Int] -> IO (S, FValueStatement)
-tryLocs _ _ _ [] = fail "EEE"
-tryLocs (_, _, env) _ state (loc:_) =
-    let
-        (e, _, vs) = stateLookup loc state
-    in let
-        maybeIOFun = interpretVS vs e [] state []
-    in runMaybeIOFun maybeIOFun
-
-runMaybeIOFun :: IO (Maybe (S, FValueStatement)) -> IO (S, FValueStatement)
-runMaybeIOFun x = do
-    x_ <- x
-    runMaybeIOFunInt x_
-
-runMaybeIOFunInt :: Maybe (S, FValueStatement) -> IO (S, FValueStatement)
-runMaybeIOFunInt Nothing = 
-    fail "UUUUUU"
-runMaybeIOFunInt (Just x) = do
-    print "HAHAHAHAHA"
-    return x
-
-interpretVS :: FValueStatement -> E -> [FPatternMatch] -> FunRunT
-interpretVS vs env argNames s vss =
-    if length vss < length argNames
+interpretVS :: FValueStatement -> E -> [FPatternMatch] -> Int -> FunRunT
+interpretVS vs env argNames loc s vss = do
+    Just (ns, nvs) <- if length vss < length argNames
         then
-            return $ Just $ wrapFunction vs argNames vss env s
+            let (s_, vs) = wrapFunction vs argNames vss env s in
+                runVS vs env s_
         else
             let (newEnv, newState) = registerArgs env s argNames vss in 
                 runVS vs newEnv newState
+    let (b, t, e, _) = stateLookup loc ns
+    let nns = putInLoc loc (b, t, e, nvs) ns
+    return $ Just (nns, nvs)
 
 runVS :: FValueStatement -> E -> FunRunQuickT
 runVS (FForceValueStatement assignments vs) env state = do
@@ -64,14 +47,18 @@ runVS (FAValueStatement (FFunApplicationB funName funArgVss)) env oldState = do
     let firstLoc = lookupFirstLoc funName env
     let locs = lookupLoc funName env
     let funArgNames = funArgNamesLookup oldState firstLoc
-    (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
-    let computedVss = reverse almostComputedVss
-    if length funArgVss > length funArgNames
+    let (ifFunction, _, _, vs) = stateLookup firstLoc oldState
+    if ifFunction
         then do
-            let (e, updatedVS) = forceUnwrapMaybe $ appendFAVS locs computedVss state
-            runVS updatedVS e state
-        else
-            tryRunVSFunApplR locs computedVss state
+            (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
+            let computedVss = reverse almostComputedVss
+            if length funArgVss > length funArgNames
+                then do
+                    let (e, updatedVS) = forceUnwrapMaybe $ appendFAVS locs computedVss state
+                    runVS updatedVS e state
+                else
+                    tryRunVSFunApplR locs computedVss state
+        else interpretVS vs env funArgNames firstLoc oldState funArgVss
 runVS (FExpr (FEMul vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS vs1 env state
     Just (newerState, FIValueStatement i2) <- runVS vs2 env newState
@@ -99,8 +86,17 @@ runVS vs@(FLitStrValueStatement _) _ s = return $ Just (s, vs)
 runVS (FCValueStatement name vss) e s = do
     (new_state, newVss) <- foldl (cvsInFoldF e) (return (s, [])) vss
     return $ Just (new_state, FCValueStatement name (reverse newVss))
+runVS (FTValueStatement xss) e s = do
+    (ns, xssc) <- foldl (runTVSInFoldF e) (return (s, [])) xss
+    return $ Just (ns, FTValueStatement xssc)
 
-runVS vs _ _ = trace (show vs) undefined
+runVS vs _ _ = trace ("??? " ++ show vs) undefined
+
+runTVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
+runTVSInFoldF env acc vs = do
+    (s, vsl) <- acc
+    Just (ns, nvs) <- runVS vs env s
+    return (ns, nvs:vsl)
 
 cvsInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 cvsInFoldF e acc vs = do
@@ -113,11 +109,12 @@ tryRunVSFunApplR :: [Int] -> [FValueStatement] -> FunRunQuickT
 tryRunVSFunApplR [] _ _ = undefined
 -- todo: hard to find the function name, probably unneeded, only one at the time
 tryRunVSFunApplR (x:xs) args state = do
-    let (env, _, vs) = stateLookup x state
+    let (ifFunction, env, _, vs) = stateLookup x state
     let argNames = funArgNamesLookup state x
     if fitPatternMatchs argNames args
-        then do
-            interpretVS vs env argNames state args
+        then
+            let (newEnv, newState) = registerArgs env state argNames args in 
+                runVS vs newEnv newState
         else 
             tryRunVSFunApplR xs args state
 
@@ -159,7 +156,7 @@ appendFAVS [] vss state = undefined -- todo: error
 appendFAVS (loc:xs) addVss state =
     let
         argNames = funArgNamesLookup state loc
-        (e, _, vs) = stateLookup loc state
+        (f, e, _, vs) = stateLookup loc state
     in if fitPatternMatchs argNames addVss
         then
             let
@@ -194,7 +191,7 @@ setPM (FTypeT types) (FPatternMatchT pmL) vs state env = do
 setPM t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
-    let newerState = putInLoc loc (newEnv, t, vs) newState
+    let newerState = putInLoc loc (False, newEnv, t, vs) newState
     return (newerState, newEnv)
 setPM _ _ _ _ _ = undefined
 
@@ -204,7 +201,9 @@ setPMInFoldF acc (t, pm, vs) = do
     setPM t pm vs s e
 
 forceGetTupleVSS :: FValueStatement -> S -> E -> IO ([FValueStatement], S, E)
-forceGetTupleVSS (FTValueStatement vss) s e = return (vss, s, e)
+forceGetTupleVSS a@(FTValueStatement vss) s e = do
+    Just (ns, FTValueStatement nvss) <- runVS a e s
+    return (nvss, ns, e)
 forceGetTupleVSS (FAValueStatement funApplication) state env = do
     (vs, s, e) <- forceRunFunApplication funApplication state env
     forceGetTupleVSS vs s e
@@ -212,7 +211,7 @@ forceGetTupleVSS _ _ _ = undefined
 
 forceRunFunApplication :: FFunApplication -> S -> E -> IO (FValueStatement, S, E)
 forceRunFunApplication (FFunApplicationB "print" [str]) state env = do
-    interpretedArgMaybe <- interpretVS str env [] state []
+    interpretedArgMaybe <- runVS str env state
     let (s, r)  = forceUnwrapMaybe interpretedArgMaybe
     print $ "hehe " ++ show r
     return (FTValueStatement [], s, env)
@@ -238,7 +237,7 @@ registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
     let
         (newLoc, newState) = getNewLoc s
         newEnv = registerLoc False e str newLoc
-        newerState = putInLoc newLoc (newEnv, FTypeT [], vs) newState
+        newerState = putInLoc newLoc (False, newEnv, FTypeT [], vs) newState
     in (newEnv, newerState)
 registerArgsInFoldF acc (FPatternMatchI _, _) = acc
 registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FCValueStatement _ vss) = 

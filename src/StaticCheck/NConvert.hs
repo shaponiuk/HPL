@@ -87,5 +87,5 @@ convertPublicNonSusFunField (FStructFieldFunPublic (NonSusFFunctionDef t name ar
         loc = getUnsetLoc state locs 
         newState = putInLoc loc newThing state
         newerState = putArgNames newState loc args
-        newThing = (env, t, vs)
+        newThing = (True, env, t, vs)
 convertPublicNonSusFunField _ _ _ = undefined
