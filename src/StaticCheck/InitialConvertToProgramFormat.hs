@@ -4,6 +4,7 @@ import StaticCheck.Format
 import Bnfc.AbsHpl
 import Util.State
 import Data.Char
+import Debug.Trace
 
 initialConvertToProgramFormat :: Program -> ProgramFormat
 initialConvertToProgramFormat p@(ProgramB l) = 
@@ -171,8 +172,12 @@ checkFunAppl :: FunApplication -> Bool
 checkFunAppl (FunApplicationB name _) = isLower $ head $ unwrapIdent name
 
 convertFunctionApplToTypeConstructor :: FunApplication -> (String, [FValueStatement])
-convertFunctionApplToTypeConstructor (FunApplicationB name [FunctionArgApplB (TValueStatement (TupleValueStatementB vss))]) = 
-  (unwrapIdent name, map convertValueStatement vss)
+convertFunctionApplToTypeConstructor (FunApplicationB name functionArgAppls) = 
+  (unwrapIdent name, map convertFunctionArgApplToTypeConstructor functionArgAppls)
+convertFunctionApplToTypeConstructor a = trace (show a) undefined
+
+convertFunctionArgApplToTypeConstructor :: FunctionArgAppl -> FValueStatement
+convertFunctionArgApplToTypeConstructor (FunctionArgApplB vs) = convertValueStatement vs
 
 exprFromLists :: ([String], [ValueStatement]) -> FValueStatement
 exprFromLists (strs, vss) = let

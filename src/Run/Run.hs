@@ -133,9 +133,10 @@ fitPatternMatchs pms vss = all fitPatternMatch $ dList pms vss
 
 fitPatternMatch :: (FPatternMatch, FValueStatement) -> Bool
 fitPatternMatch (FPatternMatchI i1, FIValueStatement i2) = i1 == i2
-fitPatternMatch (FPatternMatchC (FPatternMatchB name1) [FPatternMatchT []], FCValueStatement name2 []) = trace "wow" $ name1 == name2
 fitPatternMatch a@(FPatternMatchC (FPatternMatchB name1) pms, FCValueStatement name2 vss) =
     trace (show a) $ name1 == name2 && fitPatternMatchs pms vss
+fitPatternMatch (FPatternMatchB _, _) = True
+fitPatternMatch (FPatternMatchC (FPatternMatchB name1) pms, FAValueStatement (FFunApplicationR loc argVss)) = -- do one step evaluation and try to fit again
 fitPatternMatch a = trace ("fitPatternMatch undefined " ++ show a) undefined
 
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
@@ -153,10 +154,12 @@ convertBApplicationsToRApplications (FExpr (FESub vs1 vs2)) e =
 convertBApplicationsToRApplications (FAValueStatement (FFunApplicationB funName funArgs)) e =
     FAValueStatement $ FFunApplicationR locs funArgs where
         locs = lookupLoc funName e
-convertBApplicationsToRApplications a@(FIValueStatement i) _ = a
+convertBApplicationsToRApplications a@(FIValueStatement _) _ = a
 convertBApplicationsToRApplications (FCValueStatement name vss) env =
     FCValueStatement name $ map (`convertBApplicationsToRApplications` env) vss
-convertBApplicationsToRApplications a b = trace (show a ++ show b) undefined
+convertBApplicationsToRApplications (FTValueStatement vss) env =
+    FTValueStatement $ map (`convertBApplicationsToRApplications` env) vss
+convertBApplicationsToRApplications a b = trace (show a) undefined
 
 appendFAVS :: [Int] -> [FValueStatement] -> S -> Maybe (E, FValueStatement)
 appendFAVS [] vss state = undefined -- todo: error
@@ -247,4 +250,6 @@ registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
 registerArgsInFoldF acc (FPatternMatchI _, _) = acc
 registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FCValueStatement _ vss) = 
     registerArgs e s pms vss
-registerArgsInFoldF _ el = trace (show el) undefined
+registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FAValueStatement (FFunApplicationR loc argVss)) = do
+    -- one step evaluation, do every step until registerArgs matches
+registerArgsInFoldF _ el = trace ("registerArgsInFoldF " ++ show el) undefined
