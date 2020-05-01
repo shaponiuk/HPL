@@ -1,5 +1,4 @@
 module StaticCheck.StaticCheck where
-
 import StaticCheck.Format
 import StaticCheck.InitialConvertToProgramFormat (initialConvertToProgramFormat)
 import StaticCheck.NConvert (convertToNPF)

@@ -137,7 +137,8 @@ convertPatternMatch (CPatternMatch pm l) =
   FPatternMatchC (convertPatternMatch pm) (convertPatternMatchList l)
 
 convertPatternMatchList :: [PatternMatch] -> [FPatternMatch]
-convertPatternMatchList = map convertPatternMatch
+convertPatternMatchList [TPatternMatch []] = []
+convertPatternMatchList l = map convertPatternMatch l
 
 convertArgList :: [FunctionArg] -> [FPatternMatch]
 convertArgList = map convertFunctionArg

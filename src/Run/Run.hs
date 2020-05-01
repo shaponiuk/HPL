@@ -133,6 +133,10 @@ fitPatternMatchs pms vss = all fitPatternMatch $ dList pms vss
 
 fitPatternMatch :: (FPatternMatch, FValueStatement) -> Bool
 fitPatternMatch (FPatternMatchI i1, FIValueStatement i2) = i1 == i2
+fitPatternMatch (FPatternMatchC (FPatternMatchB name1) [FPatternMatchT []], FCValueStatement name2 []) = trace "wow" $ name1 == name2
+fitPatternMatch a@(FPatternMatchC (FPatternMatchB name1) pms, FCValueStatement name2 vss) =
+    trace (show a) $ name1 == name2 && fitPatternMatchs pms vss
+fitPatternMatch a = trace ("fitPatternMatch undefined " ++ show a) undefined
 
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runVSInFoldF env acc vs = do
@@ -150,6 +154,9 @@ convertBApplicationsToRApplications (FAValueStatement (FFunApplicationB funName 
     FAValueStatement $ FFunApplicationR locs funArgs where
         locs = lookupLoc funName e
 convertBApplicationsToRApplications a@(FIValueStatement i) _ = a
+convertBApplicationsToRApplications (FCValueStatement name vss) env =
+    FCValueStatement name $ map (`convertBApplicationsToRApplications` env) vss
+convertBApplicationsToRApplications a b = trace (show a ++ show b) undefined
 
 appendFAVS :: [Int] -> [FValueStatement] -> S -> Maybe (E, FValueStatement)
 appendFAVS [] vss state = undefined -- todo: error
@@ -238,4 +245,6 @@ registerArgsInFoldF (e, s) (FPatternMatchB str, vs) =
         newerState = putInLoc newLoc (newEnv, FTypeT [], vs) newState
     in (newEnv, newerState)
 registerArgsInFoldF acc (FPatternMatchI _, _) = acc
-registerArgsInFoldF _ _ = undefined
+registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FCValueStatement _ vss) = 
+    registerArgs e s pms vss
+registerArgsInFoldF _ el = trace (show el) undefined
