@@ -102,6 +102,7 @@ data FValueStatement =
   | FIValueStatement Int
   | FLitStrValueStatement String
   | FFValueStatement String FValueStatement
+  | FCValueStatement String [FValueStatement]
   | FExpr FValueStatementExpr
   deriving (Eq,Ord,Show)
 

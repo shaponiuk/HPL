@@ -2,13 +2,16 @@ module StaticCheck.InitialConvertToProgramFormat where
 
 import StaticCheck.Format
 import Bnfc.AbsHpl
+import Util.State
+import Data.Char
 
 initialConvertToProgramFormat :: Program -> ProgramFormat
 initialConvertToProgramFormat p@(ProgramB l) = 
     SITList 
-        (gatherAndConvertStructs p) 
+        (gatherAndConvertStructs p ) 
         (gatherAndConvertInterfaces p) 
         (gatherAndConvertAlgTypes p)
+        
 
 gatherAndConvertStructs :: Program -> [FStruct]
 gatherAndConvertStructs p@(ProgramB _) = map convertStruct $ gatherStructs p
@@ -151,12 +154,24 @@ convertValueStatement (LValueStatement (ListValueStatementB l)) =
 convertValueStatement (TValueStatement (TupleValueStatementB l)) = 
   FTValueStatement $ convertValueStatementList l
 convertValueStatement (AValueStatement funAppl) = 
-  FAValueStatement $ convertFunctionAppl funAppl
+  if checkFunAppl funAppl
+    then FAValueStatement $ convertFunctionAppl funAppl
+    else 
+      let
+        (name, vss) = convertFunctionApplToTypeConstructor funAppl
+      in FCValueStatement name vss
 convertValueStatement (IValueStatement i) = FIValueStatement $ fromIntegral i
 convertValueStatement (LitStrValueStatement str) = FLitStrValueStatement str
 convertValueStatement (FValueStatement ident vs) = 
   FFValueStatement (unwrapIdent ident) (convertValueStatement vs)
 convertValueStatement (Expr vs e) = exprFromLists (makeExprLists vs e)
+
+checkFunAppl :: FunApplication -> Bool
+checkFunAppl (FunApplicationB name _) = isLower $ head $ unwrapIdent name
+
+convertFunctionApplToTypeConstructor :: FunApplication -> (String, [FValueStatement])
+convertFunctionApplToTypeConstructor (FunApplicationB name [FunctionArgApplB (TValueStatement (TupleValueStatementB vss))]) = 
+  (unwrapIdent name, map convertValueStatement vss)
 
 exprFromLists :: ([String], [ValueStatement]) -> FValueStatement
 exprFromLists (strs, vss) = let

@@ -8,6 +8,7 @@ import Debug.Trace
 
 run :: NProgramFormat -> IO ()
 run (NSIT structs state) = do
+    print state
     let mainStruct = getMainStruct structs
     let (mainName, mainArgs, env) = getMainFunction mainStruct
     s <- runFunction (mainName, mainArgs, env) [] state

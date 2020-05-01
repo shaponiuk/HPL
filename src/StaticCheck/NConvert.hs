@@ -8,16 +8,25 @@ import Data.Map as M
 convertToNPF :: ProgramFormat -> NProgramFormat
 convertToNPF (SITList structs interfaces algTypes) =
     NSIT nfStructs new_state where
-    (nfStructs, state) = 
+    (nfStructs, new_state) = 
         Prelude.foldl (\(nfstrcts, st) strct ->
             let 
                 (nfstrct, newState) = fstructConvert st strct
             in (nfstrct:nfstrcts, newState)
-        ) ([], getNewState) structs
-    new_state = convertAlgTypes state algTypes
+        ) ([], state) structs
+    state = convertAlgTypes getNewState algTypes
     
 convertAlgTypes :: S -> [FAlgType] -> S
-convertAlgTypes = undefined
+convertAlgTypes = Prelude.foldl registerAlgType
+
+registerAlgType :: S -> FAlgType -> S
+registerAlgType s (FAlgType _ _ fAlgTypeVals) = registerFAlgTypeVals s fAlgTypeVals
+
+registerFAlgTypeVals :: S -> [FAlgTypeVal] -> S
+registerFAlgTypeVals = Prelude.foldl registerFAlgTypeVal
+
+registerFAlgTypeVal :: S -> FAlgTypeVal -> S
+registerFAlgTypeVal s (FAlgTypeVal name (FTypeT types)) = addTypeConstructor name (length types) s
 
 fstructConvert :: S -> FStruct -> (NFStruct, S)
 fstructConvert s (FStructB name body) =
@@ -44,7 +53,7 @@ convertPublicNonSusFuns structFields state =
         publicFields = extractPublicNonSusFunFields structFields
     in let
         (inStructEnv, newState) = makeInStructEnv getNewEnv publicFields state
-    in (convertPublicNonSusFunFields publicFields inStructEnv newState)
+    in convertPublicNonSusFunFields publicFields inStructEnv newState
 
 makeInStructEnv :: E -> [FStructField] -> S -> (E, S)
 makeInStructEnv env fields state =
@@ -59,7 +68,7 @@ extractPublicNonSusFunFields :: [FStructField] -> [FStructField]
 extractPublicNonSusFunFields = Prelude.filter checkPublicNonSusFunctionField
 
 checkPublicNonSusFunctionField :: FStructField -> Bool
-checkPublicNonSusFunctionField (FStructFieldFunPublic (NonSusFFunctionDef _ _ _ _)) = True
+checkPublicNonSusFunctionField (FStructFieldFunPublic NonSusFFunctionDef {}) = True
 checkPublicNonSusFunctionField _ = False
 
 convertPublicNonSusFunFields :: [FStructField] -> E -> S -> ([NFNonSusFunDef], S)

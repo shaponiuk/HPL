@@ -24,7 +24,8 @@ putArgNames (S varsMap newIntLoc functionArgsMap atStoreMap) loc strs =
   S varsMap newIntLoc (insert loc strs functionArgsMap) atStoreMap
 
 addTypeConstructor :: String -> Int -> S -> S
-addTypeConstructor = undefined
+addTypeConstructor name arity (S varsMap nextLoc funArgsMap atStoreMap) =
+  S varsMap nextLoc funArgsMap (insert name arity atStoreMap)
 
 getTypeConstructorArity :: String -> S -> Int
 getTypeConstructorArity = undefined
