@@ -1,0 +1,17 @@
+struct Main {
+    fun () e () = e ();
+    fun (Int () -> Int ()) sil (x) = if x () == 0 then 1 else x () * sil (x () - 1);
+    
+    fun () tple (x) = 
+        force let
+            () :: () = print ("hahaha");
+        in (sil (x ()), sil (x ()));
+
+    fun (() -> Int ()) main () =
+        force let
+            (Int (), Int ()) :: x = tple();
+            () :: () = print (x (4));
+            () :: () = print (x (4));
+            () :: () = print (tple (4));
+        in 0;
+};

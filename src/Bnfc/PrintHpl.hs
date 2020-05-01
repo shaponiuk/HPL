@@ -31,7 +31,7 @@ render d = rend 0 (map ($ "") $ d []) "" where
     t        :ts -> space t . rend i ts
     _            -> id
   new i   = showChar '\n' . replicateS (2*i) (showChar ' ') . dropWhile isSpace
-  space t = showString t . (\s -> if null s then "" else (' ':s))
+  space t = showString t . (\s -> if null s then "" else ' ':s)
 
 parenth :: Doc -> Doc
 parenth ss = doc (showChar '(') . ss . doc (showChar ')')
@@ -79,7 +79,7 @@ instance Print Double where
 
 
 instance Print Ident where
-  prt _ (Ident i) = doc (showString ( i))
+  prt _ (Ident i) = doc (showString i)
 
 
 
@@ -95,8 +95,8 @@ instance Print StructOrInterfaceOrType where
    StructOrInterfaceOrTypeT algtype -> prPrec i 0 (concatD [prt 0 algtype])
 
   prtList es = case es of
-   [] -> (concatD [])
-   x:xs -> (concatD [prt 0 x , prt 0 xs])
+   [] -> concatD []
+   x:xs -> concatD [prt 0 x , prt 0 xs]
 
 instance Print Struct where
   prt i e = case e of
@@ -117,16 +117,16 @@ instance Print StructField where
    StructFieldRefPu refdef -> prPrec i 0 (concatD [prt 0 refdef])
 
   prtList es = case es of
-   [] -> (concatD [])
-   x:xs -> (concatD [prt 0 x , prt 0 xs])
+   [] -> concatD []
+   x:xs -> concatD [prt 0 x , prt 0 xs]
 
 instance Print InterfaceId where
   prt i e = case e of
    InterfaceIdB id -> prPrec i 0 (concatD [prt 0 id])
 
   prtList es = case es of
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+   [x] -> concatD [prt 0 x]
+   x:xs -> concatD [prt 0 x , doc (showString ",") , prt 0 xs]
 
 instance Print Interface where
   prt i e = case e of
@@ -146,8 +146,8 @@ instance Print FunOrRefDecl where
    FunOrRefDeclR type' id -> prPrec i 0 (concatD [doc (showString "ref") , prt 0 type' , prt 0 id , doc (showString ";")])
 
   prtList es = case es of
-   [] -> (concatD [])
-   x:xs -> (concatD [prt 0 x , prt 0 xs])
+   [] -> concatD []
+   x:xs -> concatD [prt 0 x , prt 0 xs]
 
 instance Print FunctionDef where
   prt i e = case e of
@@ -160,9 +160,9 @@ instance Print FunctionArg where
    FunctionArgB patternmatch -> prPrec i 0 (concatD [prt 0 patternmatch])
 
   prtList es = case es of
-   [] -> (concatD [])
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+   [] -> concatD []
+   [x] -> concatD [prt 0 x]
+   x:xs -> concatD [prt 0 x , doc (showString ",") , prt 0 xs]
 
 instance Print ValueStatement where
   prt i e = case e of
@@ -178,9 +178,9 @@ instance Print ValueStatement where
    Expr valuestatement valuestatementexpr -> prPrec i 0 (concatD [prt 0 valuestatement , prt 0 valuestatementexpr])
 
   prtList es = case es of
-   [] -> (concatD [])
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+   [] -> concatD []
+   [x] -> concatD [prt 0 x]
+   x:xs -> concatD [prt 0 x , doc (showString ",") , prt 0 xs]
 
 instance Print RefDef where
   prt i e = case e of
@@ -194,9 +194,9 @@ instance Print Type where
    TType types -> prPrec i 0 (concatD [doc (showString "(") , prt 0 types , doc (showString ")")])
 
   prtList es = case es of
-   [] -> (concatD [])
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+   [] -> concatD []
+   [x] -> concatD [prt 0 x]
+   x:xs -> concatD [prt 0 x , doc (showString ",") , prt 0 xs]
 
 instance Print AlgType where
   prt i e = case e of
@@ -208,18 +208,18 @@ instance Print TypeArg where
    TypeArgB id -> prPrec i 0 (concatD [prt 0 id])
 
   prtList es = case es of
-   [] -> (concatD [])
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+   [] -> concatD []
+   [x] -> concatD [prt 0 x]
+   x:xs -> concatD [prt 0 x , doc (showString ",") , prt 0 xs]
 
 instance Print AlgTypeVal where
   prt i e = case e of
    AlgTypeValB id type' -> prPrec i 0 (concatD [prt 0 id , doc (showString "(") , prt 0 type' , doc (showString ")")])
 
   prtList es = case es of
-   [] -> (concatD [])
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString "|") , prt 0 xs])
+   [] -> concatD []
+   [x] -> concatD [prt 0 x]
+   x:xs -> concatD [prt 0 x , doc (showString "|") , prt 0 xs]
 
 instance Print PatternMatch where
   prt i e = case e of
@@ -229,9 +229,9 @@ instance Print PatternMatch where
    CPatternMatch patternmatch patternmatchs -> prPrec i 0 (concatD [prt 0 patternmatch , doc (showString "(") , prt 0 patternmatchs , doc (showString ")")])
 
   prtList es = case es of
-   [] -> (concatD [])
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+   [] -> concatD []
+   [x] -> concatD [prt 0 x]
+   x:xs -> concatD [prt 0 x , doc (showString ",") , prt 0 xs]
 
 instance Print Assignment where
   prt i e = case e of
@@ -239,8 +239,8 @@ instance Print Assignment where
    RefAssignment refdef -> prPrec i 0 (concatD [prt 0 refdef])
 
   prtList es = case es of
-   [] -> (concatD [])
-   x:xs -> (concatD [prt 0 x , prt 0 xs])
+   [] -> concatD []
+   x:xs -> concatD [prt 0 x , prt 0 xs]
 
 instance Print FunApplication where
   prt i e = case e of
@@ -253,9 +253,9 @@ instance Print FunctionArgAppl where
    FunctionArgApplB valuestatement -> prPrec i 0 (concatD [prt 0 valuestatement])
 
   prtList es = case es of
-   [] -> (concatD [])
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+   [] -> concatD []
+   [x] -> concatD [prt 0 x]
+   x:xs -> concatD [prt 0 x, doc (showString ",") , prt 0 xs]
 
 instance Print ListValueStatementr where
   prt i e = case e of

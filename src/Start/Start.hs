@@ -11,7 +11,7 @@ import Run.Run ( run )
 import Debug.Trace ( trace )
 
 runFile :: FilePath -> IO ()
-runFile x = runFileAux pProgram x
+runFile = runFileAux pProgram
 
 type ParseFun a = [Token] -> Err a
 
@@ -24,7 +24,7 @@ runAux :: ParseFun Program -> String -> IO ()
 runAux p s = let ts = myLLexer s in case p ts of
          Bad s      -> do 
                         putStrLn "\nParse Failed... TODO\n"
-                        putStrLn $ show ts
+                        print ts
                         putStrLn s
          Ok tree    -> do
                         putStrLn "\nParse Successful!"

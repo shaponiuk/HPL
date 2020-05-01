@@ -11,4 +11,4 @@ main = do
   case args of
     [] -> runFile "Bnfc/testfiles/new_function.hpl"
     [x] -> runFile x 
-    otherwise -> printTooManyFiles
+    _ -> printTooManyFiles

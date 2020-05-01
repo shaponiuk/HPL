@@ -23,7 +23,7 @@ myLLexer = myLexer
 type Verbosity = Int
 
 putStrV :: Verbosity -> String -> IO ()
-putStrV v s = if v > 1 then putStrLn s else return ()
+putStrV v s = Control.Monad.when (v > 1) $ putStrLn s
 
 runFile :: (Print a, Show a) => Verbosity -> ParseFun a -> FilePath -> IO ()
 runFile v p f = putStrLn f >> readFile f >>= run v p
@@ -48,7 +48,7 @@ showTree v tree
 main :: IO ()
 main = do args <- getArgs
           case args of
-            [] -> hGetContents stdin >>= run 2 pProgram
+            [] -> getContents >>= run 2 pProgram
             "-s":fs -> mapM_ (runFile 0 pProgram) fs
             fs -> mapM_ (runFile 2 pProgram) fs
 

@@ -190,11 +190,11 @@ mergeMulDivModVss x = let
   in if x == xaux then x else mergeMulDivModVss xaux
 
 mergeMulDivModVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
-mergeMulDivModVssAux ("*":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEMul x x2):nxs) where
+mergeMulDivModVssAux ("*":strs, x:x2:xs) = (nstrs, (FExpr $ FEMul x x2):nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
-mergeMulDivModVssAux ("/":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEDiv x x2):nxs) where
+mergeMulDivModVssAux ("/":strs, x:x2:xs) = (nstrs, (FExpr $ FEDiv x x2):nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
-mergeMulDivModVssAux ("%":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEMod x x2):nxs) where
+mergeMulDivModVssAux ("%":strs, x:x2:xs) = (nstrs, (FExpr $ FEMod x x2):nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
 mergeMulDivModVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
@@ -206,9 +206,9 @@ mergeAddSubVss x = let
   in if x == xaux then x else mergeAddSubVss xaux
 
 mergeAddSubVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
-mergeAddSubVssAux ("+":strs, (x:x2:xs)) = (nstrs, (FExpr $ FEAdd x x2):nxs) where
+mergeAddSubVssAux ("+":strs, x:x2:xs) = (nstrs, (FExpr $ FEAdd x x2):nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
-mergeAddSubVssAux ("-":strs, (x:x2:xs)) = (nstrs, (FExpr $ FESub x x2):nxs) where
+mergeAddSubVssAux ("-":strs, x:x2:xs) = (nstrs, (FExpr $ FESub x x2):nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
 mergeAddSubVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
@@ -216,12 +216,12 @@ mergeAddSubVssAux x = x
 
 mergeCmpVss :: ([String], [FValueStatement]) -> FValueStatement
 mergeCmpVss ([], [x]) = x
-mergeCmpVss (("<"):strs, x:xs) = FExpr $ FEL x $ mergeCmpVss (strs, xs)
-mergeCmpVss (("<="):strs, x:xs) = FExpr $ FELQ x $ mergeCmpVss (strs, xs)
-mergeCmpVss ((">"):strs, x:xs) = FExpr $ FEG x $ mergeCmpVss (strs, xs)
-mergeCmpVss ((">="):strs, x:xs) = FExpr $ FEGQ x $ mergeCmpVss (strs, xs)
-mergeCmpVss (("=="):strs, x:xs) = FExpr $ FEEQ x $ mergeCmpVss (strs, xs)
-mergeCmpVss (("!="):strs, x:xs) = FExpr $ FENE x $ mergeCmpVss (strs, xs)
+mergeCmpVss ("<":strs, x:xs) = FExpr $ FEL x $ mergeCmpVss (strs, xs)
+mergeCmpVss ("<=":strs, x:xs) = FExpr $ FELQ x $ mergeCmpVss (strs, xs)
+mergeCmpVss (">":strs, x:xs) = FExpr $ FEG x $ mergeCmpVss (strs, xs)
+mergeCmpVss (">=":strs, x:xs) = FExpr $ FEGQ x $ mergeCmpVss (strs, xs)
+mergeCmpVss ("==":strs, x:xs) = FExpr $ FEEQ x $ mergeCmpVss (strs, xs)
+mergeCmpVss ("!=":strs, x:xs) = FExpr $ FENE x $ mergeCmpVss (strs, xs)
 
 makeExprLists :: ValueStatement -> ValueStatementExpr -> ([String], [ValueStatement])
 makeExprLists vs1 vs2 = (signs, vs1:vss) where
