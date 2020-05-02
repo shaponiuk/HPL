@@ -69,7 +69,7 @@ convertPublicNonSusFunFields fields env state =
 
 convertPublicNonSusFunField :: FStructField -> E -> S -> (NFNonSusFunDef, S)
 convertPublicNonSusFunField (FStructFieldFunPublic (NonSusFFunctionDef t name args vs)) env state =
-    trace (show name ++ show newerState) (NFNonSusFunDef name args env, newerState) where
+    (NFNonSusFunDef name args env, newerState) where
         locs = lookupLoc name env
         loc = getUnsetLoc state locs 
         newState = putInLoc loc newThing state

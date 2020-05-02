@@ -199,7 +199,8 @@ appendFAVS (loc:xs) addVss state =
         else appendFAVS xs addVss state
 
 appendFAVSInt (FAValueStatement (FFunApplicationB funName vss)) addVss = FAValueStatement $ FFunApplicationB funName (vss ++ addVss)
-appendFAVSInt _ _ = undefined
+appendFAVSInt x y = trace ("appendFAVSInt" ++ show x ++ show y) undefined
+
 
 wrapFunction :: FValueStatement -> [FPatternMatch] -> [FValueStatement] -> E -> S -> (S, FValueStatement)
 wrapFunction = undefined
