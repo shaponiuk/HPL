@@ -16,7 +16,7 @@ newtype E = E {
 data NProgramFormat = NSIT [NFStruct] S
   deriving (Show)
 
-data NFStruct = NFStruct String [String] NFStructBody
+data NFStruct = NFStruct String NFStructBody
   deriving (Show)
 
 -- private,public,private,public,private,public
@@ -43,7 +43,7 @@ data NFSusFunDef = TODO1
 data NFRefDef = TODO2
   deriving (Show)
 
-data ProgramFormat = SITList [FStruct] [FInterface] [FAlgType]
+data ProgramFormat = SITList [FStruct] [FAlgType]
   deriving (Eq,Ord,Show)
 
 data FStruct = FStructB String [FStructField] | FStructI String [String] [FStructField]
@@ -55,11 +55,6 @@ convertStringToPM = FPatternMatchB
 convertStringsToPMs :: [String] -> [FPatternMatch]
 convertStringsToPMs = Prelude.map convertStringToPM
 
-data FInterface = 
-    FInterfaceB String [FFunOrRefDecl] 
-  | FInterfaceI String [String] [FFunOrRefDecl]
-  deriving (Eq,Ord,Show)
- 
 data FAlgType = FAlgType String [String] [FAlgTypeVal]
   deriving (Eq,Ord,Show)
 
@@ -110,12 +105,6 @@ data FFunApplication =
     FSFunApplication String FFunApplication
   | FFunApplicationB String [FValueStatement]
   | FFunApplicationR [Int] [FValueStatement]
-  deriving (Eq,Ord,Show)
-
-data FFunOrRefDecl =
-    FFunOrRefDeclF FType String
-  | FFunOrRefDeclSF FType String
-  | FFunOrRefDeclR FType String
   deriving (Eq,Ord,Show)
 
 data FAssignment =

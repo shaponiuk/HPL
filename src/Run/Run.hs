@@ -18,10 +18,10 @@ run (NSIT structs state) = do
     print "Finish"
 
 getMainStruct :: [NFStruct] -> NFStruct
-getMainStruct = head . filter (\(NFStruct name _ _) -> name == "Main")
+getMainStruct = head . filter (\(NFStruct name _) -> name == "Main")
 
 getMainFunction :: NFStruct -> (String, [FPatternMatch], E)
-getMainFunction (NFStruct _ _ (NFStructBody _ l _ _ _ _)) =
+getMainFunction (NFStruct _ (NFStructBody _ l _ _ _ _)) =
     (\(NFNonSusFunDef name args env) -> (name, args, env)) $ head $ filter (\(NFNonSusFunDef name _ _) -> name == "main") l
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> Int -> FunRunT

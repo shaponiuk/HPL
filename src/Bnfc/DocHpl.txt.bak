@@ -33,16 +33,18 @@ The set of reserved words is the set of terminals appearing in the grammar. Thos
 
 The reserved words used in Hpl are the following:
   | ``data`` | ``else`` | ``force`` | ``fun``
-  | ``if`` | ``in`` | ``let`` | ``private``
-  | ``ref`` | ``struct`` | ``sus`` | ``then``
+  | ``if`` | ``in`` | ``interface`` | ``let``
+  | ``private`` | ``ref`` | ``struct`` | ``sus``
+  | ``then`` |  |  | 
 
 The symbols used in Hpl are the following:
-  | { | } | ; | (
-  | ) | = | , | ->
-  | | | :: | . | [
-  | ] | + | - | %
-  | * | / | < | <=
-  | > | >= | == | !=
+  | { | } | ; | :
+  | , | ( | ) | =
+  | -> | | | :: | .
+  | [ | ] | + | -
+  | % | * | / | <
+  | <= | > | >= | ==
+  | != |  |  | 
 
 ===Comments===
 Single-line comments begin with //.Multiple-line comments are  enclosed with /* and */.
@@ -55,10 +57,12 @@ All other symbols are terminals.
 
   | //Program// | -> | //[StructOrInterfaceOrType]// 
   | //StructOrInterfaceOrType// | -> | //Struct// 
+  |  |  **|**  | //Interface// 
   |  |  **|**  | //AlgType// 
   | //[StructOrInterfaceOrType]// | -> | **eps**
   |  |  **|**  | //StructOrInterfaceOrType// //[StructOrInterfaceOrType]// 
   | //Struct// | -> | ``struct`` //Ident// ``{`` //StructBody// ``}`` ``;`` 
+  |  |  **|**  | ``struct`` //Ident// ``:`` //[InterfaceId]// ``{`` //StructBody// ``}`` ``;`` 
   | //StructBody// | -> | //[StructField]// 
   | //StructField// | -> | ``private`` //FunctionDef// 
   |  |  **|**  | //FunctionDef// 
@@ -66,6 +70,17 @@ All other symbols are terminals.
   |  |  **|**  | //RefDef// 
   | //[StructField]// | -> | **eps**
   |  |  **|**  | //StructField// //[StructField]// 
+  | //InterfaceId// | -> | //Ident// 
+  | //[InterfaceId]// | -> | //InterfaceId// 
+  |  |  **|**  | //InterfaceId// ``,`` //[InterfaceId]// 
+  | //Interface// | -> | ``interface`` //InterfaceId// ``{`` //InterfaceBody// ``}`` ``;`` 
+  |  |  **|**  | ``interface`` //InterfaceId// ``:`` //[InterfaceId]// ``{`` //InterfaceBody// ``}`` ``;`` 
+  | //InterfaceBody// | -> | //[FunOrRefDecl]// 
+  | //FunOrRefDecl// | -> | ``fun`` //Type// //Ident// ``;`` 
+  |  |  **|**  | ``sus`` ``fun`` //Type// //Ident// ``;`` 
+  |  |  **|**  | ``ref`` //Type// //Ident// ``;`` 
+  | //[FunOrRefDecl]// | -> | **eps**
+  |  |  **|**  | //FunOrRefDecl// //[FunOrRefDecl]// 
   | //FunctionDef// | -> | ``fun`` //Type// //Ident// ``(`` //[FunctionArg]// ``)`` ``=`` //ValueStatement// ``;`` 
   |  |  **|**  | ``sus`` //FunctionDef// 
   | //FunctionArg// | -> | //PatternMatch// 

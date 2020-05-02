@@ -3,7 +3,6 @@
 ProgramB. Program ::= [StructOrInterfaceOrType] ;
 
 StructOrInterfaceOrTypeS. StructOrInterfaceOrType ::= Struct ;
-StructOrInterfaceOrTypeI. StructOrInterfaceOrType ::= Interface ;
 StructOrInterfaceOrTypeT. StructOrInterfaceOrType ::= AlgType ;
 
 separator StructOrInterfaceOrType "" ;
@@ -11,7 +10,6 @@ separator StructOrInterfaceOrType "" ;
 -----Struct--------------------------------
 
 StructB. Struct ::= "struct" Ident "{" StructBody "}" ";" ;
-StructI. Struct ::= "struct" Ident ":" [InterfaceId] "{" StructBody "}" ";" ;
 
 StructBodyB. StructBody ::= [StructField] ;
 
@@ -21,23 +19,6 @@ StructFieldRefPr. StructField ::= "private" RefDef ;
 StructFieldRefPu. StructField ::= RefDef ;
 
 separator StructField "" ;
-
------Interface----------------------------
-
-InterfaceIdB. InterfaceId ::= Ident ;
-
-separator nonempty InterfaceId "," ;
-
-InterfaceB. Interface ::= "interface" InterfaceId "{" InterfaceBody "}" ";" ;
-InterfaceBInh. Interface ::= "interface" InterfaceId ":" [InterfaceId] "{" InterfaceBody "}" ";" ;
-
-InterfaceBodyB. InterfaceBody ::= [FunOrRefDecl] ;
-
-FunOrRefDeclF. FunOrRefDecl ::= "fun" Type Ident ";" ;
-FunOrRefDeclSF. FunOrRefDecl ::= "sus" "fun" Type Ident ";" ;
-FunOrRefDeclR. FunOrRefDecl ::= "ref" Type Ident ";" ;
-
-separator FunOrRefDecl "" ;
 
 -----Functions----------------------------
 

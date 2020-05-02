@@ -10,15 +10,11 @@ initialConvertToProgramFormat :: Program -> ProgramFormat
 initialConvertToProgramFormat p@(ProgramB l) = 
     SITList 
         (gatherAndConvertStructs p ) 
-        (gatherAndConvertInterfaces p) 
         (gatherAndConvertAlgTypes p)
         
 
 gatherAndConvertStructs :: Program -> [FStruct]
 gatherAndConvertStructs p@(ProgramB _) = map convertStruct $ gatherStructs p
-
-gatherAndConvertInterfaces :: Program -> [FInterface]
-gatherAndConvertInterfaces p@(ProgramB _) = map convertInterface $ gatherInterfaces p
 
 gatherAndConvertAlgTypes :: Program -> [FAlgType]
 gatherAndConvertAlgTypes p@(ProgramB _) = map convertAlgType $ gatherAlgTypes p
@@ -26,17 +22,11 @@ gatherAndConvertAlgTypes p@(ProgramB _) = map convertAlgType $ gatherAlgTypes p
 gatherStructs :: Program -> [Struct]
 gatherStructs (ProgramB l) = map sitToStruct $ filter checkStruct l
 
-gatherInterfaces :: Program -> [Interface]
-gatherInterfaces (ProgramB l) = map sitToInterface $ filter checkInterface l
-
 gatherAlgTypes :: Program -> [AlgType]
 gatherAlgTypes (ProgramB l) = map sitToAlgType $ filter checkAlgType l
 
 sitToStruct :: StructOrInterfaceOrType -> Struct
 sitToStruct (StructOrInterfaceOrTypeS s) = s
-
-sitToInterface :: StructOrInterfaceOrType -> Interface
-sitToInterface (StructOrInterfaceOrTypeI i) = i
 
 sitToAlgType :: StructOrInterfaceOrType -> AlgType
 sitToAlgType (StructOrInterfaceOrTypeT t) = t
@@ -45,10 +35,6 @@ checkStruct :: StructOrInterfaceOrType -> Bool
 checkStruct (StructOrInterfaceOrTypeS _) = True
 checkStruct _ = False
 
-checkInterface :: StructOrInterfaceOrType -> Bool
-checkInterface (StructOrInterfaceOrTypeI _) = True
-checkInterface _ = False
-
 checkAlgType :: StructOrInterfaceOrType -> Bool
 checkAlgType (StructOrInterfaceOrTypeT _) = True
 checkAlgType _ = False
@@ -56,22 +42,6 @@ checkAlgType _ = False
 convertStruct :: Struct -> FStruct
 convertStruct (StructB (Ident name) body) = 
   FStructB name $ convertBody body
-convertStruct (StructI (Ident name) interfaceIdList body) = 
-  FStructI name (convertInterfaceIdList interfaceIdList) $ convertBody body
-
-convertInterface :: Interface -> FInterface
-convertInterface (InterfaceB iid body) = 
-  FInterfaceB (convertInterfaceId iid) (convertInterfaceBody body)
-convertInterface (InterfaceBInh iid iidList body) = 
-  FInterfaceI (convertInterfaceId iid) (convertInterfaceIdList iidList) (convertInterfaceBody body)
-
-convertInterfaceBody :: InterfaceBody -> [FFunOrRefDecl]
-convertInterfaceBody (InterfaceBodyB l) = map convertFunOrRefDecl l
-
-convertFunOrRefDecl :: FunOrRefDecl -> FFunOrRefDecl
-convertFunOrRefDecl (FunOrRefDeclF t i) = FFunOrRefDeclF (convertType t) (unwrapIdent i)
-convertFunOrRefDecl (FunOrRefDeclSF t i) = FFunOrRefDeclSF (convertType t) (unwrapIdent i)
-convertFunOrRefDecl (FunOrRefDeclR t i) = FFunOrRefDeclR (convertType t) (unwrapIdent i)
 
 convertAlgType :: AlgType -> FAlgType
 convertAlgType (AlgTypeB i taList atvList) = 
@@ -88,15 +58,6 @@ convertAlgTypeVal (AlgTypeValB i t) = FAlgTypeVal (unwrapIdent i) (convertType t
 
 convertAlgTypeValList :: [AlgTypeVal] -> [FAlgTypeVal]
 convertAlgTypeValList = map convertAlgTypeVal
-
-convertInterfaceIdList :: [InterfaceId] -> [String]
-convertInterfaceIdList = map convertInterfaceId
-
-convertInterfaceId :: InterfaceId -> String
-convertInterfaceId = unwrapIdent . unwrapInterfaceId
-
-unwrapInterfaceId :: InterfaceId -> Ident
-unwrapInterfaceId (InterfaceIdB ident) = ident
 
 unwrapIdent :: Ident -> String
 unwrapIdent (Ident str) = str

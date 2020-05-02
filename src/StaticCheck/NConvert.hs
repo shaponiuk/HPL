@@ -7,7 +7,7 @@ import Data.Map as M
 import Debug.Trace
 
 convertToNPF :: ProgramFormat -> NProgramFormat
-convertToNPF (SITList structs interfaces algTypes) =
+convertToNPF (SITList structs algTypes) =
     NSIT nfStructs new_state where
     (nfStructs, new_state) = 
         Prelude.foldl (\(nfstrcts, st) strct ->
@@ -18,7 +18,7 @@ convertToNPF (SITList structs interfaces algTypes) =
     
 fstructConvert :: S -> FStruct -> (NFStruct, S)
 fstructConvert s (FStructB name body) =
-    (NFStruct name [] (
+    (NFStruct name (
         NFStructBody
         []
         publicNonSus

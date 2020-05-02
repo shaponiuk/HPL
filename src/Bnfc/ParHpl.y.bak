@@ -15,6 +15,12 @@ import ErrM
 %name pStructBody StructBody
 %name pStructField StructField
 %name pListStructField ListStructField
+%name pInterfaceId InterfaceId
+%name pListInterfaceId ListInterfaceId
+%name pInterface Interface
+%name pInterfaceBody InterfaceBody
+%name pFunOrRefDecl FunOrRefDecl
+%name pListFunOrRefDecl ListFunOrRefDecl
 %name pFunctionDef FunctionDef
 %name pFunctionArg FunctionArg
 %name pListFunctionArg ListFunctionArg
@@ -53,31 +59,33 @@ import ErrM
   '->' { PT _ (TS _ 9) }
   '.' { PT _ (TS _ 10) }
   '/' { PT _ (TS _ 11) }
-  '::' { PT _ (TS _ 12) }
-  ';' { PT _ (TS _ 13) }
-  '<' { PT _ (TS _ 14) }
-  '<=' { PT _ (TS _ 15) }
-  '=' { PT _ (TS _ 16) }
-  '==' { PT _ (TS _ 17) }
-  '>' { PT _ (TS _ 18) }
-  '>=' { PT _ (TS _ 19) }
-  '[' { PT _ (TS _ 20) }
-  ']' { PT _ (TS _ 21) }
-  'data' { PT _ (TS _ 22) }
-  'else' { PT _ (TS _ 23) }
-  'force' { PT _ (TS _ 24) }
-  'fun' { PT _ (TS _ 25) }
-  'if' { PT _ (TS _ 26) }
-  'in' { PT _ (TS _ 27) }
-  'let' { PT _ (TS _ 28) }
-  'private' { PT _ (TS _ 29) }
-  'ref' { PT _ (TS _ 30) }
-  'struct' { PT _ (TS _ 31) }
-  'sus' { PT _ (TS _ 32) }
-  'then' { PT _ (TS _ 33) }
-  '{' { PT _ (TS _ 34) }
-  '|' { PT _ (TS _ 35) }
-  '}' { PT _ (TS _ 36) }
+  ':' { PT _ (TS _ 12) }
+  '::' { PT _ (TS _ 13) }
+  ';' { PT _ (TS _ 14) }
+  '<' { PT _ (TS _ 15) }
+  '<=' { PT _ (TS _ 16) }
+  '=' { PT _ (TS _ 17) }
+  '==' { PT _ (TS _ 18) }
+  '>' { PT _ (TS _ 19) }
+  '>=' { PT _ (TS _ 20) }
+  '[' { PT _ (TS _ 21) }
+  ']' { PT _ (TS _ 22) }
+  'data' { PT _ (TS _ 23) }
+  'else' { PT _ (TS _ 24) }
+  'force' { PT _ (TS _ 25) }
+  'fun' { PT _ (TS _ 26) }
+  'if' { PT _ (TS _ 27) }
+  'in' { PT _ (TS _ 28) }
+  'interface' { PT _ (TS _ 29) }
+  'let' { PT _ (TS _ 30) }
+  'private' { PT _ (TS _ 31) }
+  'ref' { PT _ (TS _ 32) }
+  'struct' { PT _ (TS _ 33) }
+  'sus' { PT _ (TS _ 34) }
+  'then' { PT _ (TS _ 35) }
+  '{' { PT _ (TS _ 36) }
+  '|' { PT _ (TS _ 37) }
+  '}' { PT _ (TS _ 38) }
 
 L_ident  { PT _ (TV $$) }
 L_integ  { PT _ (TI $$) }
@@ -94,12 +102,14 @@ Program :: { Program }
 Program : ListStructOrInterfaceOrType { AbsHpl.ProgramB (reverse $1) }
 StructOrInterfaceOrType :: { StructOrInterfaceOrType }
 StructOrInterfaceOrType : Struct { AbsHpl.StructOrInterfaceOrTypeS $1 }
+                        | Interface { AbsHpl.StructOrInterfaceOrTypeI $1 }
                         | AlgType { AbsHpl.StructOrInterfaceOrTypeT $1 }
 ListStructOrInterfaceOrType :: { [StructOrInterfaceOrType] }
 ListStructOrInterfaceOrType : {- empty -} { [] }
                             | ListStructOrInterfaceOrType StructOrInterfaceOrType { flip (:) $1 $2 }
 Struct :: { Struct }
 Struct : 'struct' Ident '{' StructBody '}' ';' { AbsHpl.StructB $2 $4 }
+       | 'struct' Ident ':' ListInterfaceId '{' StructBody '}' ';' { AbsHpl.StructI $2 $4 $6 }
 StructBody :: { StructBody }
 StructBody : ListStructField { AbsHpl.StructBodyB (reverse $1) }
 StructField :: { StructField }
@@ -110,6 +120,23 @@ StructField : 'private' FunctionDef { AbsHpl.StructFieldFunPr $2 }
 ListStructField :: { [StructField] }
 ListStructField : {- empty -} { [] }
                 | ListStructField StructField { flip (:) $1 $2 }
+InterfaceId :: { InterfaceId }
+InterfaceId : Ident { AbsHpl.InterfaceIdB $1 }
+ListInterfaceId :: { [InterfaceId] }
+ListInterfaceId : InterfaceId { (:[]) $1 }
+                | InterfaceId ',' ListInterfaceId { (:) $1 $3 }
+Interface :: { Interface }
+Interface : 'interface' InterfaceId '{' InterfaceBody '}' ';' { AbsHpl.InterfaceB $2 $4 }
+          | 'interface' InterfaceId ':' ListInterfaceId '{' InterfaceBody '}' ';' { AbsHpl.InterfaceBInh $2 $4 $6 }
+InterfaceBody :: { InterfaceBody }
+InterfaceBody : ListFunOrRefDecl { AbsHpl.InterfaceBodyB (reverse $1) }
+FunOrRefDecl :: { FunOrRefDecl }
+FunOrRefDecl : 'fun' Type Ident ';' { AbsHpl.FunOrRefDeclF $2 $3 }
+             | 'sus' 'fun' Type Ident ';' { AbsHpl.FunOrRefDeclSF $3 $4 }
+             | 'ref' Type Ident ';' { AbsHpl.FunOrRefDeclR $2 $3 }
+ListFunOrRefDecl :: { [FunOrRefDecl] }
+ListFunOrRefDecl : {- empty -} { [] }
+                 | ListFunOrRefDecl FunOrRefDecl { flip (:) $1 $2 }
 FunctionDef :: { FunctionDef }
 FunctionDef : 'fun' Type Ident '(' ListFunctionArg ')' '=' ValueStatement ';' { AbsHpl.FunctionDefB $2 $3 $5 $8 }
             | 'sus' FunctionDef { AbsHpl.SusFunctionDef $2 }
