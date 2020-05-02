@@ -16,7 +16,10 @@ registerLoc b (E nameMap) name loc =
       E (insert name [loc] nameMap)
 
 lookupLoc :: String -> E -> [Int]
-lookupLoc name (E nameMap) = nameMap ! name
+lookupLoc name (E nameMap) =
+  if member name nameMap
+    then nameMap ! name
+    else trace ("lookupLoc " ++ show name) undefined
 
 lookupFirstLoc :: String -> E -> Int
 lookupFirstLoc name env = head $ lookupLoc name env

@@ -2,6 +2,7 @@ module Util.State where
 
 import Data.Map
 import StaticCheck.Format
+import Debug.Trace
 
 getNewLoc :: S -> (Int, S)
 getNewLoc (S varsMap loc funArgs) = (loc + 1, S varsMap (loc + 1) funArgs)
@@ -11,7 +12,10 @@ putInLoc loc thing (S varsMap newIntLoc funArgs) =
   S (insert loc thing varsMap) newIntLoc funArgs
 
 stateLookup :: Int -> S -> (Bool, E, FType, FValueStatement)
-stateLookup loc (S varsMap _ _) = varsMap ! loc
+stateLookup loc (S varsMap _ _) = 
+  if member loc varsMap
+    then varsMap ! loc
+    else trace ("loc not found in state " ++ show loc) undefined
 
 funArgNamesLookup :: S -> Int -> [FPatternMatch]
 funArgNamesLookup (S _ _ funArgs) loc =

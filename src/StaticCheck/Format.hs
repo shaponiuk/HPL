@@ -7,7 +7,6 @@ data S = S {
   vars :: Map Int (Bool, E, FType, FValueStatement),
   newInt :: Int,
   functionArgs :: Map Int [FPatternMatch]
--- constructor name -> arity
 } deriving (Show)
 
 newtype E = E {
@@ -104,6 +103,7 @@ data FValueStatement =
   | FFValueStatement String FValueStatement
   | FCValueStatement String [FValueStatement]
   | FExpr FValueStatementExpr
+  | FRefAddr Int
   deriving (Eq,Ord,Show)
 
 data FFunApplication =
