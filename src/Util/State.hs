@@ -42,13 +42,16 @@ putQueue (S varsMap newIntLoc functionArgsMap semaphores queues) thing =
 anyAvailibleQueue :: S -> Bool
 anyAvailibleQueue (S _ _ _ semaphores queues) = any (`notBlockedByAnyOfTheSemaphores` semaphores) queues
 
-notBlockedByAnyOfTheSemaphores :: (E, FValueStatement, Int, Bool) -> [([Int], Int)] -> Bool
+notBlockedByAnyOfTheSemaphores :: (E, FValueStatement, Int, Bool) -> [([Int], Int, Int)] -> Bool
 notBlockedByAnyOfTheSemaphores (_, _, _, False) [] = True
 notBlockedByAnyOfTheSemaphores (_, _, _, True) [] = False
 notBlockedByAnyOfTheSemaphores q semaphores = any (q `notBlockedBySemaphoreOrNotFinished`) semaphores
 
-notBlockedBySemaphoreOrNotFinished :: (E, FValueStatement, Int, Bool) -> ([Int], Int) -> Bool
-notBlockedBySemaphoreOrNotFinished (_, _, queueId, b) (blockedQueues, _) = queueId `notElem` blockedQueues || not b
+checkNotBlocked :: (E, FValueStatement, Int, Bool) -> S -> Bool
+checkNotBlocked queue (S _ _ _ semaphores _) = notBlockedByAnyOfTheSemaphores queue semaphores
+
+notBlockedBySemaphoreOrNotFinished :: (E, FValueStatement, Int, Bool) -> ([Int], Int, Int) -> Bool
+notBlockedBySemaphoreOrNotFinished (_, _, queueId, b) (blockedQueues, _, _) = queueId `notElem` blockedQueues || not b
 
 getAvailibleQueue :: S -> (E, FValueStatement, Int, Bool)
 getAvailibleQueue (S _ _ _ semaphores queues) = first (`notBlockedByAnyOfTheSemaphores` semaphores) queues
@@ -66,11 +69,17 @@ updateQueues qId q ((e, vs, qId_, b):queues) = if qId == qId_ then q:queues else
 getQueue :: Int -> S -> (E, FValueStatement, Int, Bool)
 getQueue qId (S _ _ _ _ queues) = first (\(_, _, id, _) -> id == qId) queues
 
-getNewSemaphore :: S -> (([Int], Int), S)
+getNewSemaphore :: S -> (([Int], Int, Int), S)
 getNewSemaphore (S varsMap newIntLoc functionArgsMap semaphores queues) =
   let
     newSemId = length semaphores
-  in (([], newSemId), S varsMap newIntLoc functionArgsMap (semaphores ++ [([], newSemId)]) queues)
+  in (([], 0, newSemId), S varsMap newIntLoc functionArgsMap (semaphores ++ [([], 0, newSemId)]) queues)
+
+getSemaphore :: Int -> S -> ([Int], Int, Int)
+getSemaphore = undefined
+
+putSemaphore :: Int -> ([Int], Int, Int) -> S -> S
+putSemaphore = undefined
 
 getNewState :: S
 getNewState = S empty 0 empty [] []
