@@ -21,8 +21,13 @@ getMainStruct :: [NFStruct] -> NFStruct
 getMainStruct = head . filter (\(NFStruct name _) -> name == "Main")
 
 getMainFunction :: NFStruct -> (String, [FPatternMatch], E)
-getMainFunction (NFStruct _ (NFStructBody _ l _ _ _ _)) =
-    (\(NFNonSusFunDef name args env) -> (name, args, env)) $ head $ filter (\(NFNonSusFunDef name _ _) -> name == "main") l
+getMainFunction (NFStruct _ (NFStructBody l)) = unwrapFunDef $ head $ filter isMainFunction l
+
+unwrapFunDef :: AnyDef -> (String, [FPatternMatch], E)
+unwrapFunDef (NonSusFunDef (NFNonSusFunDef a b c)) = (a, b, c)
+
+isMainFunction :: AnyDef -> Bool
+isMainFunction (NonSusFunDef (NFNonSusFunDef name _ _)) = name == "main"
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> Int -> FunRunT
 interpretVS vs env argNames loc s vss =

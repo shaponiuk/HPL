@@ -17,4 +17,3 @@ staticCheckEither p = do
   let pf = initialConvertToProgramFormat p
   let npf = convertToNPF pf
   return npf
-

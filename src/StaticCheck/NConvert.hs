@@ -18,15 +18,7 @@ convertToNPF (SITList structs algTypes) =
     
 fstructConvert :: S -> FStruct -> (NFStruct, S)
 fstructConvert s (FStructB name body) =
-    (NFStruct name (
-        NFStructBody
-        []
-        publicNonSus
-        []
-        []
-        []
-        []),
-    state) where
+    (NFStruct name (NFStructBody publicNonSus), state) where
     (publicNonSus, state) = convertPublicNonSusFuns body s
 
 getNewState :: S
@@ -35,31 +27,25 @@ getNewState = S M.empty 0 M.empty
 getNewEnv :: E
 getNewEnv = E M.empty
 
-convertPublicNonSusFuns :: [FStructField] -> S -> ([NFNonSusFunDef], S)
+convertPublicNonSusFuns :: [FStructField] -> S -> ([AnyDef], S)
 convertPublicNonSusFuns structFields state =
     let
-        publicFields = extractPublicNonSusFunFields structFields
-    in let
-        (inStructEnv, newState) = makeInStructEnv getNewEnv publicFields state
-    in convertPublicNonSusFunFields publicFields inStructEnv newState
+        (inStructEnv, newState) = makeInStructEnv getNewEnv structFields state
+    in convertPublicNonSusFunFields structFields inStructEnv newState
 
 makeInStructEnv :: E -> [FStructField] -> S -> (E, S)
 makeInStructEnv env fields state =
-    Prelude.foldl (\(e, s) (FStructFieldFunPublic (NonSusFFunctionDef _ name _ _)) ->
-        let
-            (loc, newState) = getNewLoc s
-            newEnv = registerLoc True e name loc
-        in (newEnv, newState)
-    ) (env, state) fields
+    Prelude.foldl makeInStructEnvInFoldF (env, state) fields
 
-extractPublicNonSusFunFields :: [FStructField] -> [FStructField]
-extractPublicNonSusFunFields = Prelude.filter checkPublicNonSusFunctionField
+makeInStructEnvInFoldF :: (E, S) -> FStructField -> (E, S)
+makeInStructEnvInFoldF (e, s) (FStructFieldFunPublic (NonSusFFunctionDef _ name _ _)) =
+    let
+        (loc, newState) = getNewLoc s
+        newEnv = registerLoc True e name loc
+    in (newEnv, newState)
+makeInStructEnvInFoldF _ _ = undefined
 
-checkPublicNonSusFunctionField :: FStructField -> Bool
-checkPublicNonSusFunctionField (FStructFieldFunPublic NonSusFFunctionDef {}) = True
-checkPublicNonSusFunctionField _ = False
-
-convertPublicNonSusFunFields :: [FStructField] -> E -> S -> ([NFNonSusFunDef], S)
+convertPublicNonSusFunFields :: [FStructField] -> E -> S -> ([AnyDef], S)
 convertPublicNonSusFunFields fields env state = 
     Prelude.foldl (\(l, s) field ->
         let 
@@ -67,12 +53,18 @@ convertPublicNonSusFunFields fields env state =
         in (nf:l, ns)
     ) ([], state) fields
 
-convertPublicNonSusFunField :: FStructField -> E -> S -> (NFNonSusFunDef, S)
+convertPublicNonSusFunField :: FStructField -> E -> S -> (AnyDef, S)
 convertPublicNonSusFunField (FStructFieldFunPublic (NonSusFFunctionDef t name args vs)) env state =
-    (NFNonSusFunDef name args env, newerState) where
+    (NonSusFunDef $ NFNonSusFunDef name args env, newerState) where
         locs = lookupLoc name env
         loc = getUnsetLoc state locs 
         newState = putInLoc loc newThing state
         newerState = putArgNames newState loc args
         newThing = (True, env, t, vs)
-convertPublicNonSusFunField _ _ _ = undefined
+convertPublicNonSusFunField (FStructFieldFunPublic (SusFFunctionDef (NonSusFFunctionDef t name args vs))) env state =
+    (SusFunDef $ NFSusFunDef name args env, newerState) where
+        locs = lookupLoc name env
+        loc = getUnsetLoc state locs
+        newState = putInLoc loc newThing state
+        newerState = putArgNames newState loc args 
+        newThing = (True, env, t, FSusValueStatement vs)

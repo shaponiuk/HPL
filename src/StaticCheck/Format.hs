@@ -19,29 +19,25 @@ data NProgramFormat = NSIT [NFStruct] S
 data NFStruct = NFStruct String NFStructBody
   deriving (Show)
 
--- private,public,private,public,private,public
-data NFStructBody = 
-  NFStructBody 
-    [NFNonSusFunDef] 
-    [NFNonSusFunDef] 
-    [NFSusFunDef] 
-    [NFSusFunDef] 
-    [NFRefDef] 
-    [NFRefDef]
+newtype NFStructBody = 
+  NFStructBody [AnyDef]
     deriving (Show)
+
+data AnyDef = NonSusFunDef NFNonSusFunDef | SusFunDef NFSusFunDef | RefDef NFRefDef
+  deriving (Show)
   
 data NFNonSusFunDef = NFNonSusFunDef String [FPatternMatch] E
+  deriving (Show)
+
+data NFSusFunDef = NFSusFunDef String [FPatternMatch] E
+  deriving (Show)
+
+data NFRefDef = NFRefDef String E
   deriving (Show)
 
 type FunRunT = S -> [FValueStatement] -> IO (Maybe (S, FValueStatement))
 
 type FunRunQuickT = S -> IO (Maybe (S, FValueStatement))
-
-data NFSusFunDef = TODO1
-  deriving (Show)
-
-data NFRefDef = TODO2
-  deriving (Show)
 
 data ProgramFormat = SITList [FStruct] [FAlgType]
   deriving (Eq,Ord,Show)
@@ -99,6 +95,7 @@ data FValueStatement =
   | FCValueStatement String [FValueStatement]
   | FExpr FValueStatementExpr
   | FRefAddr Int
+  | FSusValueStatement FValueStatement
   deriving (Eq,Ord,Show)
 
 data FFunApplication =
