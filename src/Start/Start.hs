@@ -33,7 +33,7 @@ runAux p s = let ts = myLLexer s in case p ts of
 checkAndRunTree :: Program -> IO ()
 checkAndRunTree x = tryRun $ staticCheck x
 
-tryRun :: Either String NProgramFormat -> IO ()
-tryRun (Left err) = putStrLn $ "TODO: make it nicer " ++ err
-tryRun (Right tree) = run tree
+tryRun :: Err NProgramFormat -> IO ()
+tryRun (Bad err) = putStrLn $ "TODO: make it nicer " ++ err
+tryRun (Ok tree) = run tree
                            
