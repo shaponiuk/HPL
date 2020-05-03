@@ -23,3 +23,6 @@ lookupLoc name (E nameMap) =
 
 lookupFirstLoc :: String -> E -> Int
 lookupFirstLoc name env = head $ lookupLoc name env
+
+getNewEnv :: E
+getNewEnv = E empty

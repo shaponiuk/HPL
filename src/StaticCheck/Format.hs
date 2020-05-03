@@ -6,7 +6,9 @@ import Data.Map
 data S = S {
   vars :: Map Int (Bool, E, FType, FValueStatement),
   newInt :: Int,
-  functionArgs :: Map Int [FPatternMatch]
+  functionArgs :: Map Int [FPatternMatch],
+  semaphores :: [([Int], Int)], -- (ids of queues waiting, id of the semaphore)
+  queues :: [(E, FValueStatement, Int)] -- (environment, vs to be run with the environment, id of the queue)
 } deriving (Show)
 
 newtype E = E {

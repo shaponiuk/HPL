@@ -21,12 +21,6 @@ fstructConvert s (FStructB name body) =
     (NFStruct name (NFStructBody publicNonSus), state) where
     (publicNonSus, state) = convertPublicNonSusFuns body s
 
-getNewState :: S
-getNewState = S M.empty 0 M.empty
-
-getNewEnv :: E
-getNewEnv = E M.empty
-
 convertPublicNonSusFuns :: [FStructField] -> S -> ([AnyDef], S)
 convertPublicNonSusFuns structFields state =
     let
@@ -43,7 +37,12 @@ makeInStructEnvInFoldF (e, s) (FStructFieldFunPublic (NonSusFFunctionDef _ name 
         (loc, newState) = getNewLoc s
         newEnv = registerLoc True e name loc
     in (newEnv, newState)
-makeInStructEnvInFoldF _ _ = undefined
+makeInStructEnvInFoldF (e, s) (FStructFieldFunPublic (SusFFunctionDef (NonSusFFunctionDef t name argNames vs))) =
+    let
+        (loc, newState) = getNewLoc s
+        newEnv = registerLoc True e name loc
+    in (newEnv, newState)
+makeInStructEnvInFoldF (e, s) x = trace (show x) undefined
 
 convertPublicNonSusFunFields :: [FStructField] -> E -> S -> ([AnyDef], S)
 convertPublicNonSusFunFields fields env state = 
