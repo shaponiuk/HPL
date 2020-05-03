@@ -287,6 +287,8 @@ forceRunFunApplication vs@(FFunApplicationB "get" [ref]) state env = do
     Just (newerState, vs) <- runVS refVS e newState
     return (vs, newerState, e)
 forceRunFunApplication a@(FFunApplicationB name args) state env = do
+    print "hahahah"
+    print a
     Just (s, vs) <- runVS (FAValueStatement a) env state
     return (vs, s, env)
 forceRunFunApplication a@(FFunApplicationR loc [args]) state env = do
