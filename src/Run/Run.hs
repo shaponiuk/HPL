@@ -145,6 +145,11 @@ runVS (FSusValueStatement vs) e s = do
     let nvs = FSuspendedValue queueId
     let ns = putQueue s (e, vs, queueId, False)
     return $ Just (ns, nvs)
+runVS (FSuspendedValue qId) e s = do
+    let (env, qvs, _, b) = getQueue qId s
+    Just (ns, nvs) <- runVS qvs env s
+    let nns = putInQueue qId (env, qvs, qId, True) ns
+    return $ Just (nns, nvs)
 
 runVS vs _ _ = trace ("runVS??? " ++ show vs) undefined
 
@@ -263,10 +268,15 @@ forceGetTupleVSS vs _ _ = trace (show vs) undefined
 
 forceRunFunApplication :: FFunApplication -> S -> E -> IO (FValueStatement, S, E)
 forceRunFunApplication (FFunApplicationB "print" [str]) state env = do
-    interpretedArgMaybe <- runVS str env state
-    let (s, r)  = forceUnwrapMaybe interpretedArgMaybe
-    print $ "hehe " ++ show r
-    return (FTValueStatement [], s, env)
+    Just (s, r) <- runVS str env state
+    case r of
+        FSuspendedValue qId -> do
+            Just (ns, nr) <- runVS r env s
+            print $ "hehe" ++ show nr
+            return (FTValueStatement [], ns, env)
+        _ -> do
+            print $ "hehe " ++ show r
+            return (FTValueStatement [], s, env)
 forceRunFunApplication vs@(FFunApplicationB "set" [ref, value]) state env = do
     Just (newState, FRefAddr refAddr) <- runVS ref env state
     let newerState = putInLoc refAddr (False, env, FTypeT [], value) newState
