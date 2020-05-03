@@ -27,10 +27,11 @@ runLoop state =
     else
         putStrLn "No availible queue to run"
 
-runQueue :: (E, FValueStatement, Int) -> S -> IO S
-runQueue (env, vs, queueId) state = do
+runQueue :: (E, FValueStatement, Int, Bool) -> S -> IO S
+runQueue (env, vs, queueId, _) state = do
+    print "here"
     Just (ns, nvs) <- runVS vs env state
-    return $ putInQueue queueId (env, nvs, queueId) ns
+    return $ putInQueue queueId (env, nvs, queueId, True) ns
 
 getMainStruct :: [NFStruct] -> NFStruct
 getMainStruct = head . filter (\(NFStruct name _) -> name == "Main")
@@ -141,8 +142,8 @@ runVS a@(FFValueStatement argName vs) e s =
     return $ Just (s, a)
 runVS (FSusValueStatement vs) e s = do
     let queueId = getFreeQueueId s
-    let nvs = FSuspendedValue queueId vs
-    let ns = putQueue s (e, vs, queueId)
+    let nvs = FSuspendedValue queueId
+    let ns = putQueue s (e, vs, queueId, False)
     return $ Just (ns, nvs)
 
 runVS vs _ _ = trace ("runVS??? " ++ show vs) undefined
@@ -251,13 +252,14 @@ unwrapSingleTuples a = [a]
 
 forceGetTupleVSS :: FValueStatement -> S -> E -> IO ([FValueStatement], S, E)
 forceGetTupleVSS a@(FTValueStatement vss) s e = do
-    Just (_, e_) <- runVS a e s
     Just (ns, tvs) <- runVS a e s
     return (unwrapSingleTuples tvs, ns, e)
 forceGetTupleVSS (FAValueStatement funApplication) state env = do
     (vs, s, e) <- forceRunFunApplication funApplication state env
     forceGetTupleVSS vs s e
-forceGetTupleVSS _ _ _ = undefined
+forceGetTupleVSS vs@(FSuspendedValue queueId) s e =
+    return ([], s, e)
+forceGetTupleVSS vs _ _ = trace (show vs) undefined
 
 forceRunFunApplication :: FFunApplication -> S -> E -> IO (FValueStatement, S, E)
 forceRunFunApplication (FFunApplicationB "print" [str]) state env = do

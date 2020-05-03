@@ -4,7 +4,7 @@ struct Main {
             () :: () = print ("hahaha");
         in ();
     
-    fun (() -> Int ()) main () =
+    sus fun (() -> Int ()) main () =
         force let
             () :: () = cor ();
             () :: () = print ("haha");

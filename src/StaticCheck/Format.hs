@@ -8,7 +8,7 @@ data S = S {
   newInt :: Int,
   functionArgs :: Map Int [FPatternMatch],
   semaphores :: [([Int], Int)], -- (ids of queues waiting, id of the semaphore)
-  queues :: [(E, FValueStatement, Int)] -- (environment, vs to be run with the environment, id of the queue)
+  queues :: [(E, FValueStatement, Int, Bool)] -- (environment, vs to be run with the environment, id of the queue, finished)
 } deriving (Show)
 
 newtype E = E {
@@ -98,7 +98,7 @@ data FValueStatement =
   | FExpr FValueStatementExpr
   | FRefAddr Int
   | FSusValueStatement FValueStatement
-  | FSuspendedValue Int FValueStatement
+  | FSuspendedValue Int
   deriving (Eq,Ord,Show)
 
 data FFunApplication =
