@@ -15,7 +15,20 @@ run (NSIT structs state) = do
     let (_, nenv, t, vs) = stateLookup mainloc nstate
     let nnstate = putInLoc nloc (False, nenv, t, vs) nstate
     Just (s, vsf) <- interpretVS vs nenv [] nloc nnstate []
+    runLoop s
     print "Finish"
+
+runLoop :: S -> IO ()
+runLoop state = 
+    if anyAvailibleQueue state then do
+        let availibleQueue = getAvailibleQueue state
+        let newState = runQueue availibleQueue state
+        runLoop newState
+    else
+        putStrLn "No availible queue to run"
+
+runQueue :: (E, FValueStatement, Int) -> S -> S
+runQueue = undefined
 
 getMainStruct :: [NFStruct] -> NFStruct
 getMainStruct = head . filter (\(NFStruct name _) -> name == "Main")
@@ -25,9 +38,11 @@ getMainFunction (NFStruct _ (NFStructBody l)) = unwrapFunDef $ head $ filter isM
 
 unwrapFunDef :: AnyDef -> (String, [FPatternMatch], E)
 unwrapFunDef (NonSusFunDef (NFNonSusFunDef a b c)) = (a, b, c)
+unwrapFunDef (SusFunDef (NFSusFunDef a b c)) = (a, b, c)
 
 isMainFunction :: AnyDef -> Bool
-isMainFunction (NonSusFunDef (NFNonSusFunDef name _ _)) = name == "main"
+isMainFunction (SusFunDef (NFSusFunDef name _ _)) = name == "main"
+isMainFunction _ = False
 
 interpretVS :: FValueStatement -> E -> [FPatternMatch] -> Int -> FunRunT
 interpretVS vs env argNames loc s vss =
@@ -120,8 +135,13 @@ runVS (FTValueStatement xss) e s = do
     (ns, xssc) <- foldl (runTVSInFoldF e) (return (s, [])) xss
     return $ Just (ns, FTValueStatement xssc)
 runVS a@(FRefAddr x) _ s = return $ Just (s, a)
-runVS a@(FFValueStatement argName vs) e s = do
+runVS a@(FFValueStatement argName vs) e s =
     return $ Just (s, a)
+runVS (FSusValueStatement vs) e s = do
+    let queueId = getFreeQueueId s
+    let nvs = FSuspendedValue queueId vs
+    let ns = putQueue s (e, vs, queueId)
+    return $ Just (ns, nvs)
 
 runVS vs _ _ = trace ("runVS??? " ++ show vs) undefined
 

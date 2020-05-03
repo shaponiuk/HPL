@@ -98,6 +98,7 @@ data FValueStatement =
   | FExpr FValueStatementExpr
   | FRefAddr Int
   | FSusValueStatement FValueStatement
+  | FSuspendedValue Int FValueStatement
   deriving (Eq,Ord,Show)
 
 data FFunApplication =
