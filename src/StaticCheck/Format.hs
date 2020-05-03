@@ -99,6 +99,7 @@ data FValueStatement =
   | FRefAddr Int
   | FSusValueStatement FValueStatement
   | FSuspendedValue Int
+  | FSemaphore Int
   deriving (Eq,Ord,Show)
 
 data FFunApplication =

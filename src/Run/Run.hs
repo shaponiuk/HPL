@@ -64,6 +64,11 @@ runSpecialFunction :: FValueStatement -> E -> FunRunQuickT
 runSpecialFunction (FAValueStatement ap@(FFunApplicationB "get" [ref])) e s = do
     (nvs, ns, _) <- forceRunFunApplication ap s e
     return $ Just (ns, nvs)
+runSpecialFunction (FAValueStatement ap@(FFunApplicationB "make_semaphore" [])) e s = do
+    print "eee"
+    (nvs, ns, _) <- forceRunFunApplication ap s e
+    return $ Just (ns, nvs)
+runSpecialFunction a b c = trace (show a) undefined
 
 runVS :: FValueStatement -> E -> FunRunQuickT
 runVS (FForceValueStatement assignments vs) env state = do
@@ -71,7 +76,7 @@ runVS (FForceValueStatement assignments vs) env state = do
     seq newState $ runVS vs newEnv newState
 runVS vs@(FIValueStatement i) _ s = return $ Just (s, vs)
 runVS a@(FAValueStatement (FFunApplicationB funName funArgVss)) env oldState =
-    if funName == "print" || funName == "get" || funName == "set"
+    if funName == "print" || funName == "get" || funName == "set" || funName == "v" || funName == "p" || funName == "make_semaphore"
     then
         runSpecialFunction a env oldState
     else do
@@ -272,23 +277,29 @@ forceRunFunApplication (FFunApplicationB "print" [str]) state env = do
     case r of
         FSuspendedValue qId -> do
             Just (ns, nr) <- runVS r env s
-            print $ "hehe" ++ show nr
+            print $ "hehe" ++ show nr 
             return (FTValueStatement [], ns, env)
         _ -> do
             print $ "hehe " ++ show r
             return (FTValueStatement [], s, env)
-forceRunFunApplication vs@(FFunApplicationB "set" [ref, value]) state env = do
+forceRunFunApplication (FFunApplicationB "set" [ref, value]) state env = do
     Just (newState, FRefAddr refAddr) <- runVS ref env state
     let newerState = putInLoc refAddr (False, env, FTypeT [], value) newState
     return (FTValueStatement [], newerState, env)
-forceRunFunApplication vs@(FFunApplicationB "get" [ref]) state env = do
+forceRunFunApplication (FFunApplicationB "get" [ref]) state env = do
     Just (newState, FRefAddr refAddr) <- runVS ref env state
     let (_, e, _, refVS) = stateLookup refAddr newState
     Just (newerState, vs) <- runVS refVS e newState
     return (vs, newerState, e)
+forceRunFunApplication (FFunApplicationB "p" [semref]) state env = do
+    Just (newState, nvs) <- runVS semref env state
+    print nvs
+    undefined
+forceRunFunApplication (FFunApplicationB "make_semaphore" []) state env = do
+    let (([], semId), newState) = getNewSemaphore state
+    return (FSemaphore semId, newState, env)
 forceRunFunApplication a@(FFunApplicationB name args) state env = do
-    print "hahahah"
-    print a
+    print $ "trying to do " ++ show name
     Just (s, vs) <- runVS (FAValueStatement a) env state
     return (vs, s, env)
 forceRunFunApplication a@(FFunApplicationR loc [args]) state env = do

@@ -66,5 +66,11 @@ updateQueues qId q ((e, vs, qId_, b):queues) = if qId == qId_ then q:queues else
 getQueue :: Int -> S -> (E, FValueStatement, Int, Bool)
 getQueue qId (S _ _ _ _ queues) = first (\(_, _, id, _) -> id == qId) queues
 
+getNewSemaphore :: S -> (([Int], Int), S)
+getNewSemaphore (S varsMap newIntLoc functionArgsMap semaphores queues) =
+  let
+    newSemId = length semaphores
+  in (([], newSemId), S varsMap newIntLoc functionArgsMap (semaphores ++ [([], newSemId)]) queues)
+
 getNewState :: S
 getNewState = S empty 0 empty [] []
