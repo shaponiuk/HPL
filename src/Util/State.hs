@@ -39,16 +39,20 @@ putQueue (S varsMap newIntLoc functionArgsMap semaphores queues) thing =
   S varsMap newIntLoc functionArgsMap semaphores (queues ++ [thing])
 
 anyAvailibleQueue :: S -> Bool
-anyAvailibleQueue (S _ _ _ semaphores queues) = any (`blockedByAnyOfTheSemaphores` semaphores) queues
+anyAvailibleQueue (S _ _ _ semaphores queues) = any (`notBlockedByAnyOfTheSemaphores` semaphores) queues
 
-blockedByAnyOfTheSemaphores :: (E, FValueStatement, Int) -> [([Int], Int)] -> Bool
-blockedByAnyOfTheSemaphores q = any (q `blockedBySemaphore`)
+notBlockedByAnyOfTheSemaphores :: (E, FValueStatement, Int) -> [([Int], Int)] -> Bool
+notBlockedByAnyOfTheSemaphores _ [] = True
+notBlockedByAnyOfTheSemaphores q semaphores = any (q `notBlockedBySemaphore`) semaphores
 
-blockedBySemaphore :: (E, FValueStatement, Int) -> ([Int], Int) -> Bool
-blockedBySemaphore (_, _, queueId) (blockedQueues, _) = queueId `elem` blockedQueues
+notBlockedBySemaphore :: (E, FValueStatement, Int) -> ([Int], Int) -> Bool
+notBlockedBySemaphore (_, _, queueId) (blockedQueues, _) = queueId `notElem` blockedQueues
 
 getAvailibleQueue :: S -> (E, FValueStatement, Int)
 getAvailibleQueue = undefined
+
+putInQueue :: Int -> (E, FValueStatement, Int) -> S -> S
+putInQueue = undefined
 
 getNewState :: S
 getNewState = S empty 0 empty [] []

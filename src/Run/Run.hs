@@ -22,13 +22,15 @@ runLoop :: S -> IO ()
 runLoop state = 
     if anyAvailibleQueue state then do
         let availibleQueue = getAvailibleQueue state
-        let newState = runQueue availibleQueue state
+        newState <- runQueue availibleQueue state
         runLoop newState
     else
         putStrLn "No availible queue to run"
 
-runQueue :: (E, FValueStatement, Int) -> S -> S
-runQueue = undefined
+runQueue :: (E, FValueStatement, Int) -> S -> IO S
+runQueue (env, vs, queueId) state = do
+    Just (ns, nvs) <- runVS vs env state
+    return $ putInQueue queueId (env, nvs, queueId) ns
 
 getMainStruct :: [NFStruct] -> NFStruct
 getMainStruct = head . filter (\(NFStruct name _) -> name == "Main")
