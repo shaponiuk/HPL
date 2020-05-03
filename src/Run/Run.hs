@@ -115,6 +115,8 @@ runVS (FTValueStatement xss) e s = do
     (ns, xssc) <- foldl (runTVSInFoldF e) (return (s, [])) xss
     return $ Just (ns, FTValueStatement xssc)
 runVS a@(FRefAddr x) _ s = return $ Just (s, a)
+runVS a@(FFValueStatement argName vs) e s = do
+    return $ Just (s, a)
 
 runVS vs _ _ = trace ("runVS??? " ++ show vs) undefined
 

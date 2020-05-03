@@ -9,6 +9,6 @@ struct Main {
             () :: y = { e -> sil (6) };
             () :: () = print (sil (4));
             () :: () = print (x (5));
-            () :: () = print (y ());
+            () :: () = print (y (1));
         in 0;
 };
