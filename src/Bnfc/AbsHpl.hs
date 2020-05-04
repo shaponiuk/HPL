@@ -8,26 +8,18 @@ module Bnfc.AbsHpl where
 
 
 newtype Ident = Ident String deriving (Eq, Ord, Show, Read)
-data Program = ProgramB [StructOrInterfaceOrType]
+data Program = ProgramB [FunctionOrRefOrType]
   deriving (Eq, Ord, Show, Read)
 
-data StructOrInterfaceOrType
-    = StructOrInterfaceOrTypeS Struct
-    | StructOrInterfaceOrTypeT AlgType
-  deriving (Eq, Ord, Show, Read)
-
-data Struct = StructB Ident StructBody
-  deriving (Eq, Ord, Show, Read)
-
-data StructBody = StructBodyB [StructField]
-  deriving (Eq, Ord, Show, Read)
-
-data StructField = StructFieldFunPu FunctionDef
+data FunctionOrRefOrType
+    = FunctionOrRefOrTypeF FunctionDef
+    | FunctionOrRefOrTypeT AlgType
+    | FunctionOrRefOrTypeR RefDef
   deriving (Eq, Ord, Show, Read)
 
 data FunctionDef
     = FunctionDefB Type Ident [FunctionArg] ValueStatement
-    | SusFunctionDef FunctionDef
+    | SusFunctionDef Type Ident [FunctionArg] ValueStatement
   deriving (Eq, Ord, Show, Read)
 
 data FunctionArg = FunctionArgB PatternMatch

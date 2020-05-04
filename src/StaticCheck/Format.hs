@@ -15,15 +15,8 @@ newtype E = E {
     names :: Map String [Int]
 } deriving (Show)
 
-data NProgramFormat = NSIT [NFStruct] S
+data NProgramFormat = NSIT [AnyDef] S
   deriving (Show)
-
-data NFStruct = NFStruct String NFStructBody
-  deriving (Show)
-
-newtype NFStructBody = 
-  NFStructBody [AnyDef]
-    deriving (Show)
 
 data AnyDef = NonSusFunDef NFNonSusFunDef | SusFunDef NFSusFunDef | RefDef NFRefDef
   deriving (Show)
@@ -41,10 +34,7 @@ type FunRunT = S -> [FValueStatement] -> IO (Maybe (S, FValueStatement))
 
 type FunRunQuickT = S -> IO (Maybe (S, FValueStatement))
 
-data ProgramFormat = SITList [FStruct] [FAlgType]
-  deriving (Eq,Ord,Show)
-
-data FStruct = FStructB String [FStructField] | FStructI String [String] [FStructField]
+data ProgramFormat = SITList [FFunctionDef] [FRefDef] [FAlgType]
   deriving (Eq,Ord,Show)
 
 convertStringToPM :: String -> FPatternMatch
@@ -54,9 +44,6 @@ convertStringsToPMs :: [String] -> [FPatternMatch]
 convertStringsToPMs = Prelude.map convertStringToPM
 
 data FAlgType = FAlgType String [String] [FAlgTypeVal]
-  deriving (Eq,Ord,Show)
-
-data FStructField = FStructFieldFunPublic FFunctionDef
   deriving (Eq,Ord,Show)
 
 data FFunctionDef =

@@ -7,41 +7,30 @@ import Data.Char
 import Debug.Trace
 
 initialConvertToProgramFormat :: Program -> ProgramFormat
-initialConvertToProgramFormat p@(ProgramB l) = 
+initialConvertToProgramFormat p = 
     SITList 
-        (gatherAndConvertStructs p ) 
+        (gatherAndConvertFunctionDefs p)
+        (gatherAndConvertRefDefs p)
         (gatherAndConvertAlgTypes p)
+
+gatherAndConvertFunctionDefs :: Program -> [FFunctionDef]
+gatherAndConvertFunctionDefs = undefined
+
+gatherAndConvertRefDefs :: Program -> [FRefDef]
+gatherAndConvertRefDefs = undefined
         
-
-gatherAndConvertStructs :: Program -> [FStruct]
-gatherAndConvertStructs p@(ProgramB _) = map convertStruct $ gatherStructs p
-
 gatherAndConvertAlgTypes :: Program -> [FAlgType]
 gatherAndConvertAlgTypes p@(ProgramB _) = map convertAlgType $ gatherAlgTypes p
-
-gatherStructs :: Program -> [Struct]
-gatherStructs (ProgramB l) = map sitToStruct $ filter checkStruct l
 
 gatherAlgTypes :: Program -> [AlgType]
 gatherAlgTypes (ProgramB l) = map sitToAlgType $ filter checkAlgType l
 
-sitToStruct :: StructOrInterfaceOrType -> Struct
-sitToStruct (StructOrInterfaceOrTypeS s) = s
+sitToAlgType :: FunctionOrRefOrType -> AlgType
+sitToAlgType (FunctionOrRefOrTypeT t) = t
 
-sitToAlgType :: StructOrInterfaceOrType -> AlgType
-sitToAlgType (StructOrInterfaceOrTypeT t) = t
-
-checkStruct :: StructOrInterfaceOrType -> Bool
-checkStruct (StructOrInterfaceOrTypeS _) = True
-checkStruct _ = False
-
-checkAlgType :: StructOrInterfaceOrType -> Bool
-checkAlgType (StructOrInterfaceOrTypeT _) = True
+checkAlgType :: FunctionOrRefOrType -> Bool
+checkAlgType (FunctionOrRefOrTypeT _) = True
 checkAlgType _ = False
-
-convertStruct :: Struct -> FStruct
-convertStruct (StructB (Ident name) body) = 
-  FStructB name $ convertBody body
 
 convertAlgType :: AlgType -> FAlgType
 convertAlgType (AlgTypeB i taList atvList) = 
@@ -65,16 +54,11 @@ unwrapIdent (Ident str) = str
 convertIdentList :: [Ident] -> [String]
 convertIdentList = map unwrapIdent
 
-convertBody :: StructBody -> [FStructField]
-convertBody (StructBodyB l) = map convertStructField l
-
-convertStructField :: StructField -> FStructField
-convertStructField (StructFieldFunPu fd) = FStructFieldFunPublic $ convertFunctionDef fd
-
 convertFunctionDef :: FunctionDef -> FFunctionDef
 convertFunctionDef (FunctionDefB t ident argList vs) = 
   NonSusFFunctionDef (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
-convertFunctionDef (SusFunctionDef fd) = SusFFunctionDef $ convertFunctionDef fd
+convertFunctionDef (SusFunctionDef t ident argList vs) = 
+  SusFFunctionDef $ NonSusFFunctionDef (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
 
 convertType :: Type -> FType
 convertType (TypeB i tl) = FTypeB (unwrapIdent i) (convertTypeList tl)

@@ -1,3 +1,1 @@
-struct Main {
-    sus fun (Int ()) main () = 0;
-};
+sus fun (Int ()) main () = 0;

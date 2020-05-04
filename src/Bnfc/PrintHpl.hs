@@ -85,32 +85,21 @@ instance Print Ident where
 
 instance Print Program where
   prt i e = case e of
-    ProgramB structorinterfaceortypes -> prPrec i 0 (concatD [prt 0 structorinterfaceortypes])
+    ProgramB functionorrefortypes -> prPrec i 0 (concatD [prt 0 functionorrefortypes])
 
-instance Print StructOrInterfaceOrType where
+instance Print FunctionOrRefOrType where
   prt i e = case e of
-    StructOrInterfaceOrTypeS struct -> prPrec i 0 (concatD [prt 0 struct])
-    StructOrInterfaceOrTypeT algtype -> prPrec i 0 (concatD [prt 0 algtype])
-  prtList _ [] = (concatD [])
-  prtList _ (x:xs) = (concatD [prt 0 x, prt 0 xs])
-instance Print Struct where
-  prt i e = case e of
-    StructB id structbody -> prPrec i 0 (concatD [doc (showString "struct"), prt 0 id, doc (showString "{"), prt 0 structbody, doc (showString "}"), doc (showString ";")])
-
-instance Print StructBody where
-  prt i e = case e of
-    StructBodyB structfields -> prPrec i 0 (concatD [prt 0 structfields])
-
-instance Print StructField where
-  prt i e = case e of
-    StructFieldFunPu functiondef -> prPrec i 0 (concatD [prt 0 functiondef])
+    FunctionOrRefOrTypeF functiondef -> prPrec i 0 (concatD [prt 0 functiondef])
+    FunctionOrRefOrTypeT algtype -> prPrec i 0 (concatD [prt 0 algtype])
+    FunctionOrRefOrTypeR refdef -> prPrec i 0 (concatD [prt 0 refdef])
   prtList _ [] = (concatD [])
   prtList _ (x:xs) = (concatD [prt 0 x, prt 0 xs])
 instance Print FunctionDef where
   prt i e = case e of
     FunctionDefB type_ id functionargs valuestatement -> prPrec i 0 (concatD [doc (showString "fun"), prt 0 type_, prt 0 id, doc (showString "("), prt 0 functionargs, doc (showString ")"), doc (showString "="), prt 0 valuestatement, doc (showString ";")])
-    SusFunctionDef functiondef -> prPrec i 0 (concatD [doc (showString "sus"), prt 0 functiondef])
-
+    SusFunctionDef type_ id functionargs valuestatement -> prPrec i 0 (concatD [doc (showString "sus"), doc (showString "fun"), prt 0 type_, prt 0 id, doc (showString "("), prt 0 functionargs, doc (showString ")"), doc (showString "="), prt 0 valuestatement, doc (showString ";")])
+  prtList _ [] = (concatD [])
+  prtList _ (x:xs) = (concatD [prt 0 x, prt 0 xs])
 instance Print FunctionArg where
   prt i e = case e of
     FunctionArgB patternmatch -> prPrec i 0 (concatD [prt 0 patternmatch])

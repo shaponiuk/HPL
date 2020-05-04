@@ -8,9 +8,9 @@ import Run.OneStepEvaluation
 import Debug.Trace
 
 run :: NProgramFormat -> IO ()
-run (NSIT structs state) = do
+run (NSIT anyDefs state) = do
     let (nloc, nstate) = getNewLoc state
-    let (_, _, env) = getMainFunction $ getMainStruct structs
+    let (_, _, env) = getMainFunction anyDefs
     let mainloc = lookupFirstLoc "main" env
     let (_, nenv, t, vs) = stateLookup mainloc nstate
     let nnstate = putInLoc nloc (False, nenv, t, vs) nstate
@@ -18,7 +18,7 @@ run (NSIT structs state) = do
     runLoop s
 
 runLoop :: S -> IO ()
-runLoop state = do
+runLoop state =
     -- print $ queues state
     if anyAvailibleQueue state then do
         let availibleQueue = getAvailibleQueue state
@@ -34,11 +34,8 @@ runQueue (env, vs, queueId, _) state = do
     Just (ns, nvs) <- runVS queueId vs env state
     return $ putInQueue queueId (env, nvs, queueId, True) ns
 
-getMainStruct :: [NFStruct] -> NFStruct
-getMainStruct = head . filter (\(NFStruct name _) -> name == "Main")
-
-getMainFunction :: NFStruct -> (String, [FPatternMatch], E)
-getMainFunction (NFStruct _ (NFStructBody l)) = unwrapFunDef $ head $ filter isMainFunction l
+getMainFunction :: [AnyDef] -> (String, [FPatternMatch], E)
+getMainFunction l = unwrapFunDef $ head $ filter isMainFunction l
 
 unwrapFunDef :: AnyDef -> (String, [FPatternMatch], E)
 unwrapFunDef (NonSusFunDef (NFNonSusFunDef a b c)) = (a, b, c)
