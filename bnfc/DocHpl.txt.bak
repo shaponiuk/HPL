@@ -17,6 +17,7 @@ reserved words excluded.
 
 
 ===Literals===
+
 Integer literals //Integer// are nonempty sequences of digits.
 
 
@@ -32,18 +33,16 @@ The set of reserved words is the set of terminals appearing in the grammar. Thos
 
 The reserved words used in Hpl are the following:
   | ``data`` | ``else`` | ``force`` | ``fun``
-  | ``if`` | ``in`` | ``interface`` | ``let``
-  | ``private`` | ``ref`` | ``struct`` | ``sus``
-  | ``then`` |  |  | 
+  | ``if`` | ``in`` | ``let`` | ``ref``
+  | ``struct`` | ``sus`` | ``then`` | 
 
 The symbols used in Hpl are the following:
-  | { | } | ; | :
-  | , | ( | ) | =
-  | -> | | | :: | .
-  | [ | ] | + | -
-  | % | * | / | <
-  | <= | > | >= | ==
-  | != |  |  | 
+  | { | } | ; | (
+  | ) | = | , | ->
+  | | | :: | . | [
+  | ] | + | - | %
+  | * | / | < | <=
+  | > | >= | == | !=
 
 ===Comments===
 Single-line comments begin with //.Multiple-line comments are  enclosed with /* and */.
@@ -56,36 +55,19 @@ All other symbols are terminals.
 
   | //Program// | -> | //[StructOrInterfaceOrType]// 
   | //StructOrInterfaceOrType// | -> | //Struct// 
-  |  |  **|**  | //Interface// 
   |  |  **|**  | //AlgType// 
   | //[StructOrInterfaceOrType]// | -> | **eps**
   |  |  **|**  | //StructOrInterfaceOrType// //[StructOrInterfaceOrType]// 
   | //Struct// | -> | ``struct`` //Ident// ``{`` //StructBody// ``}`` ``;`` 
-  |  |  **|**  | ``struct`` //Ident// ``:`` //[InterfaceId]// ``{`` //StructBody// ``}`` ``;`` 
-  | //StructBody// | -> | //[StructField]// 
-  | //StructField// | -> | ``private`` //FunctionDef// 
-  |  |  **|**  | //FunctionDef// 
-  |  |  **|**  | ``private`` //RefDef// 
-  |  |  **|**  | //RefDef// 
-  | //[StructField]// | -> | **eps**
-  |  |  **|**  | //StructField// //[StructField]// 
-  | //InterfaceId// | -> | //Ident// 
-  | //[InterfaceId]// | -> | //InterfaceId// 
-  |  |  **|**  | //InterfaceId// ``,`` //[InterfaceId]// 
-  | //Interface// | -> | ``interface`` //InterfaceId// ``{`` //InterfaceBody// ``}`` ``;`` 
-  |  |  **|**  | ``interface`` //InterfaceId// ``:`` //[InterfaceId]// ``{`` //InterfaceBody// ``}`` ``;`` 
-  | //InterfaceBody// | -> | //[FunOrRefDecl]// 
-  | //FunOrRefDecl// | -> | ``fun`` //Type// //Ident// ``;`` 
-  |  |  **|**  | ``sus`` ``fun`` //Type// //Ident// ``;`` 
-  |  |  **|**  | ``ref`` //Type// //Ident// ``;`` 
-  | //[FunOrRefDecl]// | -> | **eps**
-  |  |  **|**  | //FunOrRefDecl// //[FunOrRefDecl]// 
+  | //StructBody// | -> | //[FunctionDef]// 
   | //FunctionDef// | -> | ``fun`` //Type// //Ident// ``(`` //[FunctionArg]// ``)`` ``=`` //ValueStatement// ``;`` 
   |  |  **|**  | ``sus`` //FunctionDef// 
   | //FunctionArg// | -> | //PatternMatch// 
   | //[FunctionArg]// | -> | **eps**
   |  |  **|**  | //FunctionArg// 
   |  |  **|**  | //FunctionArg// ``,`` //[FunctionArg]// 
+  | //[FunctionDef]// | -> | **eps**
+  |  |  **|**  | //FunctionDef// //[FunctionDef]// 
   | //ValueStatement// | -> | ``let`` //[Assignment]// ``in`` //ValueStatement// 
   |  |  **|**  | ``force`` ``let`` //[Assignment]// ``in`` //ValueStatement// 
   |  |  **|**  | ``if`` //ValueStatement// ``then`` //ValueStatement// ``else`` //ValueStatement// 

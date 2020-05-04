@@ -1,26 +1,42 @@
--- BNF Converter: Error Monad
--- Copyright (C) 2004  Author:  Aarne Ranta
+{-# LANGUAGE CPP #-}
 
--- This file comes with NO WARRANTY and may be used FOR ANY PURPOSE.
+---------------------------------------------------------------------------
+-- Pattern synonyms exist since ghc 7.8.
+
+-- | BNF Converter: Error Monad.
+--
+-- Module for backwards compatibility.
+--
+-- The generated parser now uses @'Either' String@ as error monad.
+-- This module defines a type synonym 'Err' and pattern synonyms
+-- 'Bad' and 'Ok' for 'Left' and 'Right'.
+
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
 module ErrM where
 
--- the Error monad: like Maybe type with error msgs
+import Control.Monad       (MonadPlus(..))
+import Control.Applicative (Alternative(..))
 
-import Control.Monad (MonadPlus(..), liftM)
+-- | Error monad with 'String' error messages.
+type Err = Either String
 
-data Err a = Ok a | Bad String
-  deriving (Read, Show, Eq, Ord)
+pattern Bad msg = Left msg
+pattern Ok  a   = Right a
 
-instance Monad Err where
-  return      = Ok
-  fail        = Bad
-  Ok a  >>= f = f a
-  Bad s >>= f = Bad s
+#if __GLASGOW_HASKELL__ >= 808
+instance MonadFail Err where
+  fail = Bad
+#endif
 
-instance Functor Err where
-  fmap = liftM
+instance Alternative Err where
+  empty           = Left "Err.empty"
+  (<|>) Left{}    = id
+  (<|>) x@Right{} = const x
 
 instance MonadPlus Err where
-  mzero = Bad "Err.mzero"
-  mplus (Bad _) y = y
-  mplus x       _ = x
+  mzero = empty
+  mplus = (<|>)
+
