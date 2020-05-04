@@ -63,8 +63,11 @@ putInQueue queueId q (S varsMap newIntLoc functionArgsMap semaphores queues) =
   in S varsMap newIntLoc functionArgsMap semaphores updatedQueues
 
 updateQueues :: Int -> (E, FValueStatement, Int, Bool) -> [(E, FValueStatement, Int, Bool)] -> [(E, FValueStatement, Int, Bool)]
-updateQueues qId q [] = []
-updateQueues qId q ((e, vs, qId_, b):queues) = if qId == qId_ then q:queues else (e, vs, qId_, b):updateQueues qId q queues
+updateQueues qId q [] = undefined
+updateQueues qId q ((e, vs, qId_, b):queues) = 
+  if qId == qId_ 
+    then q:queues 
+    else (e, vs, qId_, b):updateQueues qId q queues
 
 getQueue :: Int -> S -> (E, FValueStatement, Int, Bool)
 getQueue qId (S _ _ _ _ queues) = first (\(_, _, id, _) -> id == qId) queues
@@ -76,10 +79,20 @@ getNewSemaphore (S varsMap newIntLoc functionArgsMap semaphores queues) =
   in (([], 0, newSemId), S varsMap newIntLoc functionArgsMap (semaphores ++ [([], 0, newSemId)]) queues)
 
 getSemaphore :: Int -> S -> ([Int], Int, Int)
-getSemaphore = undefined
+getSemaphore semId (S _ _ _ semaphoreList _) = first (\(_, _, i) -> i == semId) semaphoreList
 
 putSemaphore :: Int -> ([Int], Int, Int) -> S -> S
-putSemaphore = undefined
+putSemaphore semId sem (S varsMap newIntLoc functionArgsMap semaphoreList queueList) =
+  let
+    updatedSemaphores = updateSemaphores semId sem semaphoreList
+  in S varsMap newIntLoc functionArgsMap updatedSemaphores queueList
+
+updateSemaphores :: Int -> ([Int], Int, Int) -> [([Int], Int, Int)] -> [([Int], Int, Int)]
+updateSemaphores semId s [] = undefined
+updateSemaphores semId s ((blockedQueues, semValue, semId_):semaphores) = 
+  if semId == semId_ 
+    then s:semaphores 
+    else (blockedQueues, semValue, semId_):updateSemaphores semId s semaphores
 
 getNewState :: S
 getNewState = S empty 0 empty [] []

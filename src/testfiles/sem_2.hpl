@@ -1,16 +1,16 @@
 struct Main {
-    sus fun (Ref (Semaphore ()) -> ()) cor (sem) = 
+    sus fun (Semaphore () -> ()) cor (sem) = 
         force let
-            () :: () = v (get (sem ()));
+            () :: () = v (sem ());
             () :: () = print ("I'm cor");
         in ();
     
     sus fun (() -> Int ()) main () =
         force let
             () :: () = print ("starting main");
-            Ref (Semaphore ()) :: sem = make_semaphore ();
+            (Semaphore ()) :: sem = make_semaphore ();
             () :: () = cor (sem ());
-            () :: () = p (get (sem ()));
+            () :: () = p (sem ());
             () :: () = print ("I'm main");
         in 0;
 };

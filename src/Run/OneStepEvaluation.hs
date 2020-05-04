@@ -8,7 +8,7 @@ import Debug.Trace
 
 oneStepEvaluation :: S -> E -> FValueStatement -> (S, E, FValueStatement)
 oneStepEvaluation s e (FAValueStatement (FFunApplicationR locs argVss)) = oneStepTryRunVSFunApplR locs argVss s
-oneStepEvaluation s e vs = trace (show s ++ show vs) undefined
+oneStepEvaluation s e vs = trace (show vs) undefined
 
 oneStepTryRunVSFunApplR :: [Int] -> [FValueStatement] -> S -> (S, E, FValueStatement)
     -- todo: here might fail
@@ -76,7 +76,7 @@ appendFAVSInt (FFValueStatement name vs) addVSS = (vs, True, [FPatternMatchB nam
 appendFAVSInt x y = trace ("appendFAVSInt " ++ show x ++ "\n" ++ show y) undefined
 
 fitPatternMatchs :: S -> E -> [FPatternMatch] -> [FValueStatement] -> Bool
-fitPatternMatchs s e pms vss = trace ("fitPatternMatch " ++ show pms ++ show vss) $ all (fitPatternMatch s e) $ dList pms vss
+fitPatternMatchs s e pms vss = all (fitPatternMatch s e) $ dList pms vss
 
 fitPatternMatch :: S -> E -> (FPatternMatch, FValueStatement) -> Bool
 fitPatternMatch _ _ (FPatternMatchI i1, FIValueStatement i2) = i1 == i2
