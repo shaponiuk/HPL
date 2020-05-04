@@ -1,14 +1,19 @@
 struct Main {
     sus fun () cor (x) = 
         force let
-            () :: () = print ("hahaha");
-        in x ();
+            () :: () = print (x ());
+        in x () + 1000;
     
     sus fun (() -> Int ()) main () =
         force let
+            () :: () = print ("raz");
             () :: x = cor (3);
-            () :: () = print ("hehehehehe");
-            () :: () = print (cor (4));
+            () :: () = print ("dwa");
+            () :: () = print (cor (5));
+            () :: () = print ("trzy");
             () :: () = print (x ());
+            () :: () = print ("cztery");
+            () :: y = cor (7);
+            () :: () = print ("piec");
         in 0;
 };

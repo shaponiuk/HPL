@@ -248,11 +248,14 @@ setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
     (vss, newState, newEnv, _) <- forceGetTupleVSS qId vs state env
     foldl (setPMInFoldF qId) (return (newState, newEnv)) $ tList types pmL vss
 setPM qId t (FPatternMatchB x) vs state env = do
+    -- print "setPM"
+    -- print x
+    -- print vs
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
-    Just (newerState, nvs) <- interpretVS qId vs env [] loc newState []
+    Just (newerState, nvs) <- interpretVS qId vs newEnv [] loc newState []
     let newererState = putInLoc loc (False, newEnv, t, nvs) newerState
-    return (newerState, newEnv)
+    return (newererState, newEnv)
 setPM _ _ _ _ _ _ = undefined
 
 setPMInFoldF :: Int -> IO (S, E) -> (FType, FPatternMatch, FValueStatement) -> IO (S, E)
@@ -272,15 +275,11 @@ forceGetTupleVSS queueId a@(FTValueStatement vss) s e = do
 forceGetTupleVSS queueId a@(FAValueStatement funApplication) state env = do
     -- print "forceGetTupleVSS"
     -- print a
+    -- print env
     (vs, s, e, b) <- forceRunFunApplication queueId funApplication state env
-    -- print "before runVS"
-    -- if b 
-        -- then return ([vs], s, e, b)
-        -- else 
+    -- print vs
     forceGetTupleVSS queueId vs s e
-forceGetTupleVSS qId vs@(FSuspendedValue queueId) s e = do
-    -- Just (ns, nvs) <- runVS queueId vs e s
-    -- return ([nvs], ns, e, False)
+forceGetTupleVSS qId vs@(FSuspendedValue queueId) s e =
     return ([vs], s, e, False)
 forceGetTupleVSS _ vs _ _ = trace (show vs) undefined
 
@@ -291,7 +290,7 @@ forceRunFunApplication queueId (FFunApplicationB "print" [str]) state env = do
     case r of
         FSuspendedValue qId -> do
             Just (ns, nr) <- runVS qId r env s
-            print $ "hehe" ++ show nr 
+            print $ "hehe " ++ show nr 
             return (FTValueStatement [], ns, env, False)
         _ -> do
             print $ "hehe " ++ show r
@@ -337,7 +336,6 @@ forceRunFunApplication queueId (FFunApplicationB "v" [semref]) state env = do
             return (FTValueStatement [], newerState, env, False)
 forceRunFunApplication queueId a@(FFunApplicationB name args) state env = do
     Just (s, vs) <- runVS queueId (FAValueStatement a) env state
-    -- print "forceRunFunApplication"
     -- print $ "after " ++ show a
     -- print vs
     return (vs, s, env, False)
