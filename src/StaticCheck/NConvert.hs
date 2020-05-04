@@ -8,6 +8,7 @@ import Debug.Trace
 
 convertToNPF :: ProgramFormat -> NProgramFormat
 convertToNPF (SITList functions refs algTypes) =
+    trace "here" $
     NSIT (functionDefs ++ refDefs ++ algTypeDefs) state3 where
         env = makeEnvForFunctions functions getNewEnv
         env2 = makeEnvForRefs refs env
@@ -28,4 +29,7 @@ convertRefs :: E -> S -> [FRefDef] -> ([AnyDef], S)
 convertRefs = undefined
 
 convertAlgTypes :: E -> S -> [FAlgType] -> ([AnyDef], S)
-convertAlgTypes = undefined
+convertAlgTypes env state = Prelude.foldl (convertAlgType env) ([], state)
+
+convertAlgType :: E -> ([AnyDef], S) -> FAlgType -> ([AnyDef], S)
+convertAlgType env (l, s) (FAlgType name typeArgs constructors) = undefined
