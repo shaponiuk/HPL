@@ -51,7 +51,7 @@ checkNotBlocked :: (E, FValueStatement, Int, Bool) -> S -> Bool
 checkNotBlocked queue (S _ _ _ semaphores _) = notBlockedByAnyOfTheSemaphores queue semaphores
 
 notBlockedBySemaphoreOrNotFinished :: (E, FValueStatement, Int, Bool) -> ([Int], Int, Int) -> Bool
-notBlockedBySemaphoreOrNotFinished (_, _, queueId, b) (blockedQueues, _, _) = queueId `notElem` blockedQueues || not b
+notBlockedBySemaphoreOrNotFinished (_, _, queueId, b) (blockedQueues, _, _) = queueId `notElem` blockedQueues && not b
 
 getAvailibleQueue :: S -> (E, FValueStatement, Int, Bool)
 getAvailibleQueue (S _ _ _ semaphores queues) = first (`notBlockedByAnyOfTheSemaphores` semaphores) queues

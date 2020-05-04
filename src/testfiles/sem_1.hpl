@@ -1,5 +1,5 @@
 struct Main {
-    sus fun (Ref (Semaphore ()) -> ()) cor (sem) = 
+    sus fun (Ref (Semaphore ()) -> ()) cor (sem) =
         force let
             () :: () = v (get (sem ()));
             () :: () = print ("I'm cor");
@@ -7,9 +7,9 @@ struct Main {
     
     sus fun (() -> Int ()) main () =
         force let
-            () :: () = print ("starting main");
             Ref (Semaphore ()) :: sem = make_semaphore ();
             () :: () = cor (sem ());
+            () :: () = print ("run cor");
             () :: () = p (get (sem ()));
             () :: () = print ("I'm main");
         in 0;
