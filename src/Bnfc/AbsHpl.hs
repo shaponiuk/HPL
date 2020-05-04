@@ -22,11 +22,7 @@ data Struct = StructB Ident StructBody
 data StructBody = StructBodyB [StructField]
   deriving (Eq, Ord, Show, Read)
 
-data StructField
-    = StructFieldFunPr FunctionDef
-    | StructFieldFunPu FunctionDef
-    | StructFieldRefPr RefDef
-    | StructFieldRefPu RefDef
+data StructField = StructFieldFunPu FunctionDef
   deriving (Eq, Ord, Show, Read)
 
 data FunctionDef

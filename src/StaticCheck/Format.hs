@@ -56,11 +56,7 @@ convertStringsToPMs = Prelude.map convertStringToPM
 data FAlgType = FAlgType String [String] [FAlgTypeVal]
   deriving (Eq,Ord,Show)
 
-data FStructField = 
-    FStructFieldFunPrivate FFunctionDef
-  | FStructFieldFunPublic FFunctionDef
-  | FStructFieldRefPrivate FRefDef
-  | FStructFieldRefPublic FRefDef
+data FStructField = FStructFieldFunPublic FFunctionDef
   deriving (Eq,Ord,Show)
 
 data FFunctionDef =

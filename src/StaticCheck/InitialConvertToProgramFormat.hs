@@ -69,10 +69,7 @@ convertBody :: StructBody -> [FStructField]
 convertBody (StructBodyB l) = map convertStructField l
 
 convertStructField :: StructField -> FStructField
-convertStructField (StructFieldFunPr fd) = FStructFieldFunPrivate $ convertFunctionDef fd
 convertStructField (StructFieldFunPu fd) = FStructFieldFunPublic $ convertFunctionDef fd
-convertStructField (StructFieldRefPr rd) = FStructFieldRefPrivate $ convertRefDef rd
-convertStructField (StructFieldRefPu rd) = FStructFieldRefPublic $ convertRefDef rd
 
 convertFunctionDef :: FunctionDef -> FFunctionDef
 convertFunctionDef (FunctionDefB t ident argList vs) = 

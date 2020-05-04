@@ -27,10 +27,7 @@ transStructBody x = case x of
   StructBodyB structfields -> failure x
 transStructField :: StructField -> Result
 transStructField x = case x of
-  StructFieldFunPr functiondef -> failure x
   StructFieldFunPu functiondef -> failure x
-  StructFieldRefPr refdef -> failure x
-  StructFieldRefPu refdef -> failure x
 transFunctionDef :: FunctionDef -> Result
 transFunctionDef x = case x of
   FunctionDefB type_ ident functionargs valuestatement -> failure x

@@ -356,4 +356,3 @@ runUntilSemReady queueId semId state env = do
                 then return (FTValueStatement [], newState, env, False)
                 else runUntilSemReady queueId semId state env
         else fail "Deadlock"
-    -- return (FTValueStatement [], state, env, False)

@@ -103,10 +103,7 @@ instance Print StructBody where
 
 instance Print StructField where
   prt i e = case e of
-    StructFieldFunPr functiondef -> prPrec i 0 (concatD [doc (showString "private"), prt 0 functiondef])
     StructFieldFunPu functiondef -> prPrec i 0 (concatD [prt 0 functiondef])
-    StructFieldRefPr refdef -> prPrec i 0 (concatD [doc (showString "private"), prt 0 refdef])
-    StructFieldRefPu refdef -> prPrec i 0 (concatD [prt 0 refdef])
   prtList _ [] = (concatD [])
   prtList _ (x:xs) = (concatD [prt 0 x, prt 0 xs])
 instance Print FunctionDef where

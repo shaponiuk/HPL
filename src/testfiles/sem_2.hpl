@@ -1,7 +1,7 @@
 struct Main {
     sus fun (Semaphore () -> ()) cor (sem) = 
         force let
-            () :: () = v (sem ());
+            () :: () = p (sem ());
             () :: () = print ("I'm cor");
         in ();
     
