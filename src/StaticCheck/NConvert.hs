@@ -7,14 +7,13 @@ import Data.Map as M
 import Debug.Trace
 
 convertToNPF :: ProgramFormat -> NProgramFormat
-convertToNPF (SITList functions refs algTypes) =
+convertToNPF (SITList functions refs _) =
     trace "here" $
-    NSIT (functionDefs ++ refDefs ++ algTypeDefs) state3 where
+    NSIT (functionDefs ++ refDefs) state2 where
         env = makeEnvForFunctions functions getNewEnv
         env2 = makeEnvForRefs refs env
         (functionDefs, state1) = convertFunctions env2 getNewState functions
         (refDefs, state2) = convertRefs env2 state1 refs
-        (algTypeDefs, state3) = convertAlgTypes env2 state3 algTypes
 
 makeEnvForFunctions :: [FFunctionDef] -> E -> E
 makeEnvForFunctions = undefined
@@ -27,9 +26,3 @@ convertFunctions = undefined
 
 convertRefs :: E -> S -> [FRefDef] -> ([AnyDef], S)
 convertRefs = undefined
-
-convertAlgTypes :: E -> S -> [FAlgType] -> ([AnyDef], S)
-convertAlgTypes env state = Prelude.foldl (convertAlgType env) ([], state)
-
-convertAlgType :: E -> ([AnyDef], S) -> FAlgType -> ([AnyDef], S)
-convertAlgType env (l, s) (FAlgType name typeArgs constructors) = undefined
