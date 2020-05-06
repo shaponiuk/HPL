@@ -14,19 +14,39 @@ initialConvertToProgramFormat p =
         (gatherAndConvertAlgTypes p)
 
 gatherAndConvertFunctionDefs :: Program -> [FFunctionDef]
-gatherAndConvertFunctionDefs = undefined
+gatherAndConvertFunctionDefs p = map convertFunctionDef $ gatherFunctionDefs p
+
+gatherFunctionDefs :: Program -> [FunctionDef]
+gatherFunctionDefs (ProgramB l) = map sitToFunDef $ filter checkFunctionDef l
 
 gatherAndConvertRefDefs :: Program -> [FRefDef]
-gatherAndConvertRefDefs = undefined
-        
+gatherAndConvertRefDefs p = map convertRefDef $ gatherRefDefs p
+
+gatherRefDefs :: Program -> [RefDef]
+gatherRefDefs (ProgramB l) = map sitToRef $ filter checkRefDef l
+
 gatherAndConvertAlgTypes :: Program -> [FAlgType]
-gatherAndConvertAlgTypes p@(ProgramB _) = map convertAlgType $ gatherAlgTypes p
+gatherAndConvertAlgTypes p = map convertAlgType $ gatherAlgTypes p
 
 gatherAlgTypes :: Program -> [AlgType]
 gatherAlgTypes (ProgramB l) = map sitToAlgType $ filter checkAlgType l
 
 sitToAlgType :: FunctionOrRefOrType -> AlgType
 sitToAlgType (FunctionOrRefOrTypeT t) = t
+
+sitToRef :: FunctionOrRefOrType -> RefDef
+sitToRef (FunctionOrRefOrTypeR r) = r
+
+sitToFunDef :: FunctionOrRefOrType -> FunctionDef
+sitToFunDef (FunctionOrRefOrTypeF f) = f
+
+checkFunctionDef :: FunctionOrRefOrType -> Bool
+checkFunctionDef (FunctionOrRefOrTypeF _) = True
+checkFunctionDef _ = False
+
+checkRefDef :: FunctionOrRefOrType -> Bool
+checkRefDef (FunctionOrRefOrTypeR _) = True
+checkRefDef _ = False
 
 checkAlgType :: FunctionOrRefOrType -> Bool
 checkAlgType (FunctionOrRefOrTypeT _) = True

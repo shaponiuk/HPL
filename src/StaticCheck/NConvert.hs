@@ -22,7 +22,13 @@ makeEnvForRefs :: [FRefDef] -> E -> E
 makeEnvForRefs = undefined
 
 convertFunctions :: E -> S -> [FFunctionDef] -> ([AnyDef], S)
-convertFunctions = undefined
+convertFunctions env state = Prelude.foldl (convertFunction env) ([], state)
+
+convertFunction :: E -> ([AnyDef], S) -> FFunctionDef -> ([AnyDef], S)
+convertFunction = undefined
 
 convertRefs :: E -> S -> [FRefDef] -> ([AnyDef], S)
-convertRefs = undefined
+convertRefs env state = Prelude.foldl (convertRef env) ([], state)
+
+convertRef :: E -> ([AnyDef], S) -> FRefDef -> ([AnyDef], S)
+convertRef = undefined
