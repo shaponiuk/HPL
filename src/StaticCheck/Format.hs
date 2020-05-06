@@ -15,19 +15,7 @@ newtype E = E {
     names :: Map String [Int]
 } deriving (Show)
 
-data NProgramFormat = NSIT [AnyDef] S
-  deriving (Show)
-
-data AnyDef = NonSusFunDef NFNonSusFunDef | SusFunDef NFSusFunDef | RefDef NFRefDef
-  deriving (Show)
-  
-data NFNonSusFunDef = NFNonSusFunDef String [FPatternMatch] E
-  deriving (Show)
-
-data NFSusFunDef = NFSusFunDef String [FPatternMatch] E
-  deriving (Show)
-
-data NFRefDef = NFRefDef String E
+data NProgramFormat = NSIT E S
   deriving (Show)
 
 type FunRunT = S -> [FValueStatement] -> IO (Maybe (S, FValueStatement))

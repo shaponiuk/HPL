@@ -9,11 +9,11 @@ import Debug.Trace
 convertToNPF :: ProgramFormat -> NProgramFormat
 convertToNPF (SITList functions refs _) =
     trace "here" $
-    NSIT (functionDefs ++ refDefs) state2 where
+    NSIT env2 state2 where
         env = makeEnvForFunctions functions getNewEnv
         env2 = makeEnvForRefs refs env
-        (functionDefs, state1) = convertFunctions env2 getNewState functions
-        (refDefs, state2) = convertRefs env2 state1 refs
+        state1 = convertFunctions env2 getNewState functions
+        state2 = convertRefs env2 state1 refs
 
 makeEnvForFunctions :: [FFunctionDef] -> E -> E
 makeEnvForFunctions = undefined
@@ -21,14 +21,19 @@ makeEnvForFunctions = undefined
 makeEnvForRefs :: [FRefDef] -> E -> E
 makeEnvForRefs = undefined
 
-convertFunctions :: E -> S -> [FFunctionDef] -> ([AnyDef], S)
-convertFunctions env state = Prelude.foldl (convertFunction env) ([], state)
+convertFunctions :: E -> S -> [FFunctionDef] -> S
+convertFunctions env = Prelude.foldl $ convertFunction env
 
-convertFunction :: E -> ([AnyDef], S) -> FFunctionDef -> ([AnyDef], S)
-convertFunction = undefined
+convertFunction :: E -> S -> FFunctionDef -> S
+convertFunction env s (NonSusFFunctionDef t name argNames vs) = undefined
+    ns where
+        locs = lookupLoc name env
+        ns = registerInRightLocs locs argNames t vs s
 
-convertRefs :: E -> S -> [FRefDef] -> ([AnyDef], S)
-convertRefs env state = Prelude.foldl (convertRef env) ([], state)
+registerInRightLocs :: [Int] -> [FPatternMatch] -> FType -> FValueStatement -> S -> S
 
-convertRef :: E -> ([AnyDef], S) -> FRefDef -> ([AnyDef], S)
+convertRefs :: E -> S -> [FRefDef] -> S
+convertRefs env = Prelude.foldl $ convertRef env
+
+convertRef :: E -> S -> FRefDef -> S
 convertRef = undefined
