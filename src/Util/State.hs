@@ -8,6 +8,13 @@ import Debug.Trace
 getNewLoc :: S -> (Int, S)
 getNewLoc (S varsMap loc funArgs semaphores queues) = (loc + 1, S varsMap (loc + 1) funArgs semaphores queues)
 
+getNNewLocs :: S -> Int -> ([Int], S)
+getNNewLocs s n = Prelude.foldl (\(l, s_) _ ->
+    let
+      (x, ns_) = getNewLoc s_
+    in (x:l, ns_)
+  ) ([], s) [1..n]
+
 putInLoc :: Int -> (Bool, E, FType, FValueStatement) -> S -> S
 putInLoc loc thing (S varsMap newIntLoc funArgs semaphores queues) =
   S (insert loc thing varsMap) newIntLoc funArgs semaphores queues

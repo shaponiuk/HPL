@@ -58,7 +58,7 @@ runVS queueId (FForceValueStatement assignments vs) env state = do
     seq newState $ runVS queueId vs newEnv newState
 runVS queueId vs@(FIValueStatement i) _ s = return $ Just (s, vs)
 runVS queueId a@(FAValueStatement (FFunApplicationB funName funArgVss)) env oldState =
-    if funName == "print" || funName == "get" || funName == "set" || funName == "v" || funName == "p" || funName == "make_semaphore"
+    if funName == "print" || funName == "get" || funName == "set" || funName == "v" || funName == "p" || funName == "make_semaphore" || funName == "yield"
     then
         runSpecialFunction queueId a env oldState
     else do
@@ -66,13 +66,18 @@ runVS queueId a@(FAValueStatement (FFunApplicationB funName funArgVss)) env oldS
         let locs = lookupLoc funName env
         let funArgNames = funArgNamesLookup oldState firstLoc
         let (ifFunction, _, _, vs) = stateLookup firstLoc oldState
-        if ifFunction
-            then do
-                -- print $ "running function " ++ funName
-                -- print vs
-                (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
-                let computedVss = reverse almostComputedVss
-                if length funArgVss > length funArgNames
+        (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
+        let computedVss = reverse almostComputedVss
+        print computedVss
+        print funArgNames
+        if length computedVss < length funArgNames
+            then 
+                let 
+                    (nnnState, wrappedFunctionVS) = wrapFunctionB a env oldState
+                in runVS queueId wrappedFunctionVS env nnnState
+            else if ifFunction
+            then
+                if length computedVss > length funArgNames
                     then do
                         let (e, updatedVS, b, pms) = forceUnwrapMaybe $ appendFAVS locs computedVss state
                         if b
@@ -81,12 +86,10 @@ runVS queueId a@(FAValueStatement (FFunApplicationB funName funArgVss)) env oldS
                                     runVS queueId updatedVS newEnv newState
                             else
                                 runVS queueId updatedVS e state
-                    else
+                    else 
                         tryRunVSFunApplR queueId locs computedVss state
-            else if length funArgVss > length funArgNames
+            else if length computedVss > length funArgNames
                 then do
-                    (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
-                    let computedVss = reverse almostComputedVss
                     let (e, updatedVS, b, pms) = forceUnwrapMaybe $ appendFAVS locs computedVss state
                     if b
                         then
@@ -94,7 +97,7 @@ runVS queueId a@(FAValueStatement (FFunApplicationB funName funArgVss)) env oldS
                                 runVS queueId updatedVS newEnv newState
                         else
                             runVS queueId updatedVS e state
-                else
+                else 
                     interpretVS queueId vs env funArgNames firstLoc oldState funArgVss
 runVS queueId (FExpr (FEMul vs1 vs2)) env state = do
     Just (newState, FIValueStatement i1) <- runVS queueId vs1 env state
@@ -203,7 +206,36 @@ convertBApplicationsToRApplications (FTValueStatement vss) env =
 convertBApplicationsToRApplications a b = trace ("convertBApplicationsToRApplications " ++ show a) undefined
 
 wrapFunction :: FValueStatement -> [FPatternMatch] -> [FValueStatement] -> E -> S -> (S, FValueStatement)
-wrapFunction = undefined
+wrapFunction vs pms vss env s = undefined
+
+wrapFunctionB :: FValueStatement -> E -> S -> (S, FValueStatement)
+wrapFunctionB vs@(FAValueStatement (FFunApplicationB x vss)) env state =
+    let
+        locs = lookupLoc x env
+    in wrapFunctionBInt locs vs env state
+
+wrapFunctionBInt :: [Int] -> FValueStatement -> E -> S -> (S, FValueStatement)
+wrapFunctionBInt (loc:locs) vs@(FAValueStatement (FFunApplicationB x vss)) env state =
+    let
+        funArgNames = funArgNamesLookup state loc
+    in if fitPatternMatchs state env funArgNames vss
+        then
+            let 
+                d = length funArgNames - length vss
+                (newLocs, newState) = getNNewLocs state d
+                lambdaNames = map show newLocs
+            in (newState, wrapFunctionBIntNNewLambdas d vs lambdaNames)
+        else 
+            wrapFunctionBInt locs vs env state
+
+wrapFunctionBIntNNewLambdas :: Int -> FValueStatement -> [String] -> FValueStatement
+wrapFunctionBIntNNewLambdas d (FAValueStatement (FFunApplicationB x vss)) strs = 
+    let
+        argVss = map makeFunApplicationNoArg strs
+    in foldl (flip FFValueStatement) (FAValueStatement (FFunApplicationB x (vss ++ argVss))) strs
+
+makeFunApplicationNoArg :: String -> FValueStatement
+makeFunApplicationNoArg x = FAValueStatement (FFunApplicationB x [])
 
 forceRegisterAssignments :: Int -> [FAssignment] -> S -> E -> IO (S, E)
 forceRegisterAssignments queueId assignments state env =
@@ -224,8 +256,7 @@ forceRegisterAssignment queueId a@(FAssignmentB typ@(FTypeB "Ref" [t]) (FPattern
     Just (newerererState, nvs) <- runVS queueId vs newEnv newererState
     let newererererState = putInLoc vsLoc (False, newEnv, t, nvs) newerererState
     return (newererererState, newEnv)
-forceRegisterAssignment queueId a@(FAssignmentB t pm vs) state env = do
-    -- print $ "assignemnt " ++ show a
+forceRegisterAssignment queueId a@(FAssignmentB t pm vs) state env =
     setPM queueId t pm vs state env
 
 setPM :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
@@ -233,9 +264,6 @@ setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
     (vss, newState, newEnv, _) <- forceGetTupleVSS qId vs state env
     foldl (setPMInFoldF qId) (return (newState, newEnv)) $ tList types pmL vss
 setPM qId t (FPatternMatchB x) vs state env = do
-    -- print "setPM"
-    -- print x
-    -- print vs
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
     Just (newerState, nvs) <- interpretVS qId vs newEnv [] loc newState []

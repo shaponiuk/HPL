@@ -1,11 +1,9 @@
-struct Main {
-    fun (List (Int ()) -> Int ()) sum_list (EmptyListC (())) = 0;
+fun (List (Int ()) -> Int ()) sum_list (EmptyListC (())) = 0;
     
-    fun (Int ()) main () =
-        force let
-            Int () :: list = sum_list (EmptyListC (()));
-            () :: () = print (list ());
-        in 0;
-};
+sus fun (Int ()) main () =
+    force let
+        Int () :: list = sum_list (EmptyListC (()));
+        () :: () = print (list ());
+    in 0;
 
 data List (a) = ListC ((a (), List (a ()))) | EmptyListC (());

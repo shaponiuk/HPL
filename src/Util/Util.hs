@@ -4,8 +4,8 @@ import Debug.Trace
 
 dList :: (Show a, Show b) => [a] -> [b] -> [(a, b)]
 dList [] _ = []
+dList _ [] = []
 dList (x:xs) (y:ys) = (x, y):dList xs ys
-dList l1 l2 = trace (show l1 ++ show l2) undefined
 
 tList :: (Show a, Show b, Show c) => [a] -> [b] -> [c] -> [(a, b, c)]
 -- tList [] [] [] = []
