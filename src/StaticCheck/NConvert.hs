@@ -10,16 +10,32 @@ convertToNPF :: ProgramFormat -> NProgramFormat
 convertToNPF (SITList functions refs _) =
     trace "here" $
     NSIT env2 state2 where
-        env = makeEnvForFunctions functions getNewEnv
-        env2 = makeEnvForRefs refs env
-        state1 = convertFunctions env2 getNewState functions
+        (env, state0_) = makeEnvForFunctions functions getNewEnv getNewState
+        (env2, state0) = makeEnvForRefs refs env state0_
+        state1 = convertFunctions env2 state0 functions
         state2 = convertRefs env2 state1 refs
 
-makeEnvForFunctions :: [FFunctionDef] -> E -> E
-makeEnvForFunctions = undefined
+makeEnvForFunctions :: [FFunctionDef] -> E -> S -> (E, S)
+makeEnvForFunctions l env s = Prelude.foldl makeEnvForFunction (env, s) l
 
-makeEnvForRefs :: [FRefDef] -> E -> E
-makeEnvForRefs = undefined
+makeEnvForFunction :: (E, S) -> FFunctionDef -> (E, S)
+makeEnvForFunction (e, s) (NonSusFFunctionDef _ name _ _) =
+    (ne, ns) where
+        (loc, ns) = getNewLoc s
+        ne = registerLoc True e name loc
+makeEnvForFunction (e, s) (SusFFunctionDef (NonSusFFunctionDef _ name _ _)) =
+    (ne, ns) where
+        (loc, ns) = getNewLoc s
+        ne = registerLoc True e name loc
+
+makeEnvForRefs :: [FRefDef] -> E -> S -> (E, S)
+makeEnvForRefs l env s = Prelude.foldl makeEnvForRef (env, s) l
+
+makeEnvForRef :: (E, S) -> FRefDef -> (E, S)
+makeEnvForRef (e, s) (FRefDef _ name _) =
+    (ne, ns) where
+        (loc, ns) = getNewLoc s
+        ne = registerLoc False e name loc
 
 convertFunctions :: E -> S -> [FFunctionDef] -> S
 convertFunctions env = Prelude.foldl $ convertFunction env
@@ -28,9 +44,15 @@ convertFunction :: E -> S -> FFunctionDef -> S
 convertFunction env s (NonSusFFunctionDef t name argNames vs) = undefined
     ns where
         locs = lookupLoc name env
-        ns = registerInRightLocs locs argNames t vs s
-
-registerInRightLocs :: [Int] -> [FPatternMatch] -> FType -> FValueStatement -> S -> S
+        loc = getUnsetLoc s locs
+        ns_ = putArgNames s loc argNames
+        ns = putInLoc loc (True, env, t, vs) ns_
+convertFunction env s (SusFFunctionDef (NonSusFFunctionDef t name argNames vs)) =
+    ns where
+        locs = lookupLoc name env
+        loc = getUnsetLoc s locs
+        ns_ = putArgNames s loc argNames
+        ns = putInLoc loc (True, env, t, FSusValueStatement vs) ns_
 
 convertRefs :: E -> S -> [FRefDef] -> S
 convertRefs env = Prelude.foldl $ convertRef env

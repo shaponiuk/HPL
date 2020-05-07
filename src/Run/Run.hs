@@ -8,9 +8,8 @@ import Run.OneStepEvaluation
 import Debug.Trace
 
 run :: NProgramFormat -> IO ()
-run (NSIT anyDefs state) = do
+run (NSIT env state) = do
     let (nloc, nstate) = getNewLoc state
-    let (_, _, env) = getMainFunction anyDefs
     let mainloc = lookupFirstLoc "main" env
     let (_, nenv, t, vs) = stateLookup mainloc nstate
     let nnstate = putInLoc nloc (False, nenv, t, vs) nstate
@@ -33,17 +32,6 @@ runQueue (env, vs, queueId, _) state = do
     print $ "running queue with id " ++ show queueId
     Just (ns, nvs) <- runVS queueId vs env state
     return $ putInQueue queueId (env, nvs, queueId, True) ns
-
-getMainFunction :: [AnyDef] -> (String, [FPatternMatch], E)
-getMainFunction l = unwrapFunDef $ head $ filter isMainFunction l
-
-unwrapFunDef :: AnyDef -> (String, [FPatternMatch], E)
-unwrapFunDef (NonSusFunDef (NFNonSusFunDef a b c)) = (a, b, c)
-unwrapFunDef (SusFunDef (NFSusFunDef a b c)) = (a, b, c)
-
-isMainFunction :: AnyDef -> Bool
-isMainFunction (SusFunDef (NFSusFunDef name _ _)) = name == "main"
-isMainFunction _ = False
 
 interpretVS :: Int -> FValueStatement -> E -> [FPatternMatch] -> Int -> FunRunT
 interpretVS queueId vs env argNames loc s vss =
