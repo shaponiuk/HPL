@@ -41,7 +41,7 @@ convertFunctions :: E -> S -> [FFunctionDef] -> S
 convertFunctions env = Prelude.foldl $ convertFunction env
 
 convertFunction :: E -> S -> FFunctionDef -> S
-convertFunction env s (NonSusFFunctionDef t name argNames vs) = undefined
+convertFunction env s (NonSusFFunctionDef t name argNames vs) =
     ns where
         locs = lookupLoc name env
         loc = getUnsetLoc s locs

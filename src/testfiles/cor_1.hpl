@@ -1,12 +1,10 @@
-struct Main {
-    sus fun () cor () = 
-        force let
-            () :: () = print ("hahaha");
-        in ();
+sus fun () cor () = 
+    force let
+        () :: () = print ("hahaha");
+    in ();
     
-    sus fun (() -> Int ()) main () =
-        force let
-            () :: () = cor ();
-            () :: () = print ("haha");
-        in 0;
-};
+sus fun (() -> Int ()) main () =
+    force let
+        () :: () = cor ();
+        () :: () = print ("haha");
+    in 0;
