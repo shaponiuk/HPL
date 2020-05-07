@@ -1,15 +1,13 @@
-struct Main {
     fun () e () = e ();
     fun (Int () -> Int ()) sil (x) = if x () == 
         force let
             () :: () = print ("hehehehehe");
         in 0 then 1 else x () * sil (x () - 1);
 
-    fun (() -> Int ()) main () =
+    sus fun (() -> Int ()) main () =
         force let
             () :: x = sil (4);
             () :: () = print (x ());
             () :: () = print (x ());
             () :: () = print (sil (4));
         in 0;
-};

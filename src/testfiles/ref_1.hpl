@@ -1,13 +1,11 @@
-struct Main {
   sus fun ((Semaphore (), IO ()) -> Maybe (String ())) susGetLine (sem, io) =
     force let
       () :: a = print ( "here" );
       () :: b = sem.V ();
     in io.getline ();
 
-  fun ((List (String ()), IO ()) -> Int ()) main (argv, io) = force let 
-    ref (Int ()) x = 1;
+  sus fun ((List (String ()), IO ()) -> Int ()) main (argv, io) = force let 
+    Ref(Int ()) :: x = 1;
     () :: () = set (x (), 2);
     () :: () = print(get (x ()));
   in 0;
-};

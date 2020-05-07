@@ -258,6 +258,7 @@ forceRegisterAssignment queueId a@(FAssignmentB typ@(FTypeB "Ref" [t]) (FPattern
     return (newererererState, newEnv)
 forceRegisterAssignment queueId a@(FAssignmentB t pm vs) state env =
     setPM queueId t pm vs state env
+forceRegisterAssignment queueId a _ _ = trace (show a) undefined
 
 setPM :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
