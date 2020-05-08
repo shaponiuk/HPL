@@ -49,15 +49,15 @@ putQueue (S varsMap newIntLoc functionArgsMap semaphores queues) thing =
 anyAvailibleQueue :: S -> Bool
 anyAvailibleQueue (S _ _ _ semaphores queues) = any (`notBlockedByAnyOfTheSemaphores` semaphores) queues
 
-notBlockedByAnyOfTheSemaphores :: QueueT -> [([Int], Int, Int)] -> Bool
+notBlockedByAnyOfTheSemaphores :: QueueT -> [SemaphoreT] -> Bool
 notBlockedByAnyOfTheSemaphores (QueueT _ _ _ f y) [] = not $ f || y
 notBlockedByAnyOfTheSemaphores q semaphores = any (q `notBlockedBySemaphoreOrNotFinishedOrNotYielding`) semaphores
 
 checkNotBlocked :: QueueT -> S -> Bool
 checkNotBlocked queue (S _ _ _ semaphores _) = notBlockedByAnyOfTheSemaphores queue semaphores
 
-notBlockedBySemaphoreOrNotFinishedOrNotYielding :: QueueT -> ([Int], Int, Int) -> Bool
-notBlockedBySemaphoreOrNotFinishedOrNotYielding (QueueT _ _ queueId b y) (blockedQueues, _, _) = queueId `notElem` blockedQueues && not b && not y
+notBlockedBySemaphoreOrNotFinishedOrNotYielding :: QueueT -> SemaphoreT -> Bool
+notBlockedBySemaphoreOrNotFinishedOrNotYielding (QueueT _ _ queueId b y) (SemaphoreT blockedQueues _ _) = queueId `notElem` blockedQueues && not b && not y
 
 getAvailibleQueue :: S -> QueueT
 getAvailibleQueue (S _ _ _ semaphores queues) = first (`notBlockedByAnyOfTheSemaphores` semaphores) queues
@@ -78,27 +78,27 @@ updateQueues qId q (QueueT e vs qId_ b y : queues) =
 getQueue :: Int -> S -> QueueT
 getQueue qId state = first (\(QueueT _ _ id _ _) -> id == qId) $ queues state
 
-getNewSemaphore :: S -> (([Int], Int, Int), S)
+getNewSemaphore :: S -> (SemaphoreT, S)
 getNewSemaphore (S varsMap newIntLoc functionArgsMap semaphores queues) =
   let
     newSemId = length semaphores
-  in (([], 0, newSemId), S varsMap newIntLoc functionArgsMap (semaphores ++ [([], 0, newSemId)]) queues)
+  in (SemaphoreT [] 0 newSemId, S varsMap newIntLoc functionArgsMap (semaphores ++ [SemaphoreT [] 0 newSemId]) queues)
 
-getSemaphore :: Int -> S -> ([Int], Int, Int)
-getSemaphore semId (S _ _ _ semaphoreList _) = first (\(_, _, i) -> i == semId) semaphoreList
+getSemaphore :: Int -> S -> SemaphoreT
+getSemaphore semId (S _ _ _ semaphoreList _) = first (\(SemaphoreT _ _ i) -> i == semId) semaphoreList
 
-putSemaphore :: Int -> ([Int], Int, Int) -> S -> S
+putSemaphore :: Int -> SemaphoreT -> S -> S
 putSemaphore semId sem (S varsMap newIntLoc functionArgsMap semaphoreList queueList) =
   let
     updatedSemaphores = updateSemaphores semId sem semaphoreList
   in S varsMap newIntLoc functionArgsMap updatedSemaphores queueList
 
-updateSemaphores :: Int -> ([Int], Int, Int) -> [([Int], Int, Int)] -> [([Int], Int, Int)]
+updateSemaphores :: Int -> SemaphoreT -> [SemaphoreT] -> [SemaphoreT]
 updateSemaphores semId s [] = undefined
-updateSemaphores semId s ((blockedQueues, semValue, semId_):semaphores) = 
+updateSemaphores semId s (SemaphoreT blockedQueues semValue semId_ : semaphores) = 
   if semId == semId_ 
     then s:semaphores 
-    else (blockedQueues, semValue, semId_):updateSemaphores semId s semaphores
+    else SemaphoreT blockedQueues semValue semId_ : updateSemaphores semId s semaphores
 
 yieldQueue :: Int -> S -> S
 yieldQueue queueId state =

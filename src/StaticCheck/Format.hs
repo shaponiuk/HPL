@@ -3,11 +3,17 @@ module StaticCheck.Format where
 import Data.Map
 
 data QueueT = QueueT {
-  env ::E,
+  env :: E,
   valueStatement :: FValueStatement, 
   queueId :: Int, 
   finished :: Bool, 
   yielding :: Bool
+} deriving (Show)
+
+data SemaphoreT = SemaphoreT {
+  waitingQueues :: [Int],
+  semaphoreValue :: Int,
+  semaphoreId :: Int
 } deriving (Show)
 
   -- if function (bool in vars)
@@ -15,7 +21,7 @@ data S = S {
   vars :: Map Int (Bool, E, FType, FValueStatement),
   newInt :: Int,
   functionArgs :: Map Int [FPatternMatch],
-  semaphores :: [([Int], Int, Int)], -- (ids of queues waiting, sem value, id of the semaphore)
+  semaphores :: [SemaphoreT],
   queues :: [QueueT]
 } deriving (Show)
 

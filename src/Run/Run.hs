@@ -289,7 +289,7 @@ forceGetTupleVSS qId vs@(FSuspendedValue queueId) s e =
 forceGetTupleVSS _ vs _ _ = trace (show vs) undefined
 
 -- bool -> if should stop
-forceRunFunApplication :: Int -> FFunApplication -> S -> E -> IO (FValueStatement, S, E, Bool)
+forceRunFunApplication :: Int -> FFunApplication -> S -> E -> IO (FValueStatement, S, E)
 forceRunFunApplication queueId (FFunApplicationB "print" [str]) state env = do
     Just (s, r) <- runVS queueId str env state
     case r of
@@ -311,29 +311,29 @@ forceRunFunApplication queueId (FFunApplicationB "get" [ref]) state env = do
     return (vs, newerState, e, False)
 forceRunFunApplication queueId (FFunApplicationB "p" [semref]) state env = do
     Just (newState, FSemaphore semId) <- runVS queueId semref env state
-    let (blockedQueues, semValue, _) = getSemaphore semId state
+    let (SemaphoreT blockedQueues semValue _) = getSemaphore semId state
     if semValue <= 0
         then do
-            let newerState = putSemaphore semId (queueId:blockedQueues, semValue, semId) newState
+            let newerState = putSemaphore semId (SemaphoreT (queueId:blockedQueues) semValue semId) newState
             let availibleQueue = getAvailibleQueue newerState
             runUntilSemReady queueId semId newerState env
         else do
-            let newerState = putSemaphore semId (blockedQueues, semValue - 1, semId) newState
+            let newerState = putSemaphore semId (SemaphoreT blockedQueues (semValue - 1) semId) newState
             return (FTValueStatement [], newerState, env, False)
 forceRunFunApplication queueId (FFunApplicationB "yield" []) state env =
     tryYield queueId state env
 forceRunFunApplication queueId (FFunApplicationB "make_semaphore" []) state env = do
-    let (([], 0, semId), newState) = getNewSemaphore state
+    let (SemaphoreT [] 0 semId, newState) = getNewSemaphore state
     return (FSemaphore semId, newState, env, False)
 forceRunFunApplication queueId (FFunApplicationB "v" [semref]) state env = do
     Just (newState, FSemaphore semId) <- runVS queueId semref env state
-    let (blockedQueues, semValue, _) = getSemaphore semId newState
+    let (SemaphoreT blockedQueues semValue _) = getSemaphore semId newState
     if null blockedQueues
         then do
-            let newerState = putSemaphore semId ([], semValue + 1, semId) newState
+            let newerState = putSemaphore semId (SemaphoreT [] (semValue + 1) semId) newState
             return (FTValueStatement [], newerState, env, False)
         else do
-            let newerState = putSemaphore semId (cutLast blockedQueues, semValue, semId) newState
+            let newerState = putSemaphore semId (SemaphoreT (cutLast blockedQueues) semValue semId) newState
             return (FTValueStatement [], newerState, env, False)
 forceRunFunApplication queueId a@(FFunApplicationB name args) state env = do
     Just (s, vs) <- runVS queueId (FAValueStatement a) env state
@@ -343,7 +343,7 @@ forceRunFunApplication queueId a@(FFunApplicationR loc [args]) state env = do
     return (vs, s, env, False)
 forceRunFunApplication queueId a _ _ = trace ("forceRunFunApplication " ++ show a) undefined
 
-runUntilSemReady :: Int -> Int -> S -> E -> IO (FValueStatement, S, E, Bool)
+runUntilSemReady :: Int -> Int -> S -> E -> IO (FValueStatement, S, E)
 runUntilSemReady queueId semId state env = do
     print $ "runUnitlSemReady " ++ show queueId
     if anyAvailibleQueue state
@@ -352,11 +352,11 @@ runUntilSemReady queueId semId state env = do
             newState <- runQueue availibleQueue state
             let queue = getQueue queueId newState
             if checkNotBlocked queue newState
-                then return (FTValueStatement [], newState, env, False)
+                then return (FTValueStatement [], newState, env)
                 else runUntilSemReady queueId semId state env
         else fail "Deadlock"
 
-tryYield :: Int -> S -> E -> IO (FValueStatement, S, E, Bool)
+tryYield :: Int -> S -> E -> IO (FValueStatement, S, E)
 tryYield queueId state env = do
     print $ "tryYield queueId = " ++ show queueId
     let newState = yieldQueue queueId state
@@ -365,7 +365,7 @@ tryYield queueId state env = do
             let availibleQueue = getAvailibleQueue newState
             newerState <- runQueue availibleQueue newState
             let newestState = unyieldQueue queueId newerState
-            return (FTValueStatement [], newestState, env, False)
+            return (FTValueStatement [], newestState, env)
         else do
             print "nothing to yield to"
-            return (FTValueStatement [], state, env, False)
+            return (FTValueStatement [], state, env)
