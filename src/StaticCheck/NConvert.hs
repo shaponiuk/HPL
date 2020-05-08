@@ -4,7 +4,6 @@ import StaticCheck.Format
 import Util.State
 import Util.Env
 import Data.Map as M
-import Debug.Trace
 
 convertToNPF :: ProgramFormat -> NProgramFormat
 convertToNPF (SITList functions refs _) =

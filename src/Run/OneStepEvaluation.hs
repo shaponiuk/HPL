@@ -4,14 +4,12 @@ import StaticCheck.Format
 import Util.State
 import Util.Env
 import Util.Util
-import Debug.Trace
 
 oneStepEvaluation :: S -> E -> FValueStatement -> (S, E, FValueStatement)
 oneStepEvaluation s e (FAValueStatement (FFunApplicationR locs argVss)) = oneStepTryRunVSFunApplR locs argVss s
-oneStepEvaluation s e vs = trace (show vs) undefined
+oneStepEvaluation s e vs = traceD (show vs) undefined
 
 oneStepTryRunVSFunApplR :: [Int] -> [FValueStatement] -> S -> (S, E, FValueStatement)
-    -- todo: here might fail
 oneStepTryRunVSFunApplR [] _ _ = undefined
 -- todo: hard to find the function name, probably unneeded, only one at the time
 oneStepTryRunVSFunApplR (x:xs) args state = do
@@ -55,7 +53,7 @@ registerArgsInFoldF (e, s) (FPatternMatchC _ pms, FCValueStatement _ vss) =
 registerArgsInFoldF (e, s) (FPatternMatchC cname pms, FAValueStatement (FFunApplicationR loc argVss)) = 
     registerArgsInFoldF (ne, ns) (FPatternMatchC cname pms, nvs) where
         (ns, ne, nvs) = oneStepEvaluation s e $ FAValueStatement (FFunApplicationR loc argVss)
-registerArgsInFoldF _ el = trace ("registerArgsInFoldF " ++ show el) undefined
+registerArgsInFoldF _ el = traceD ("registerArgsInFoldF " ++ show el) undefined
 
 appendFAVS :: [Int] -> [FValueStatement] -> S -> Maybe (E, FValueStatement, Bool, [FPatternMatch])
 appendFAVS [] vss state = Nothing
@@ -73,7 +71,7 @@ appendFAVS (loc:xs) addVss state =
 appendFAVSInt :: FValueStatement -> [FValueStatement] -> (FValueStatement, Bool, [FPatternMatch])
 appendFAVSInt (FAValueStatement (FFunApplicationB funName vss)) addVss = (FAValueStatement $ FFunApplicationB funName (vss ++ addVss), False, [])
 appendFAVSInt (FFValueStatement name vs) addVSS = (vs, True, [FPatternMatchB name])
-appendFAVSInt x y = trace ("appendFAVSInt " ++ show x ++ "\n" ++ show y) undefined
+appendFAVSInt x y = traceD ("appendFAVSInt " ++ show x ++ "\n" ++ show y) undefined
 
 fitPatternMatchs :: S -> E -> [FPatternMatch] -> [FValueStatement] -> Bool
 fitPatternMatchs s e pms vss = all (fitPatternMatch s e) $ dList pms vss
@@ -86,4 +84,4 @@ fitPatternMatch _ _ (FPatternMatchB _, _) = True
 fitPatternMatch s e (FPatternMatchC (FPatternMatchB name1) pms, FAValueStatement (FFunApplicationR loc argVss)) =
     fitPatternMatch ns ne (FPatternMatchC (FPatternMatchB name1) pms, nvs) where
         (ns, ne, nvs) = oneStepEvaluation s e $ FAValueStatement (FFunApplicationR loc argVss)
-fitPatternMatch _ _ a = trace ("fitPatternMatch undefined " ++ show a) undefined
+fitPatternMatch _ _ a = traceD ("fitPatternMatch undefined " ++ show a) undefined

@@ -4,7 +4,7 @@ import Debug.Trace
 import Control.Monad
 
 debug :: Bool
-debug = False
+debug = True
 
 printD :: Show a => a -> IO ()
 printD a = when debug $ print a

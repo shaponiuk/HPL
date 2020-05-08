@@ -3,7 +3,7 @@ module Util.State where
 import Data.Map
 import StaticCheck.Format
 import Util.Util
-import Debug.Trace
+import Util.Env
 
 getNewLoc :: S -> (Int, S)
 getNewLoc (S varsMap loc funArgs semaphores queues) = (loc + 1, S varsMap (loc + 1) funArgs semaphores queues)
@@ -23,7 +23,7 @@ stateLookup :: Int -> S -> (Bool, E, FType, FValueStatement)
 stateLookup loc (S varsMap _ _ _ _) = 
   if member loc varsMap
     then varsMap ! loc
-    else trace ("loc not found in state " ++ show loc ++ "\nhaving vars: ") undefined
+    else traceD ("loc not found in state " ++ show loc ++ "\nhaving vars: ") undefined
 
 funArgNamesLookup :: S -> Int -> [FPatternMatch]
 funArgNamesLookup (S _ _ funArgs _ _) loc =

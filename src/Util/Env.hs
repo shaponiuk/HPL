@@ -1,8 +1,8 @@
 module Util.Env where
 
 import Data.Map
+import Util.Util
 import StaticCheck.Format
-import Debug.Trace
 
 -- bool - only if it is an instance of a pm function
 registerLoc :: Bool -> E -> String -> Int -> E
@@ -19,7 +19,7 @@ lookupLoc :: String -> E -> [Int]
 lookupLoc name (E nameMap) =
   if member name nameMap
     then nameMap ! name
-    else trace ("lookupLoc " ++ show name) undefined
+    else traceD ("lookupLoc " ++ show name) undefined
 
 lookupFirstLoc :: String -> E -> Int
 lookupFirstLoc name env = head $ lookupLoc name env

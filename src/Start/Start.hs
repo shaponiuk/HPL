@@ -8,7 +8,7 @@ import Bnfc.AbsHpl
 import StaticCheck.StaticCheck ( staticCheck )
 import StaticCheck.Format
 import Run.Run ( run )
-import Debug.Trace ( trace )
+import Util.Util
 
 runFile :: FilePath -> IO ()
 runFile = runFileAux pProgram
@@ -27,7 +27,7 @@ runAux p s = let ts = myLLexer s in case p ts of
                         print ts
                         putStrLn s
          Ok tree    -> do
-                        putStrLn "\nParse Successful!"
+                        printD "\nParse Successful!"
                         checkAndRunTree tree 
 
 checkAndRunTree :: Program -> IO ()
