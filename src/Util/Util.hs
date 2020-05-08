@@ -1,6 +1,21 @@
 module Util.Util where
 
 import Debug.Trace
+import Control.Monad
+
+debug :: Bool
+debug = False
+
+printD :: Show a => a -> IO ()
+printD a = when debug $ print a
+
+traceD :: Show a => a -> b -> b
+traceD a b = 
+    if debug
+        then
+            trace (show a) b
+        else
+            b
 
 dList :: (Show a, Show b) => [a] -> [b] -> [(a, b)]
 dList [] _ = []

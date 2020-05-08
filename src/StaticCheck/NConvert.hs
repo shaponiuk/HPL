@@ -8,7 +8,6 @@ import Debug.Trace
 
 convertToNPF :: ProgramFormat -> NProgramFormat
 convertToNPF (SITList functions refs _) =
-    trace "here" $
     NSIT env2 state2 where
         (env, state0_) = makeEnvForFunctions functions getNewEnv getNewState
         (env2, state0) = makeEnvForRefs refs env state0_

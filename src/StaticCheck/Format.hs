@@ -32,10 +32,6 @@ newtype E = E {
 data NProgramFormat = NSIT E S
   deriving (Show)
 
-type FunRunT = S -> [FValueStatement] -> IO (Maybe (S, FValueStatement))
-
-type FunRunQuickT = S -> IO (Maybe (S, FValueStatement))
-
 data ProgramFormat = SITList [FFunctionDef] [FRefDef] [FAlgType]
   deriving (Eq,Ord,Show)
 
