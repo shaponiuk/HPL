@@ -83,6 +83,7 @@ runVS queueId vs@FFValueStatement{} = runVSLam queueId vs
 runVS queueId vs@FSusValueStatement{}= runVSSusSt queueId vs
 runVS queueId vs@FSuspendedValue{} = runVSSusVal queueId vs
 runVS queueId vs@FSemaphore{} = runVSSem queueId vs
+runVS queueId vs@(FValueStatementB _ _) = runVSLazyLet queueId vs
 runVS _ vs = traceD ("runVS??? " ++ show vs) undefined
 
 runVSMul :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement) 
@@ -211,6 +212,13 @@ runVSSem queueId vs@(FSemaphore i) e s =
 runVSRef :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSRef queueId vs@(FRefAddr x) _ s = return (s, vs)
 
+runVSLazyLet :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSLazyLet queueId (FValueStatementB assignments vs) env state = do
+    print "here"
+    (newState, newEnv) <- lazyRegisterAssignments queueId assignments state env
+    seq newState $ runVS queueId vs newEnv newState
+ 
+
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runVSInFoldF env acc vs = do
     (s, vsl) <- acc
@@ -236,10 +244,19 @@ forceRegisterAssignments :: Int -> [FAssignment] -> S -> E -> IO (S, E)
 forceRegisterAssignments queueId assignments state env =
     foldl (forceRegisterAssignmentsInFoldF queueId) (return (state, env)) assignments
 
+lazyRegisterAssignments :: Int -> [FAssignment] -> S -> E -> IO (S, E)
+lazyRegisterAssignments queueId assignments state env =
+    foldl (lazyRegisterAssignmentsInFoldF queueId) (return (state, env)) assignments
+
 forceRegisterAssignmentsInFoldF :: Int -> IO (S, E) -> FAssignment -> IO (S, E)
 forceRegisterAssignmentsInFoldF queueId acc assignment = do
     (s, e) <- acc
     forceRegisterAssignment queueId assignment s e
+
+lazyRegisterAssignmentsInFoldF :: Int -> IO (S, E) -> FAssignment -> IO (S, E)
+lazyRegisterAssignmentsInFoldF queueId acc assignment = do
+    (s, e) <- acc
+    lazyRegisterAssignment queueId assignment s e
 
 forceRegisterAssignment :: Int -> FAssignment -> S -> E -> IO (S, E)
 forceRegisterAssignment queueId a@(FAssignmentB typ@(FTypeB "Ref" [t]) (FPatternMatchB name) vs) state env = do
@@ -255,6 +272,10 @@ forceRegisterAssignment queueId a@(FAssignmentB t pm vs) state env =
     setPM queueId t pm vs state env
 forceRegisterAssignment queueId a _ _ = traceD (show a) undefined
 
+lazyRegisterAssignment :: Int -> FAssignment -> S -> E -> IO (S, E)
+lazyRegisterAssignment queueId (FAssignmentB t pm vs) state env =
+    setPMLazy queueId t pm vs state env
+
 setPM :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
     (vss, newState, newEnv, _) <- forceGetTupleVSS qId vs state env
@@ -266,6 +287,14 @@ setPM qId t (FPatternMatchB x) vs state env = do
     let newererState = putInLoc loc (False, newEnv, t, nvs) newerState
     return (newererState, newEnv)
 setPM _ _ _ _ _ _ = undefined
+
+setPMLazy :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
+setPMLazy qId (FTypeT types) (FPatternMatchT pmL) vs state env = undefined
+setPMLazy qId t (FPatternMatchB x) vs state env = do
+    let (loc, newState) = getNewLoc state
+    let newEnv = registerLoc False env x loc
+    let newerState = putInLoc loc (False, newEnv, t, vs) newState
+    return (newerState, newEnv)
 
 setPMInFoldF :: Int -> IO (S, E) -> (FType, FPatternMatch, FValueStatement) -> IO (S, E)
 setPMInFoldF queueId acc (t, pm, vs) = do
