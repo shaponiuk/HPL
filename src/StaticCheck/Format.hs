@@ -8,7 +8,7 @@ data S = S {
   newInt :: Int,
   functionArgs :: Map Int [FPatternMatch],
   semaphores :: [([Int], Int, Int)], -- (ids of queues waiting, sem value, id of the semaphore)
-  queues :: [(E, FValueStatement, Int, Bool)] -- (environment, vs to be run with the environment, id of the queue, finished)
+  queues :: [(E, FValueStatement, Int, Bool, Bool)] -- (environment, vs to be run with the environment, id of the queue, finished, yielding)
 } deriving (Show)
 
 newtype E = E {

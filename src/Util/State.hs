@@ -42,42 +42,41 @@ getUnsetLoc s (x:xs) = if member x (vars s) then getUnsetLoc s xs else x
 getFreeQueueId :: S -> Int
 getFreeQueueId (S _ _ _ _ queues) = length queues
 
-putQueue :: S -> (E, FValueStatement, Int, Bool) -> S
+putQueue :: S -> (E, FValueStatement, Int, Bool, Bool) -> S
 putQueue (S varsMap newIntLoc functionArgsMap semaphores queues) thing =
   S varsMap newIntLoc functionArgsMap semaphores (queues ++ [thing])
 
 anyAvailibleQueue :: S -> Bool
 anyAvailibleQueue (S _ _ _ semaphores queues) = any (`notBlockedByAnyOfTheSemaphores` semaphores) queues
 
-notBlockedByAnyOfTheSemaphores :: (E, FValueStatement, Int, Bool) -> [([Int], Int, Int)] -> Bool
-notBlockedByAnyOfTheSemaphores (_, _, _, False) [] = True
-notBlockedByAnyOfTheSemaphores (_, _, _, True) [] = False
-notBlockedByAnyOfTheSemaphores q semaphores = any (q `notBlockedBySemaphoreOrNotFinished`) semaphores
+notBlockedByAnyOfTheSemaphores :: (E, FValueStatement, Int, Bool, Bool) -> [([Int], Int, Int)] -> Bool
+notBlockedByAnyOfTheSemaphores (_, _, _, f, y) [] = not $ f || y
+notBlockedByAnyOfTheSemaphores q semaphores = any (q `notBlockedBySemaphoreOrNotFinishedOrNotYielding`) semaphores
 
-checkNotBlocked :: (E, FValueStatement, Int, Bool) -> S -> Bool
+checkNotBlocked :: (E, FValueStatement, Int, Bool, Bool) -> S -> Bool
 checkNotBlocked queue (S _ _ _ semaphores _) = notBlockedByAnyOfTheSemaphores queue semaphores
 
-notBlockedBySemaphoreOrNotFinished :: (E, FValueStatement, Int, Bool) -> ([Int], Int, Int) -> Bool
-notBlockedBySemaphoreOrNotFinished (_, _, queueId, b) (blockedQueues, _, _) = queueId `notElem` blockedQueues && not b
+notBlockedBySemaphoreOrNotFinishedOrNotYielding :: (E, FValueStatement, Int, Bool, Bool) -> ([Int], Int, Int) -> Bool
+notBlockedBySemaphoreOrNotFinishedOrNotYielding (_, _, queueId, b, y) (blockedQueues, _, _) = queueId `notElem` blockedQueues && not b && not y
 
-getAvailibleQueue :: S -> (E, FValueStatement, Int, Bool)
+getAvailibleQueue :: S -> (E, FValueStatement, Int, Bool, Bool)
 getAvailibleQueue (S _ _ _ semaphores queues) = first (`notBlockedByAnyOfTheSemaphores` semaphores) queues
 
-putInQueue :: Int -> (E, FValueStatement, Int, Bool) -> S -> S
+putInQueue :: Int -> (E, FValueStatement, Int, Bool, Bool) -> S -> S
 putInQueue queueId q (S varsMap newIntLoc functionArgsMap semaphores queues) =
   let
     updatedQueues = updateQueues queueId q queues
   in S varsMap newIntLoc functionArgsMap semaphores updatedQueues
 
-updateQueues :: Int -> (E, FValueStatement, Int, Bool) -> [(E, FValueStatement, Int, Bool)] -> [(E, FValueStatement, Int, Bool)]
+updateQueues :: Int -> (E, FValueStatement, Int, Bool, Bool) -> [(E, FValueStatement, Int, Bool, Bool)] -> [(E, FValueStatement, Int, Bool, Bool)]
 updateQueues qId q [] = undefined
-updateQueues qId q ((e, vs, qId_, b):queues) = 
+updateQueues qId q ((e, vs, qId_, b, y):queues) = 
   if qId == qId_ 
     then q:queues 
-    else (e, vs, qId_, b):updateQueues qId q queues
+    else (e, vs, qId_, b, y):updateQueues qId q queues
 
-getQueue :: Int -> S -> (E, FValueStatement, Int, Bool)
-getQueue qId (S _ _ _ _ queues) = first (\(_, _, id, _) -> id == qId) queues
+getQueue :: Int -> S -> (E, FValueStatement, Int, Bool, Bool)
+getQueue qId (S _ _ _ _ queues) = first (\(_, _, id, _, _) -> id == qId) queues
 
 getNewSemaphore :: S -> (([Int], Int, Int), S)
 getNewSemaphore (S varsMap newIntLoc functionArgsMap semaphores queues) =
@@ -100,6 +99,18 @@ updateSemaphores semId s ((blockedQueues, semValue, semId_):semaphores) =
   if semId == semId_ 
     then s:semaphores 
     else (blockedQueues, semValue, semId_):updateSemaphores semId s semaphores
+
+yieldQueue :: Int -> S -> S
+yieldQueue queueId state =
+  let
+    (e, vs, _, b, _) = getQueue queueId state
+  in putInQueue queueId (e, vs, queueId, b, True) state
+
+unyieldQueue :: Int -> S -> S
+unyieldQueue queueId state =
+  let
+    (e, vs, _, b, _) = getQueue queueId state
+  in putInQueue queueId (e, vs, queueId, b, False) state
 
 getNewState :: S
 getNewState = S empty 0 empty [] []

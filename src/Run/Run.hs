@@ -18,20 +18,18 @@ run (NSIT env state) = do
 
 runLoop :: S -> IO ()
 runLoop state =
-    -- print $ queues state
     if anyAvailibleQueue state then do
         let availibleQueue = getAvailibleQueue state
-        -- print availibleQueue
         newState <- runQueue availibleQueue state
         runLoop newState
     else
         putStrLn "No availible queue to run"
 
-runQueue :: (E, FValueStatement, Int, Bool) -> S -> IO S
-runQueue (env, vs, queueId, _) state = do
+runQueue :: (E, FValueStatement, Int, Bool, Bool) -> S -> IO S
+runQueue (env, vs, queueId, _, _) state = do
     print $ "running queue with id " ++ show queueId
     Just (ns, nvs) <- runVS queueId vs env state
-    return $ putInQueue queueId (env, nvs, queueId, True) ns
+    return $ putInQueue queueId (env, nvs, queueId, True, False) ns
 
 interpretVS :: Int -> FValueStatement -> E -> [FPatternMatch] -> Int -> FunRunT
 interpretVS queueId vs env argNames loc s vss =
@@ -68,8 +66,6 @@ runVS queueId a@(FAValueStatement (FFunApplicationB funName funArgVss)) env oldS
         let (ifFunction, _, _, vs) = stateLookup firstLoc oldState
         (state, almostComputedVss) <- foldl (runVSInFoldF env) (return (oldState, [])) funArgVss
         let computedVss = reverse almostComputedVss
-        print computedVss
-        print funArgNames
         if length computedVss < length funArgNames
             then 
                 let 
@@ -135,13 +131,12 @@ runVS queueId a@(FFValueStatement argName vs) e s =
 runVS queueId (FSusValueStatement vs) e s = do
     let queueId = getFreeQueueId s
     let nvs = FSuspendedValue queueId
-    let ns = putQueue s (e, vs, queueId, False)
+    let ns = putQueue s (e, vs, queueId, False, False)
     return $ Just (ns, nvs)
 runVS queueId (FSuspendedValue qId) e s = do
-    -- print $ "runVS suspended value " ++ show qId
-    let (env, qvs, _, b) = getQueue qId s
+    let (env, qvs, _, b, y) = getQueue qId s
     Just (ns, nvs) <- runVS qId qvs env s
-    let nns = putInQueue qId (env, qvs, qId, True) ns
+    let nns = putInQueue qId (env, qvs, qId, True, False) ns
     return $ Just (nns, nvs)
 runVS queueId vs@(FSemaphore i) e s =
     return $ Just (s, vs)
@@ -287,11 +282,7 @@ forceGetTupleVSS queueId a@(FTValueStatement vss) s e = do
     Just (ns, tvs) <- runVS queueId a e s
     return (unwrapSingleTuples tvs, ns, e, False)
 forceGetTupleVSS queueId a@(FAValueStatement funApplication) state env = do
-    -- print "forceGetTupleVSS"
-    -- print a
-    -- print env
     (vs, s, e, b) <- forceRunFunApplication queueId funApplication state env
-    -- print vs
     forceGetTupleVSS queueId vs s e
 forceGetTupleVSS qId vs@(FSuspendedValue queueId) s e =
     return ([vs], s, e, False)
@@ -314,12 +305,6 @@ forceRunFunApplication queueId (FFunApplicationB "set" [ref, value]) state env =
     let newerState = putInLoc refAddr (False, env, FTypeT [], value) newState
     return (FTValueStatement [], newerState, env, False)
 forceRunFunApplication queueId (FFunApplicationB "get" [ref]) state env = do
-    -- Just (newState, aaa) <- runVS queueId ref env state
-    -- print ref
-    -- print aaa
-    -- print env
-    -- print newState
-    -- undefined
     Just (newState, FRefAddr refAddr) <- runVS queueId ref env state
     let (_, e, _, refVS) = stateLookup refAddr newState
     Just (newerState, vs) <- runVS queueId refVS e newState
@@ -335,6 +320,8 @@ forceRunFunApplication queueId (FFunApplicationB "p" [semref]) state env = do
         else do
             let newerState = putSemaphore semId (blockedQueues, semValue - 1, semId) newState
             return (FTValueStatement [], newerState, env, False)
+forceRunFunApplication queueId (FFunApplicationB "yield" []) state env =
+    tryYield queueId state env
 forceRunFunApplication queueId (FFunApplicationB "make_semaphore" []) state env = do
     let (([], 0, semId), newState) = getNewSemaphore state
     return (FSemaphore semId, newState, env, False)
@@ -350,8 +337,6 @@ forceRunFunApplication queueId (FFunApplicationB "v" [semref]) state env = do
             return (FTValueStatement [], newerState, env, False)
 forceRunFunApplication queueId a@(FFunApplicationB name args) state env = do
     Just (s, vs) <- runVS queueId (FAValueStatement a) env state
-    -- print $ "after " ++ show a
-    -- print vs
     return (vs, s, env, False)
 forceRunFunApplication queueId a@(FFunApplicationR loc [args]) state env = do
     Just (s, vs) <- runVS queueId (FAValueStatement a) env state
@@ -370,3 +355,17 @@ runUntilSemReady queueId semId state env = do
                 then return (FTValueStatement [], newState, env, False)
                 else runUntilSemReady queueId semId state env
         else fail "Deadlock"
+
+tryYield :: Int -> S -> E -> IO (FValueStatement, S, E, Bool)
+tryYield queueId state env = do
+    print $ "tryYield queueId = " ++ show queueId
+    let newState = yieldQueue queueId state
+    if anyAvailibleQueue newState
+        then do
+            let availibleQueue = getAvailibleQueue newState
+            newerState <- runQueue availibleQueue newState
+            let newestState = unyieldQueue queueId newerState
+            return (FTValueStatement [], newestState, env, False)
+        else do
+            print "nothing to yield to"
+            return (FTValueStatement [], state, env, False)
