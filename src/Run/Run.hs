@@ -25,11 +25,11 @@ runLoop state =
     else
         putStrLn "No availible queue to run"
 
-runQueue :: (E, FValueStatement, Int, Bool, Bool) -> S -> IO S
-runQueue (env, vs, queueId, _, _) state = do
+runQueue :: QueueT -> S -> IO S
+runQueue (QueueT env vs queueId _ _) state = do
     print $ "running queue with id " ++ show queueId
     Just (ns, nvs) <- runVS queueId vs env state
-    return $ putInQueue queueId (env, nvs, queueId, True, False) ns
+    return $ putInQueue queueId (QueueT env nvs queueId True False) ns
 
 interpretVS :: Int -> FValueStatement -> E -> [FPatternMatch] -> Int -> FunRunT
 interpretVS queueId vs env argNames loc s vss =
@@ -131,12 +131,12 @@ runVS queueId a@(FFValueStatement argName vs) e s =
 runVS queueId (FSusValueStatement vs) e s = do
     let queueId = getFreeQueueId s
     let nvs = FSuspendedValue queueId
-    let ns = putQueue s (e, vs, queueId, False, False)
+    let ns = putQueue s (QueueT e vs queueId False False)
     return $ Just (ns, nvs)
 runVS queueId (FSuspendedValue qId) e s = do
-    let (env, qvs, _, b, y) = getQueue qId s
+    let (QueueT env qvs _ b y) = getQueue qId s
     Just (ns, nvs) <- runVS qId qvs env s
-    let nns = putInQueue qId (env, qvs, qId, True, False) ns
+    let nns = putInQueue qId (QueueT env qvs qId True False) ns
     return $ Just (nns, nvs)
 runVS queueId vs@(FSemaphore i) e s =
     return $ Just (s, vs)
