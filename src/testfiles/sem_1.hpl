@@ -1,4 +1,3 @@
-struct Main {
     sus fun (Ref (Semaphore ()) -> ()) cor (sem) =
         force let
             () :: () = v (get (sem ()));
@@ -13,4 +12,3 @@ struct Main {
             () :: () = p (get (sem ()));
             () :: () = print ("I'm main");
         in 0;
-};

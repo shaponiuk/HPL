@@ -286,7 +286,7 @@ forceGetTupleVSS queueId a@(FAValueStatement funApplication) state env = do
     forceGetTupleVSS queueId vs s e
 forceGetTupleVSS qId vs@(FSuspendedValue queueId) s e =
     return ([vs], s, e, False)
-forceGetTupleVSS _ vs _ _ = traceD (show vs) undefined
+forceGetTupleVSS _ vs _ _ = traceD vs undefined
 
 forceRunFunApplication :: Int -> FFunApplication -> S -> E -> IO (FValueStatement, S, E)
 forceRunFunApplication queueId (FFunApplicationB "print" [str]) state env = do
@@ -294,10 +294,10 @@ forceRunFunApplication queueId (FFunApplicationB "print" [str]) state env = do
     case r of
         FSuspendedValue qId -> do
             (ns, nr) <- runVS qId r env s
-            print $ "hehe " ++ show nr 
+            print nr
             return (FTValueStatement [], ns, env)
         _ -> do
-            print $ "hehe " ++ show r
+            print r
             return (FTValueStatement [], s, env)
 forceRunFunApplication queueId (FFunApplicationB "set" [ref, value]) state env = do
     (newState, FRefAddr refAddr) <- runVS queueId ref env state

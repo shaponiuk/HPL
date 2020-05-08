@@ -1,6 +1,7 @@
 module StaticCheck.Format where
 
 import Data.Map
+import Util.Util
 
 data QueueT = QueueT {
   env :: E,
@@ -81,7 +82,7 @@ data FValueStatement =
   | FSusValueStatement FValueStatement
   | FSuspendedValue Int
   | FSemaphore Int
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord)
 
 data FFunApplication =
     FSFunApplication String FFunApplication
@@ -109,4 +110,18 @@ data FValueStatementExpr =
   | FEGQ FValueStatement FValueStatement
   | FEEQ FValueStatement FValueStatement
   | FENE FValueStatement FValueStatement
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord)
+
+instance Show FValueStatement where
+  show (FLitStrValueStatement str) = str
+  show (FIValueStatement i) = show i
+  show (FTValueStatement l) = showTupleList l
+  show (FCValueStatement constructorName args) = constructorName ++ " " ++ show args
+  show a = traceD a undefined
+
+showTupleList [] = "()"
+showTupleList [x] = "(" ++ show x ++ ")"
+showTupleList (x:x2:xs) =
+  let
+    '(':rest = showTupleList (x2:xs)
+  in "(" ++ show x ++ ", " ++ rest
