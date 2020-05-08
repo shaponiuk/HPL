@@ -73,11 +73,8 @@ runVS queueId vs@(FExpr (FEMul vs1 vs2)) env state = runVSMul queueId vs env sta
 runVS queueId vs@(FIfValueStatement condvs res1vs res2vs) env state = runVSIf queueId vs env state
 runVS queueId vs@(FExpr (FEEQ vs1 vs2)) env state = runVSEQ queueId vs env state
 runVS queueId vs@(FExpr (FESub vs1 vs2)) env state = runVSSub queueId vs env state
-runVS queueId (FExpr (FEAdd vs1 vs2)) env state = do
-    (newState, FIValueStatement i1) <- runVS queueId vs1 env state
-    (newerState, FIValueStatement i2) <- runVS queueId vs2 env newState
-    return (newerState, FIValueStatement (i1 + i2))
-runVS queueId (FAValueStatement (FFunApplicationR locs args)) _ state =
+runVS queueId vs@(FExpr (FEAdd vs1 vs2)) env state = runVSAdd queueId vs env state
+runVS queueId (FAValueStatement (FFunApplicationR locs args)) _ state = 
     tryRunVSFunApplR queueId locs args state
 runVS queueId vs@(FLitStrValueStatement _) _ s = return (s, vs)
 runVS queueId (FCValueStatement name vss) e s = do
@@ -143,6 +140,16 @@ runVSFunB queueId a@(FAValueStatement (FFunApplicationB funName _)) =
             runSpecialFunction queueId a
         else 
             runNotSpecialFunction queueId a
+
+runVSAdd :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSAdd queueId (FExpr (FEAdd vs1 vs2)) env state = do
+    (newState, FIValueStatement i1) <- runVS queueId vs1 env state
+    (newerState, FIValueStatement i2) <- runVS queueId vs2 env newState
+    return (newerState, FIValueStatement (i1 + i2)
+
+runVSFunR ::
+runVSFunR queueId (FAValueStatement (FFunApplicationR locs args)) _ state = 
+    tryRunVSFunApplR queueId locs args state
 
 runTVSInFoldF :: Int -> E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runTVSInFoldF queueId env acc vs = do
