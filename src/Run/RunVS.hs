@@ -66,39 +66,24 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
                     else interpretVS queueId vs env funArgNames firstLoc oldState funArgVss
 
 runVS :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
-runVS queueId a@(FForceValueStatement assignments vs) env state = runVSForceLet queueId a env state
-runVS queueId vs@(FIValueStatement i) e s = runVSI queueId vs e s
-runVS queueId a@(FAValueStatement (FFunApplicationB funName funArgVss)) env state = runVSFunB queueId a env state
-runVS queueId vs@(FExpr (FEMul vs1 vs2)) env state = runVSMul queueId vs env state
-runVS queueId vs@(FIfValueStatement condvs res1vs res2vs) env state = runVSIf queueId vs env state
-runVS queueId vs@(FExpr (FEEQ vs1 vs2)) env state = runVSEQ queueId vs env state
-runVS queueId vs@(FExpr (FESub vs1 vs2)) env state = runVSSub queueId vs env state
-runVS queueId vs@(FExpr (FEAdd vs1 vs2)) env state = runVSAdd queueId vs env state
-runVS queueId (FAValueStatement (FFunApplicationR locs args)) _ state = 
-    tryRunVSFunApplR queueId locs args state
-runVS queueId vs@(FLitStrValueStatement _) _ s = return (s, vs)
-runVS queueId (FCValueStatement name vss) e s = do
-    (new_state, newVss) <- foldl (cvsInFoldF queueId e) (return (s, [])) vss
-    return (new_state, FCValueStatement name (reverse newVss))
-runVS queueId (FTValueStatement xss) e s = do
-    (ns, xssc) <- foldl (runTVSInFoldF queueId e) (return (s, [])) xss
-    return (ns, FTValueStatement xssc)
-runVS queueId a@(FRefAddr x) _ s = return (s, a)
-runVS queueId a@(FFValueStatement argName vs) e s =
-    return (s, a)
-runVS queueId (FSusValueStatement vs) e s = do
-    let queueId = getFreeQueueId s
-    let nvs = FSuspendedValue queueId
-    let ns = putQueue s (QueueT e vs queueId False False)
-    return (ns, nvs)
-runVS queueId (FSuspendedValue qId) e s = do
-    let (QueueT env qvs _ b y) = getQueue qId s
-    (ns, nvs) <- runVS qId qvs env s
-    let nns = putInQueue qId (QueueT env qvs qId True False) ns
-    return (nns, nvs)
-runVS queueId vs@(FSemaphore i) e s =
-    return (s, vs)
-runVS _ vs _ _ = traceD ("runVS??? " ++ show vs) undefined
+runVS queueId vs@FForceValueStatement{} = runVSForceLet queueId vs
+runVS queueId vs@FIValueStatement{} = runVSI queueId vs
+runVS queueId vs@(FAValueStatement FFunApplicationB{}) = runVSFunB queueId vs
+runVS queueId vs@(FExpr FEMul{}) = runVSMul queueId vs
+runVS queueId vs@FIfValueStatement{} = runVSIf queueId vs
+runVS queueId vs@(FExpr FEEQ{}) = runVSEQ queueId vs
+runVS queueId vs@(FExpr FESub{}) = runVSSub queueId vs
+runVS queueId vs@(FExpr FEAdd{}) = runVSAdd queueId vs
+runVS queueId vs@(FAValueStatement FFunApplicationR{}) = runVSFunR queueId vs
+runVS queueId vs@FLitStrValueStatement{} = runVSStr queueId vs
+runVS queueId vs@FCValueStatement{} = runVSC queueId vs
+runVS queueId vs@FTValueStatement{} = runVST queueId vs
+runVS queueId vs@FRefAddr{} = runVSRef queueId vs
+runVS queueId vs@FFValueStatement{} = runVSLam queueId vs
+runVS queueId vs@FSusValueStatement{}= runVSSusSt queueId vs
+runVS queueId vs@FSuspendedValue{} = runVSSusVal queueId vs
+runVS queueId vs@FSemaphore{} = runVSSem queueId vs
+runVS _ vs = traceD ("runVS??? " ++ show vs) undefined
 
 runVSMul :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement) 
 runVSMul queueId (FExpr (FEMul vs1 vs2)) env state = do
@@ -124,7 +109,7 @@ runVSForceLet queueId (FForceValueStatement assignments vs) env state = do
     seq newState $ runVS queueId vs newEnv newState
 
 runVSI :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
-runVS queueId vs@(FIValueStatement i) _ s = return (s, vs)
+runVSI queueId vs@(FIValueStatement i) _ s = return (s, vs)
 
 runVSIf :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSIf queueId (FIfValueStatement condvs res1vs res2vs) env state = do
@@ -145,23 +130,11 @@ runVSAdd :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSAdd queueId (FExpr (FEAdd vs1 vs2)) env state = do
     (newState, FIValueStatement i1) <- runVS queueId vs1 env state
     (newerState, FIValueStatement i2) <- runVS queueId vs2 env newState
-    return (newerState, FIValueStatement (i1 + i2)
-
-runVSFunR ::
-runVSFunR queueId (FAValueStatement (FFunApplicationR locs args)) _ state = 
-    tryRunVSFunApplR queueId locs args state
-
-runTVSInFoldF :: Int -> E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
-runTVSInFoldF queueId env acc vs = do
-    (s, vsl) <- acc
-    (ns, nvs) <- runVS queueId vs env s
-    return (ns, nvs:vsl)
-
-cvsInFoldF :: Int -> E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
-cvsInFoldF queueId e acc vs = do
-    (state, vsl) <- acc
-    (new_state, vs_) <- runVS queueId vs e state
-    return (new_state, vs_:vsl)
+    return (newerState, FIValueStatement (i1 + i2))
+    
+runVSFunR :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSFunR queueId (FAValueStatement (FFunApplicationR locs args)) _ = 
+    tryRunVSFunApplR queueId locs args
 
 tryRunVSFunApplR :: Int -> [Int] -> [FValueStatement] -> S -> IO (S, FValueStatement)
     -- todo: here might fail
@@ -186,6 +159,57 @@ tryRunVSFunApplR queueId (x:xs) args state = do
                         runVS queueId vs newEnv newState
         else 
             tryRunVSFunApplR queueId xs args state
+
+
+runVSStr :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSStr queueIdStr vs@(FLitStrValueStatement _) _ s = return (s, vs)
+
+runVSC :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSC queueId (FCValueStatement name vss) e s = do
+    (new_state, newVss) <- foldl (cvsInFoldF queueId e) (return (s, [])) vss
+    return (new_state, FCValueStatement name (reverse newVss))
+
+cvsInFoldF :: Int -> E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
+cvsInFoldF queueId e acc vs = do
+    (state, vsl) <- acc
+    (new_state, vs_) <- runVS queueId vs e state
+    return (new_state, vs_:vsl)
+
+runVST :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVST queueId (FTValueStatement xss) e s = do
+    (ns, xssc) <- foldl (runTVSInFoldF queueId e) (return (s, [])) xss
+    return (ns, FTValueStatement xssc)
+
+runTVSInFoldF :: Int -> E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
+runTVSInFoldF queueId env acc vs = do
+    (s, vsl) <- acc
+    (ns, nvs) <- runVS queueId vs env s
+    return (ns, nvs:vsl)
+
+runVSLam :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSLam queueId a@(FFValueStatement argName vs) e s =
+    return (s, a)
+
+runVSSusSt :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSSusSt queueId (FSusValueStatement vs) e s = do
+    let queueId = getFreeQueueId s
+    let nvs = FSuspendedValue queueId
+    let ns = putQueue s (QueueT e vs queueId False False)
+    return (ns, nvs)
+
+runVSSusVal :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSSusVal queueId (FSuspendedValue qId) e s = do
+    let (QueueT env qvs _ b y) = getQueue qId s
+    (ns, nvs) <- runVS qId qvs env s
+    let nns = putInQueue qId (QueueT env qvs qId True False) ns
+    return (nns, nvs)
+
+runVSSem :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSSem queueId vs@(FSemaphore i) e s =
+    return (s, vs)
+
+runVSRef :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSRef queueId vs@(FRefAddr x) _ s = return (s, vs)
 
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runVSInFoldF env acc vs = do
