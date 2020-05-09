@@ -1,0 +1,5 @@
+sus fun (Int ()) main () = 0;
+
+ref (Int ()) x = 0;
+
+data A (a) = AC (a ()) | AD ((a (), a ()));

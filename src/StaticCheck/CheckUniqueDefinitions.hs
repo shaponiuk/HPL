@@ -4,6 +4,7 @@ import StaticCheck.Format
 import Bnfc.ErrM
 import Util.Util
 import Data.Map
+import Data.Char
 import Control.Monad.State
 import Control.Monad.Trans.State as ST
 import Control.Monad.Trans.Except
@@ -11,6 +12,10 @@ import Control.Monad.Trans.Identity
 
 newtype UniqueDefS = UniqueDefS (Map String [(Bool, String, FType, [FPatternMatch])])
     deriving (Show)
+
+-- name -> (argTypes, type constructors)
+-- type constructors
+data UniqueAlgTypeS = UniqueAlgTypeS (Map String ([String], [FAlgTypeVal])) (Map String FAlgTypeVal)
 
 hasDifferentSusOrDifferentTypeOrDifferentPMs :: Bool -> FType -> [FPatternMatch] -> [(Bool, String, FType, [FPatternMatch])] -> Bool
 hasDifferentSusOrDifferentTypeOrDifferentPMs sus t pms [] = False
@@ -45,20 +50,74 @@ checkUniqueFunctionDefinitions (SusFFunctionDef (NonSusFFunctionDef t name pms _
             ST.put $ UniqueDefS $ insert name ((True, name, t, pms):registerDefs) m
             checkUniqueFunctionDefinitions fdefs
 
+checkUniqueReferenceDefinitions :: [FRefDef] -> ST.StateT UniqueDefS Err UniqueDefS
+checkUniqueReferenceDefinitions [] =
+    ST.get
+checkUniqueReferenceDefinitions (FRefDef t name vs:refdefs) = do
+    UniqueDefS m <- ST.get
+    if member name m
+        then lift $ fail $ name ++ " declarations are not unique"
+        else do
+            ST.put $ UniqueDefS $ insert name [(False, name, t, [])] m
+            checkUniqueReferenceDefinitions refdefs
+
+checkTypeArgsInType :: FType -> [String] -> ST.StateT UniqueAlgTypeS Err UniqueAlgTypeS
+checkTypeArgsInType (FTypeB name@(x:xs) []) typeArgs =
+    if (isLower x && name `elem` typeArgs) || isUpper x
+        then ST.get
+        else lift $ fail $ "type arg: " ++ name ++ " is unregistered"
+checkTypeArgsInType (FTypeB name (x:xs)) typeArgs = do
+    checkTypeArgsInType x typeArgs
+    checkTypeArgsInType (FTypeB name xs) typeArgs
+checkTypeArgsInType (FTypeT []) _ =
+    ST.get
+checkTypeArgsInType (FTypeT (x:xs)) typeArgs = do
+    checkTypeArgsInType x typeArgs
+    checkTypeArgsInType (FTypeT xs) typeArgs
+
+checkUniqueAlgTypeConstructors :: [FAlgTypeVal] -> [String] -> ST.StateT UniqueAlgTypeS Err UniqueAlgTypeS
+checkUniqueAlgTypeConstructors [] _ =
+    ST.get
+checkUniqueAlgTypeConstructors (algTypeVal@(FAlgTypeVal constructorName t):algTypVals) typeArgs = do
+    checkTypeArgsInType t typeArgs
+    UniqueAlgTypeS typeMap constructorMap <- ST.get
+    if member constructorName constructorMap
+        then lift $ fail $ "duplicate constructor name: " ++ constructorName
+        else do
+            ST.put $ UniqueAlgTypeS typeMap $ insert constructorName algTypeVal constructorMap
+            checkUniqueAlgTypeConstructors algTypVals typeArgs
+
+checkUniqueAlgTypeDefinitions :: [FAlgType] -> ST.StateT UniqueAlgTypeS Err UniqueAlgTypeS
+checkUniqueAlgTypeDefinitions [] =
+    ST.get
+checkUniqueAlgTypeDefinitions (FAlgType typeName typeArgs typeConstructors:algTypes) = do
+    UniqueAlgTypeS typeMap constructorMap <- ST.get
+    if member typeName typeMap
+        then lift $ fail $ typeName ++ " algebraic type is already registered"
+        else do
+            UniqueAlgTypeS newTypeMap newConstructorMap <- checkUniqueAlgTypeConstructors typeConstructors typeArgs
+            ST.put $ UniqueAlgTypeS (insert typeName (typeArgs, typeConstructors) newTypeMap) newConstructorMap
+            checkUniqueAlgTypeDefinitions algTypes
+
+
 runCheckUniqueFunctionDefinitions :: [FFunctionDef] -> UniqueDefS -> Err UniqueDefS
 runCheckUniqueFunctionDefinitions funDefs state = do
     (_, s) <- runStateT (checkUniqueFunctionDefinitions funDefs) state
     return s
 
 runCheckUniqueReferenceDefinitions :: [FRefDef] -> UniqueDefS -> Err UniqueDefS
-runCheckUniqueReferenceDefinitions = undefined
+runCheckUniqueReferenceDefinitions refDefs state = do
+    (_, s) <- runStateT (checkUniqueReferenceDefinitions refDefs) state
+    return s
 
-runCheckUniqueAlgTypesDefinitions :: [FAlgType] -> UniqueDefS -> Err UniqueDefS
-runCheckUniqueAlgTypesDefinitions = undefined
+runCheckUniqueAlgTypesDefinitions :: [FAlgType] -> UniqueAlgTypeS -> Err UniqueAlgTypeS
+runCheckUniqueAlgTypesDefinitions algTypes state = do
+    (_, s) <- runStateT (checkUniqueAlgTypeDefinitions algTypes) state
+    return s
 
 checkUniqueDefinitions :: ProgramFormat -> Err ProgramFormat
 checkUniqueDefinitions pf@(SITList funDefs refDefs algTypes) = do
     s1 <- runCheckUniqueFunctionDefinitions funDefs $ UniqueDefS empty
-    s2 <- runCheckUniqueReferenceDefinitions refDefs s1
-    s3 <- runCheckUniqueAlgTypesDefinitions algTypes s2
-    traceD s3 $ return pf
+    _ <- runCheckUniqueReferenceDefinitions refDefs s1
+    _ <- runCheckUniqueAlgTypesDefinitions algTypes $ UniqueAlgTypeS empty empty
+    return pf

@@ -55,5 +55,13 @@ convertFunction env s (SusFFunctionDef (NonSusFFunctionDef t name argNames vs)) 
 convertRefs :: E -> S -> [FRefDef] -> S
 convertRefs env = Prelude.foldl $ convertRef env
 
+unrefType :: FType -> FType
+unrefType (FTypeB "Ref" [t]) = t
+
 convertRef :: E -> S -> FRefDef -> S
-convertRef = undefined
+convertRef env state (FRefDef t name vs) =
+    ns where
+        loc = lookupFirstLoc name env
+        (newLoc, ns_) = getNewLoc state
+        ns__ = putInLoc loc (False, env, t, FRefAddr newLoc) ns_
+        ns = putInLoc newLoc (False, env, unrefType t, vs) ns__
