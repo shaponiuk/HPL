@@ -50,9 +50,15 @@ runCheckUniqueFunctionDefinitions funDefs state = do
     (_, s) <- runStateT (checkUniqueFunctionDefinitions funDefs) state
     return s
 
--- runCheckUniqueReferenceDefinitions
+runCheckUniqueReferenceDefinitions :: [FRefDef] -> UniqueDefS -> Err UniqueDefS
+runCheckUniqueReferenceDefinitions = undefined
+
+runCheckUniqueAlgTypesDefinitions :: [FAlgType] -> UniqueDefS -> Err UniqueDefS
+runCheckUniqueAlgTypesDefinitions = undefined
 
 checkUniqueDefinitions :: ProgramFormat -> Err ProgramFormat
 checkUniqueDefinitions pf@(SITList funDefs refDefs algTypes) = do
     s1 <- runCheckUniqueFunctionDefinitions funDefs $ UniqueDefS empty
-    traceD s1 $ return pf
+    s2 <- runCheckUniqueReferenceDefinitions refDefs s1
+    s3 <- runCheckUniqueAlgTypesDefinitions algTypes s2
+    traceD s3 $ return pf
