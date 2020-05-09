@@ -8,23 +8,21 @@ import Run.OneStepEvaluation
 wrapFunction :: FValueStatement -> [FPatternMatch] -> [FValueStatement] -> E -> S -> (S, FValueStatement)
 wrapFunction vs pms vss env s = undefined
 
-wrapFunctionB :: FValueStatement -> E -> S -> (S, FValueStatement)
-wrapFunctionB vs@(FAValueStatement (FFunApplicationB x vss)) env state =
-    let
-        locs = lookupLoc x env
-    in wrapFunctionBInt locs vs env state
+wrapFunctionB :: FValueStatement -> E -> S -> IO (S, FValueStatement)
+wrapFunctionB vs@(FAValueStatement (FFunApplicationB x vss)) env state = do
+    let locs = lookupLoc x env
+    wrapFunctionBInt locs vs env state
 
-wrapFunctionBInt :: [Int] -> FValueStatement -> E -> S -> (S, FValueStatement)
-wrapFunctionBInt (loc:locs) vs@(FAValueStatement (FFunApplicationB x vss)) env state =
-    let
-        funArgNames = funArgNamesLookup state loc
-    in if fitPatternMatchs state env funArgNames vss
-        then
-            let 
-                d = length funArgNames - length vss
-                (newLocs, newState) = getNNewLocs state d
-                lambdaNames = map show newLocs
-            in (newState, wrapFunctionBIntNNewLambdas d vs lambdaNames)
+wrapFunctionBInt :: [Int] -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+wrapFunctionBInt (loc:locs) vs@(FAValueStatement (FFunApplicationB x vss)) env state = do
+    let funArgNames = funArgNamesLookup state loc
+    fits <- fitPatternMatchs state env funArgNames vss
+    if fits
+        then do
+            let d = length funArgNames - length vss
+            let (newLocs, newState) = getNNewLocs state d
+            let lambdaNames = map show newLocs
+            return (newState, wrapFunctionBIntNNewLambdas d vs lambdaNames)
         else 
             wrapFunctionBInt locs vs env state
 

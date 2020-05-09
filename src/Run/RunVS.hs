@@ -20,7 +20,7 @@ interpretVS queueId vs env argNames loc s vss =
             let (s_, vs) = wrapFunction vs argNames vss env s in
                 runVS queueId vs env s_
         else do
-            let (newEnv, newState) = registerArgs env s argNames vss
+            (newEnv, newState) <- registerArgs env s argNames vss
             (ns, nvs) <- runVS queueId vs newEnv newState
             let (b, t, e, _) = stateLookup loc ns
             let nns = putInLoc loc (b, t, e, nvs) ns
@@ -62,13 +62,13 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
         else
             if length computedVss < length funArgNames
         then do
-            let (nnnState, wrappedFunctionVS) = wrapFunctionB a env oldState
+            (nnnState, wrappedFunctionVS) <- wrapFunctionB a env oldState
             runVS queueId wrappedFunctionVS env nnnState
         else do
-            let (e, updatedVS, b, pms) = forceUnwrapMaybe $ appendFAVS locs computedVss state
+            (e, updatedVS, b, pms) <- appendFAVS locs computedVss state
             let tooManyAppliedResult = if b
                 then do
-                        let (newEnv, newState) = registerArgs e state pms computedVss
+                        (newEnv, newState) <- registerArgs e state pms computedVss
                         runVS queueId updatedVS newEnv newState
                 else
                     runVS queueId updatedVS e state
@@ -160,20 +160,21 @@ tryRunVSFunApplR _ [] _ _ = undefined
 tryRunVSFunApplR queueId (x:xs) args state = do
     let (ifFunction, env, _, vs) = stateLookup x state
     let argNames = funArgNamesLookup state x
-    if fitPatternMatchs state env argNames args
+    fits <- fitPatternMatchs state env argNames args
+    if fits
         then
             if length args > length argNames
                 then do
-                    let (e, updatedVS, b, pms) = forceUnwrapMaybe $ appendFAVS [x] args state
+                    (e, updatedVS, b, pms) <- appendFAVS [x] args state
                     if b
-                        then
-                            let (newEnv, newState) = registerArgs e state pms args in 
-                                runVS queueId updatedVS newEnv newState
+                        then do
+                            (newEnv, newState) <- registerArgs e state pms args
+                            runVS queueId updatedVS newEnv newState
                         else 
                             runVS queueId updatedVS e state
-                else
-                    let (newEnv, newState) = registerArgs env state argNames args in 
-                        runVS queueId vs newEnv newState
+                else do
+                    (newEnv, newState) <- registerArgs env state argNames args
+                    runVS queueId vs newEnv newState
         else 
             tryRunVSFunApplR queueId xs args state
 
