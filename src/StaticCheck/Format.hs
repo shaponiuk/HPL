@@ -125,3 +125,7 @@ showTupleList (x:x2:xs) =
   let
     '(':rest = showTupleList (x2:xs)
   in "(" ++ show x ++ ", " ++ rest
+
+getFunctionName :: FFunctionDef -> String
+getFunctionName (NonSusFFunctionDef _ name _ _) = name
+getFunctionName (SusFFunctionDef fd) = getFunctionName fd

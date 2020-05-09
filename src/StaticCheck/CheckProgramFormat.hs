@@ -2,12 +2,13 @@ module StaticCheck.CheckProgramFormat where
 
 import StaticCheck.Format
 import StaticCheck.CheckUniqueDefinitions
+import StaticCheck.CheckDoubleSus
 import Bnfc.ErrM
 import Util.Util
 
 checkProgramFormat :: ProgramFormat -> Err ProgramFormat
 checkProgramFormat pf = do
-    -- check double sus
+    checkDoubleSus pf
     -- check upper / lower case
     checkUniqueDefinitions pf
     -- check usage of existing, available values
