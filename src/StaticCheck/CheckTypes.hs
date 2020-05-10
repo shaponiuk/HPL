@@ -27,9 +27,11 @@ registerRefDefs (FRefDef t name _:refDefs) (TCE mt mat) =
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
 checkFunctionDefs [] _ = return ()
-checkFunctionDefs (NonSusFFunctionDef t name pms vs) tce = do
+checkFunctionDefs (NonSusFFunctionDef t name pms vs:functionDefs) tce = do
     (argTypes, returnType) <- exctractTypes t pms
     tce2 <- registerArgs argTypes pms tce
+    checkFunctionBody vs tce2
+    checkFunctionDefs functionDefs tce
 
 checkRefDefs :: [FRefDef] -> TCE -> Err ()
 checkRefDefs _ _ = return ()
