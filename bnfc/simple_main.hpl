@@ -1,3 +1,0 @@
-struct Main {
-  fun (List (String ()) -> Int ()) main (argv) = 0;
-};

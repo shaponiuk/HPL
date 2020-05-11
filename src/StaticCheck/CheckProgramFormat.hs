@@ -13,6 +13,6 @@ checkProgramFormat pf = do
     checkDoubleSus pf
     checkCase pf
     checkUniqueDefinitions pf
-    checkTypes pf
+    -- checkTypes pf
     -- check main function
     traceD pf $ return pf

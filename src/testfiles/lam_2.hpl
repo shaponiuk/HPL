@@ -7,7 +7,7 @@
     sus fun (() -> Int ()) main () =
         force let
             () :: x = { e -> sil (e ()) };
-            () :: y = { e -> sil (6) };
+            Int () -> (Int () -> Int ()) :: y = { e -> sil (6) };
             () :: z = x(3);
             () :: zz = z();
             () :: () = print (sil (4));
