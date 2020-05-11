@@ -98,6 +98,7 @@ checkFunctionApplicationType funName (FTypeT []) "print" [x] tce =
     if checkIntOrString x tce
         then return ()
         else fail $ "argument of function print is not Int () or String () in function " ++ funName
+checkFunctionApplicationType funName (FTypeT []) "yield" [] _ = return ()
 checkFunctionApplicationType funName t name args tce@(TCE tm atm) =
     if member name tm
         then checkFunctionApplicationTypeInt funName t name (tm ! name) args tce
