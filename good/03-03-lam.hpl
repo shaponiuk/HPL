@@ -8,7 +8,7 @@
         force let
             (Int () -> (Int () -> Int ())) :: x = { e -> sil (e ()) };
             () :: () = print (x (1, 1));
-            () :: y = { e -> x (e ()) };
-            () :: z = y (3);
+            (Int () -> (Int () -> Int ())) :: y = { e -> x (e ()) };
+            (Int () -> Int ()) :: z = y (3);
             () :: () = print (z (1));
         in 0;

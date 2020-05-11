@@ -3,7 +3,7 @@ sus fun () cor () =
         () :: () = print ("hahaha");
     in ();
     
-sus fun (() -> Int ()) main () =
+sus fun (Int ()) main () =
     force let
         () :: () = cor ();
         () :: () = print ("haha");

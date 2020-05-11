@@ -5,7 +5,7 @@ sus fun () cor () =
         () :: () = print ("cor end");
     in ();
     
-sus fun (() -> Int ()) main () =
+sus fun (Int ()) main () =
     force let
         () :: () = print ("main start");
         () :: () = cor ();

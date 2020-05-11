@@ -2,10 +2,10 @@ fun (Int () -> Int ()) sil () = { x ->
         if x () == 0 then 1 else x () * sil (x () - 1)
     };
     
-sus fun (() -> Int ()) main () =
+sus fun (Int ()) main () =
     force let
-        () :: x = sil ();
-        () :: y = sil (6);
+        (Int () -> Int ()) :: x = sil ();
+        Int () :: y = sil (6);
         () :: () = print (sil (4));
         () :: () = print (x (5));
         () :: () = print (y ());

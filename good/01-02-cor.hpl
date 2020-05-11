@@ -1,17 +1,17 @@
-sus fun () cor (x) = 
+sus fun (Int () -> Int ()) cor (x) = 
     force let
         () :: () = print (x ());
     in x () + 1000;
     
-sus fun (() -> Int ()) main () =
+sus fun (Int ()) main () =
     force let
         () :: () = print ("raz");
-        () :: x = cor (3);
+        Int () :: x = cor (3);
         () :: () = print ("dwa");
         () :: () = print (cor (5));
         () :: () = print ("trzy");
         () :: () = print (x ());
         () :: () = print ("cztery");
-        () :: y = cor (7);
+        Int () :: y = cor (7);
         () :: () = print ("piec");
     in 0;

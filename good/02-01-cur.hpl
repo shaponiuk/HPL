@@ -1,4 +1,4 @@
-fun (Int () -> (Int ())) a (x, y, z, zz) = 
+fun (Int () -> (Int () -> (Int () -> (Int () -> Int ())))) a (x, y, z, zz) = 
     force let
         () :: () = print ("aaaaaa");
     in 1;
@@ -6,9 +6,9 @@ fun (Int () -> (Int ())) a (x, y, z, zz) =
 sus fun (Int ()) main () =
     force let
         () :: () = print ("start main");
-        (Int ()) :: e = a (0);
-        (Int ()) :: uu = e (0, 0);
-        (Int ()) :: u = uu (0);
+        (Int () -> (Int () -> (Int () -> Int ()))) :: e = a (0);
+        (Int () -> Int ()) :: uu = e (0, 0);
+        Int () :: u = uu (0);
         () :: () = print (u ());
         () :: () = print (u ());
     in 0;
