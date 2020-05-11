@@ -61,15 +61,8 @@ runLambdaWrapper queueId (loc:locs) vss env state = do
     if fits
         then do
             let (_, _, _, vs) = stateLookup loc state
-            printD "runLambdaWrapper"
-            printD vs
-            printD argPMs
             let argVSs = take (length argPMs) vss
             let restVSs = takeLast (length vss - length argPMs) vss
-            print "heeereee"
-            print vss
-            print argVSs
-            print restVSs
             (newEnv, newState) <- registerArgs env state argPMs argVSs
             runLambda queueId vs restVSs newEnv newState
         else 
@@ -315,7 +308,6 @@ forceRegisterAssignment queueId a@(FAssignmentB typ@(FTypeB "Ref" [t]) (FPattern
     let newererererState = putInLoc vsLoc (False, newEnv, t, nvs) newerererState
     return (newererererState, newEnv)
 forceRegisterAssignment queueId a@(FAssignmentB t pm vs) state env = do
-    printD $ "assignment " ++ show a
     setPM queueId t pm vs state env
 forceRegisterAssignment queueId a _ _ = traceD (show a) undefined
 
@@ -329,18 +321,12 @@ setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
     (vss, newState, newEnv, _) <- forceGetTupleVSS qId vs state env
     foldl (setPMInFoldF qId) (return (newState, newEnv)) $ tList types pmL vss
 setPM qId t (FPatternMatchB x) vs@(FAValueStatement _) state env = do
-    printD "setPM application"
-    printD vs
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
     (newerState, _, nvs) <- runVS qId vs newEnv newState
-    printD "WATCH OUT"
-    printD nvs
     let newererState = putInLoc loc (False, newEnv, t, nvs) newerState
     return (newererState, newEnv)
 setPM qId t (FPatternMatchB x) vs state env = do
-    printD "setPM"
-    printD vs
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
     (newerState, nvs) <- interpretVS qId vs newEnv [] loc newState []
