@@ -72,6 +72,7 @@ checkIntExpression :: String -> FValueStatementExpr -> TCE -> Err ()
 checkIntExpression funName (FEEQ vs1 vs2) = checkIntExpressionInt funName vs1 vs2
 checkIntExpression funName (FEMul vs1 vs2) = checkIntExpressionInt funName vs1 vs2
 checkIntExpression funName (FESub vs1 vs2) = checkIntExpressionInt funName vs1 vs2
+checkIntExpression funName (FEAdd vs1 vs2) = checkIntExpressionInt funName vs1 vs2
 checkIntExpression _ expr = traceD expr undefined
 
 checkFunctionApplicationTypeInt :: String -> FType -> String -> FType -> [FValueStatement] -> TCE -> Err ()
