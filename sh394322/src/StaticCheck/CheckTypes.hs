@@ -8,6 +8,12 @@ import Data.Map
 data TCE = TCE (Map String FType) (Map String FAlgType)
     deriving (Show)
 
+intType :: FType
+intType = FTypeB "Int" []
+
+strType :: FType
+strType = FTypeB "String" []
+
 registerAlgTypes :: [FAlgType] -> TCE -> TCE
 registerAlgTypes [] tce = tce
 registerAlgTypes (at@(FAlgType name _ _):algTypes) (TCE mt mat) =
@@ -64,8 +70,8 @@ registerAssignments funName (FAssignmentB t pm vs:assignments) tce = do
 
 checkIntExpressionInt :: String -> FValueStatement -> FValueStatement -> TCE -> Err ()
 checkIntExpressionInt funName vs1 vs2 tce = do
-    checkFunctionBody funName (FTypeB "Int" []) vs1 tce
-    checkFunctionBody funName (FTypeB "Int" []) vs2 tce
+    checkFunctionBody funName intType vs1 tce
+    checkFunctionBody funName intType vs2 tce
     return ()
 
 checkIntExpression :: String -> FValueStatementExpr -> TCE -> Err ()
@@ -86,8 +92,8 @@ checkFunctionApplicationTypeInt _ t1 _ t2 vss _ = traceD (show t1 ++ show t2 ++ 
 
 checkIntOrString :: FValueStatement -> TCE -> Bool
 checkIntOrString vs tce =
-    traceD vs $ case checkFunctionBody "" (FTypeB "Int" []) vs tce of
-        Bad _ -> case checkFunctionBody "" (FTypeB "String" []) vs tce of
+    traceD vs $ case checkFunctionBody "" intType vs tce of
+        Bad _ -> case checkFunctionBody "" strType vs tce of
             Bad _ -> False
             Ok _ -> True
         Ok _ -> True
@@ -101,12 +107,6 @@ checkFunctionApplicationType funName t name args tce@(TCE tm atm) =
     if member name tm
         then checkFunctionApplicationTypeInt funName t name (tm ! name) args tce
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName
-
-checkTupleFunctionBody :: String -> [FType] -> [FValueStatement] -> TCE -> Err ()
-checkTupleFunctionBody _ [] [] tce = return ()
-checkTupleFunctionBody funName (t:types) (vs:vss) tce = do
-    checkFunctionBody funName t vs tce
-    checkTupleFunctionBody funName types vss tce
 
 checkFunctionBody :: String -> FType -> FValueStatement -> TCE -> Err ()
 checkFunctionBody funName (FunFType t1 t2) (FFValueStatement name vs) tce = do
@@ -124,12 +124,10 @@ checkFunctionBody funName t (FIfValueStatement ifvs vs1 vs2) tce = do
     checkFunctionBody funName t vs1 tce
     checkFunctionBody funName t vs2 tce
     return ()
-checkFunctionBody _ (FTypeB "Int" []) (FIValueStatement _) _ = return ()
-checkFunctionBody funName (FTypeB "String" []) (FIValueStatement _) _ = fail $ "function " ++ funName ++ " has an Int () value while expecting String ()"
-checkFunctionBody funName (FTypeB "Int" []) (FLitStrValueStatement _) _ = fail $ "function " ++ funName ++ " has a String () value while expecting Int ()"
-checkFunctionBody _ (FTypeB "String" []) (FLitStrValueStatement _) _ = return ()
-checkFunctionBody funName (FTypeT [t]) vs tce = checkFunctionBody funName t vs tce
-checkFunctionBody funName (FTypeT types) (FTValueStatement vss) tce = checkTupleFunctionBody funName types vss tce
+checkFunctionBody _ intType (FIValueStatement _) _ = return ()
+checkFunctionBody funName strType (FIValueStatement _) _ = fail $ "function " ++ funName ++ " has an Int () value while expecting String ()"
+checkFunctionBody funName intType (FLitStrValueStatement _) _ = fail $ "function " ++ funName ++ " has a String () value while expecting Int ()"
+checkFunctionBody _ strType (FLitStrValueStatement _) _ = return ()
 checkFunctionBody _ t vs _ = traceD (show t ++ show vs) undefined
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()

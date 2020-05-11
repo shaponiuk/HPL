@@ -1,0 +1,10 @@
+    fun (Int () -> (Int () -> (Int () -> Int ()))) another_two (a, b, x) = x () * 2;
+
+    fun (Int () -> Int ()) aaa (x) = x () * 2;
+
+    sus fun (() -> Int ()) main () =
+        force let
+            (Int () -> Int ()) :: y = aaa ();
+            (Int () -> Int ()) :: x = another_two (0, 1);
+            () :: () = print (x (2) * y (2));
+        in 0;

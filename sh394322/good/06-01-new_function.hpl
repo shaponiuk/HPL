@@ -1,0 +1,8 @@
+    fun (Int () -> Int ()) not_main (val) =
+        val () * 2;
+
+    sus fun (() -> Int ()) main () =
+        force let
+            Int () :: x = not_main (2);
+            () :: () = print (x ());
+        in 0;

@@ -1,0 +1,18 @@
+    fun (Int () -> Int ()) sil () = { x ->
+        force let
+            () :: () = print ("uuu");
+        in if x () == 0 then 1 else x () * sil (x () - 1)
+    };
+    
+    sus fun (Int ()) main () =
+        force let
+            () :: x = { e -> sil (e ()) };
+            (Int () -> (Int () -> Int ())) :: y = { e -> sil (6) };
+            () :: z = x (3);
+            () :: zz = z();
+            () :: () = print (sil (4));
+            () :: () = print (x (5));
+            () :: () = print (y (1));
+            () :: () = print (z ());
+            () :: () = print (zz ());
+        in 0;

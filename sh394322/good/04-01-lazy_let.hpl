@@ -1,0 +1,14 @@
+fun () e () =
+    force let
+        () :: () = print ("you should see it once");
+    in ();
+
+sus fun (Int ()) main () =
+    let
+        () :: x = e ();
+    in force let 
+        () :: () = print ("here");
+        () :: () = print (x ());
+        () :: () = print (x ());
+        () :: () = print ("nice");
+    in 0;

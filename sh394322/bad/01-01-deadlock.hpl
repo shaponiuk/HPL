@@ -1,0 +1,14 @@
+    sus fun (Semaphore () -> ()) cor (sem) = 
+        force let
+            () :: () = p (sem ());
+            () :: () = print ("I'm cor");
+        in ();
+    
+    sus fun (() -> Int ()) main () =
+        force let
+            () :: () = print ("starting main");
+            (Semaphore ()) :: sem = make_semaphore ();
+            () :: () = cor (sem ());
+            () :: () = p (sem ());
+            () :: () = print ("I'm main");
+        in 0;

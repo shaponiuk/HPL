@@ -1,0 +1,11 @@
+    fun (List (Int ()) -> Int ()) sum_list (EmptyListC (())) = 0;
+    fun (List (Int ()) -> Int ()) sum_list (ListC (x, l)) = x () + sum_list (l ());
+    
+    sus fun (Int ()) main () =
+        force let
+            (List (Int ())) :: l2 = ListC (33, EmptyListC(()));
+            Int () :: list = sum_list (ListC (1, ListC (78, l2 ())));
+            () :: () = print (list ());
+        in 0;
+
+data List (a) = ListC ((a (), List (a ()))) | EmptyListC (());
