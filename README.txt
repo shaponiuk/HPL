@@ -13,7 +13,7 @@ Potrzebuję:
 -doimplementować sprawdzanie typów i obecności tylko zadeklarowanych funkcji i referencji (chwilowo jest zakomentowane)
 -inne małe poprawki
 
-Testowałem na GHC 8.6.5
+Testowałem na students
 kompilacja standardowo komendą make, stworzy się plik binarny "interpreter", który przyjmuje jako argument jeden plik.
 
-
+w src/testfiles są przykłady poprawnych (na razie, ponieważ nie ma włączonego sprawdzania typów) programów
