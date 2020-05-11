@@ -25,14 +25,34 @@ registerRefDefs [] tce = tce
 registerRefDefs (FRefDef t name _:refDefs) (TCE mt mat) =
     registerRefDefs refDefs $ TCE (insert name (FTypeB "Ref" [t]) mt) mat
 
+extractTypes :: String -> FType -> [FPatternMatch] -> Err ([FType], FType)
+extractTypes name (FunFType t1 t2) (_:xs) = do
+    (argTypes, resultType) <- extractTypes name t2 xs
+    return (t1:argTypes, resultType)
+extractTypes name t (_:_) = fail $ "type " ++ show t ++ " of function " ++ name ++ " shows insufficient number of arguments"
+extractTypes _ t [] = return ([], t)
+
+registerArgs :: [FType] -> [FPatternMatch] -> TCE -> Err TCE
+registerArgs [] [] tce = return tce
+registerArgs (t:types) (pm:pms) tce = do
+    tce2 <- registerArg t pm tce
+    registerArgs types pms tce2
+
+registerArg :: FType -> FPatternMatch -> TCE -> Err TCE
+registerArg t@(FTypeB "Int" []) (FPatternMatchB x) (TCE tm atm) =
+    return $ TCE (insert x t tm) atm
+-- registerArg t pm tce = traceD t undefined
+
+checkFunctionBody :: FValueStatement -> TCE -> Err ()
+checkFunctionBody vs tce = traceD vs undefined
+
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
 checkFunctionDefs [] _ = return ()
 checkFunctionDefs (NonSusFFunctionDef t name pms vs:functionDefs) tce = do
-    -- (argTypes, returnType) <- exctractTypes t pms
-    -- tce2 <- registerArgs argTypes pms tce
-    -- checkFunctionBody vs tce2
-    -- checkFunctionDefs functionDefs tce
-    return ()
+    (argTypes, returnType) <- extractTypes name t pms
+    tce2 <- registerArgs argTypes pms tce
+    checkFunctionBody vs tce2
+    checkFunctionDefs functionDefs tce
 
 checkRefDefs :: [FRefDef] -> TCE -> Err ()
 checkRefDefs _ _ = return ()
