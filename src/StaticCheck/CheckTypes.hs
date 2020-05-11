@@ -43,6 +43,11 @@ checkExistingType (FTypeB "Int" []) tce = return ()
 checkExistingType (FunFType t1 t2) tce = do
     checkExistingType t1 tce
     checkExistingType t2 tce
+checkExistingType (FTypeT []) _ = return ()
+checkExistingType (FTypeT (x:xs)) tce = do
+    checkExistingType x tce
+    checkExistingType (FTypeT xs) tce
+checkExistingType t _ = traceD t undefined
 
 registerArg :: FType -> FPatternMatch -> TCE -> Err TCE
 registerArg t@(FTypeB _ _) (FPatternMatchB x) tce@(TCE tm atm) = do
@@ -52,6 +57,9 @@ registerArg (FTypeT ts) (FPatternMatchT pms) tce = registerArgs ts pms tce
 registerArg t@(FunFType t1 t2) (FPatternMatchB x) tce@(TCE tm atm) = do
     checkExistingType t1 tce
     checkExistingType t2 tce
+    return $ TCE (insert x t tm) atm
+registerArg t@(FTypeT _) (FPatternMatchB x) tce@(TCE tm atm) = do
+    checkExistingType t tce
     return $ TCE (insert x t tm) atm
 registerArg t pm tce = traceD (show t ++ show pm) undefined
 
@@ -99,6 +107,7 @@ checkFunctionApplicationType funName (FTypeT []) "print" [x] tce =
         then return ()
         else fail $ "argument of function print is not Int () or String () in function " ++ funName
 checkFunctionApplicationType funName (FTypeT []) "yield" [] _ = return ()
+-- checkFunctionApplicationType _ _ "print" _ _ = ...
 checkFunctionApplicationType funName t name args tce@(TCE tm atm) =
     if member name tm
         then checkFunctionApplicationTypeInt funName t name (tm ! name) args tce
@@ -132,6 +141,9 @@ checkFunctionBody funName (FTypeB "Int" []) (FLitStrValueStatement _) _ = fail $
 checkFunctionBody _ (FTypeB "String" []) (FLitStrValueStatement _) _ = return ()
 checkFunctionBody funName (FTypeT [t]) vs tce = checkFunctionBody funName t vs tce
 checkFunctionBody funName (FTypeT types) (FTValueStatement vss) tce = checkTupleFunctionBody funName types vss tce
+checkFunctionBody funName t (FValueStatementB assignments vs) tce = do
+    tce2 <- registerAssignments funName assignments tce
+    checkFunctionBody funName t vs tce2
 checkFunctionBody _ t vs _ = traceD (show t ++ show vs) undefined
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
