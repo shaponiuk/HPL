@@ -4,11 +4,11 @@
         in if x () == 0 then 1 else x () * sil (x () - 1)
     };
     
-    sus fun (() -> Int ()) main () =
+    sus fun (Int ()) main () =
         force let
             () :: x = { e -> sil (e ()) };
-            Int () -> (Int () -> Int ()) :: y = { e -> sil (6) };
-            () :: z = x(3);
+            (Int () -> (Int () -> Int ())) :: y = { e -> sil (6) };
+            () :: z = x (3);
             () :: zz = z();
             () :: () = print (sil (4));
             () :: () = print (x (5));
