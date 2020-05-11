@@ -47,11 +47,11 @@ ioAll f (x:xs) = do
         else return False
 
 cutFirst :: Int -> [a] -> [a]
-cutFirst 0 _ = []
+cutFirst 0 l = l
 cutFirst d (x:xs) =
     if d < 0
         then undefined
-        else x:cutFirst (d - 1) xs
+        else cutFirst (d - 1) xs
 
 takeLast :: (Show a) => Int -> [a] -> [a]
-takeLast d l = traceD ("takeLast " ++ show d ++ show l) cutFirst (length l - d) l
+takeLast d l = cutFirst (length l - d) l

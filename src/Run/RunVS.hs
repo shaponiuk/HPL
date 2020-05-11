@@ -41,12 +41,21 @@ isLambda _ = False
 
 runLambda :: Int -> FValueStatement -> [FValueStatement] -> E -> S -> IO (S, E, FValueStatement)
 runLambda queueId (FFValueStatement argName vs) (argVs:argVss) env state = do
+    printD "runLambda"
+    print vs
+    printD argVss
     let (newLoc, newState) = getNewLoc state
     let newEnv = registerLoc False env argName newLoc
     let newerState = putInLoc newLoc (True, newEnv, FTypeT [], argVs) newState
     runLambda queueId vs argVss newEnv newerState
 runLambda queueId vs [] env state = return (state, env, vs)
-runLambda _ vs args _ _ = traceD vs undefined
+runLambda queueId vs args env state = do
+    print "uwaga"
+    print vs
+    (newState, newEnv, nvs) <- runVS queueId vs env state
+    if isLambda nvs
+        then runLambda queueId nvs args newEnv newState
+        else undefined -- infinite loop
 
 runLambdaWrapper :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, E, FValueStatement)
 runLambdaWrapper _ [] _ _ _ = undefined
@@ -61,6 +70,7 @@ runLambdaWrapper queueId (loc:locs) vss env state = do
             printD argPMs
             let argVSs = take (length argPMs) vss
             let restVSs = takeLast (length vss - length argPMs) vss
+            print "heeereee"
             print vss
             print argVSs
             print restVSs
@@ -103,26 +113,27 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
                     then tooManyAppliedResult
                     else interpretVS queueId vs env funArgNames firstLoc oldState funArgVss
 
-runVS :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
-runVS queueId vs@FForceValueStatement{} = traceD "forcelet" $ runVSForceLet queueId vs
-runVS queueId vs@FIValueStatement{} = traceD "int" $ runVSI queueId vs
-runVS queueId vs@(FAValueStatement FFunApplicationB{}) = traceD "funapplB" $ runVSFunB queueId vs
-runVS queueId vs@(FExpr FEMul{}) = traceD "mul" $ runVSMul queueId vs
-runVS queueId vs@FIfValueStatement{} = traceD "if" $ runVSIf queueId vs
-runVS queueId vs@(FExpr FEEQ{}) = traceD "eq" $ runVSEQ queueId vs
+-- bool = should return updated environment
+runVS :: Bool -> Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
+runVS queueId vs@FForceValueStatement{} = runVSForceLet queueId vs
+runVS queueId vs@FIValueStatement{} = runVSI queueId vs
+runVS queueId vs@(FAValueStatement FFunApplicationB{}) = runVSFunB queueId vs
+runVS queueId vs@(FExpr FEMul{}) = runVSMul queueId vs
+runVS queueId vs@FIfValueStatement{} = runVSIf queueId vs
+runVS queueId vs@(FExpr FEEQ{}) = runVSEQ queueId vs
 runVS queueId vs@(FExpr FESub{}) = runVSSub queueId vs
-runVS queueId vs@(FExpr FEAdd{}) = traceD "add" $ runVSAdd queueId vs
-runVS queueId vs@(FAValueStatement FFunApplicationR{}) = traceD "funapplR" $ runVSFunR queueId vs
-runVS queueId vs@FLitStrValueStatement{} = traceD "str" $ runVSStr queueId vs
-runVS queueId vs@FCValueStatement{} = traceD "constructor" $ runVSC queueId vs
-runVS queueId vs@FTValueStatement{} = traceD "tuple" $ runVST queueId vs
-runVS queueId vs@FRefAddr{} = traceD "refaddr" $ runVSRef queueId vs
-runVS queueId vs@FFValueStatement{} = traceD "lambda" $ runVSLam queueId vs
-runVS queueId vs@FSusValueStatement{}= traceD "susst" $ runVSSusSt queueId vs
-runVS queueId vs@FSuspendedValue{} = traceD "susval" $ runVSSusVal queueId vs
-runVS queueId vs@FSemaphore{} = traceD "sem" $ runVSSem queueId vs
-runVS queueId vs@(FValueStatementB _ _) = traceD "lazylet" $ runVSLazyLet queueId vs
-runVS _ vs = traceD ("runVS??? ") undefined
+runVS queueId vs@(FExpr FEAdd{}) = runVSAdd queueId vs
+runVS queueId vs@(FAValueStatement FFunApplicationR{}) = runVSFunR queueId vs
+runVS queueId vs@FLitStrValueStatement{} = runVSStr queueId vs
+runVS queueId vs@FCValueStatement{} = runVSC queueId vs
+runVS queueId vs@FTValueStatement{} = runVST queueId vs
+runVS queueId vs@FRefAddr{} = runVSRef queueId vs
+runVS queueId vs@FFValueStatement{} = runVSLam queueId vs
+runVS queueId vs@FSusValueStatement{} = runVSSusSt queueId vs
+runVS queueId vs@FSuspendedValue{} = runVSSusVal queueId vs
+runVS queueId vs@FSemaphore{} = runVSSem queueId vs
+runVS queueId vs@(FValueStatementB _ _) = runVSLazyLet queueId vs
+runVS _ vs = undefined
 
 runVSMul :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement) 
 runVSMul queueId (FExpr (FEMul vs1 vs2)) env state = do
@@ -166,7 +177,9 @@ runVSFunB queueId a@(FAValueStatement (FFunApplicationB funName _)) =
             runNotSpecialFunction queueId a
 
 runVSAdd :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
-runVSAdd queueId (FExpr (FEAdd vs1 vs2)) env state = do
+runVSAdd queueId vs@(FExpr (FEAdd vs1 vs2)) env state = do
+    printD "runVSAdd"
+    printD vs
     (newState, FIValueStatement i1) <- runVS queueId vs1 env state
     (newerState, FIValueStatement i2) <- runVS queueId vs2 env newState
     return (newerState, FIValueStatement (i1 + i2))
@@ -320,9 +333,16 @@ setPM :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
     (vss, newState, newEnv, _) <- forceGetTupleVSS qId vs state env
     foldl (setPMInFoldF qId) (return (newState, newEnv)) $ tList types pmL vss
-setPM qId t (FPatternMatchB x) vs@(FAValueStatement _) state env =
-    printD 
+setPM qId t (FPatternMatchB x) vs@(FAValueStatement _) state env = do
     printD "setPM application"
+    printD vs
+    let (loc, newState) = getNewLoc state
+    let newEnv = registerLoc False env x loc
+    (newerState, nvs) <- runVS qId vs newEnv newState
+    printD "WATCH OUT"
+    printD nvs
+    let newererState = putInLoc loc (False, newEnv, t, nvs) newerState
+    return (newererState, newEnv)
 setPM qId t (FPatternMatchB x) vs state env = do
     printD "setPM"
     printD vs
