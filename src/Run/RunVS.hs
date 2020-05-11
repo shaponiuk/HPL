@@ -114,7 +114,7 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
                     else interpretVS queueId vs env funArgNames firstLoc oldState funArgVss
 
 -- bool = should return updated environment
-runVS :: Bool -> Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
+runVS :: Bool -> Int -> FValueStatement -> E -> S -> Bool -> IO (S, E, FValueStatement)
 runVS queueId vs@FForceValueStatement{} = runVSForceLet queueId vs
 runVS queueId vs@FIValueStatement{} = runVSI queueId vs
 runVS queueId vs@(FAValueStatement FFunApplicationB{}) = runVSFunB queueId vs
