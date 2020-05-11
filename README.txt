@@ -17,3 +17,4 @@ Testowałem na students
 kompilacja standardowo komendą make, stworzy się plik binarny "interpreter", który przyjmuje jako argument jeden plik.
 
 w src/testfiles są przykłady poprawnych (na razie, ponieważ nie ma włączonego sprawdzania typów) programów
+w src/badfiles są dwa przykładowe złe programy (wykrycie deadlocka i dwie deklaracje konstruktorów o tych samych nazwach), dojdzie więcej przykładów, kiedy będę wiecej rzeczy sprawdzał statycznie
