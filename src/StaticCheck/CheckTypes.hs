@@ -75,21 +75,44 @@ checkExistingType (FTypeB name args) tce@(TCE _ atm) =
         else 
             fail $ "type " ++ name ++ " doesn't exist"
 
-checkConstructorExistence :: String -> String -> [FAlgTypeVal] -> Err FAlgTypeVal
-checkConstructorExistence typeName cName [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
-checkConstructorExistence typeName cName (atv@(FAlgTypeVal cName_ _):atvs) =
-    if cName == cName_
+checkConstructorExistence :: String -> String -> Int -> [FAlgTypeVal] -> Err FAlgTypeVal
+checkConstructorExistence typeName cName _ [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
+checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal cName_ (FTypeB _ _)):atvs) =
+    if cName == cName_ && argCount == 1
         then return atv
-        else checkConstructorExistence typeName cName atvs
+        else checkConstructorExistence typeName cName argCount atvs
+checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal cName_ (FTypeT types)):atvs) =
+    if cName == cName_ && argCount == length types
+        then return atv
+        else checkConstructorExistence typeName cName argCount atvs
+
+mapType :: FType -> Map String FType -> FType
+mapType (FTypeT types) m = FTypeT $ Prelude.map (`mapType` m) types
+mapType t m = traceD t undefined
 
 getCorrectedConstructor :: FAlgTypeVal -> FAlgType -> [FType] -> Err FAlgTypeVal
-getCorrectedConstructor = undefined
+getCorrectedConstructor atv@(FAlgTypeVal cName ct) at@(FAlgType tName tArgs atvs) types = do
+    let m = fromList $ dList tArgs types
+    return $ FAlgTypeVal cName $ mapType ct m
+    
+checkMatchingType :: FType -> FPatternMatch -> TCE -> Err ()
+checkMatchingType t pm tce = traceD (show t ++ show pm) undefined
+
+checkMatchingTypes :: [FType] -> [FPatternMatch] -> TCE -> Err ()
+checkMatchingTypes [] [] _ = return ()
+checkMatchingTypes (x:xs) (y:ys) tce = do
+    checkMatchingType x y tce
+    checkMatchingTypes xs ys tce
 
 checkMatchingConstructors :: FAlgTypeVal -> FPatternMatch -> TCE -> Err ()
-checkMatchingConstructors = undefined
+checkMatchingConstructors (FAlgTypeVal cName (FTypeT cArgs)) (FPatternMatchC _ cArgs_) tce =
+    checkMatchingTypes cArgs cArgs_ tce
+checkMatchingConstructors atv pm tce = traceD (show atv ++ show pm) undefined
 
 registerConstructor :: FAlgTypeVal -> FPatternMatch -> TCE -> Err TCE
-registerConstructor = undefined
+registerConstructor (FAlgTypeVal _ (FTypeT cArgs)) (FPatternMatchC _ cArgs_) tce =
+    registerArgs cArgs cArgs_ tce
+registerConstructor atv pm (TCE tm atm) = traceD (show atv ++ show pm) undefined
 
 registerArg :: FType -> FPatternMatch -> TCE -> Err TCE
 registerArg t@(FTypeB _ _) (FPatternMatchB x) tce@(TCE tm atm) = do
@@ -103,10 +126,12 @@ registerArg t@(FunFType t1 t2) (FPatternMatchB x) tce@(TCE tm atm) = do
 registerArg t@(FTypeT _) (FPatternMatchB x) tce@(TCE tm atm) = do
     checkExistingType t tce
     return $ TCE (insert x t tm) atm
-registerArg t@(FTypeB name args) pmc@(FPatternMatchC (FPatternMatchB cName) _) tce@(TCE tm atm) = do
+registerArg t@(FTypeB name args) pmc@(FPatternMatchC (FPatternMatchB cName) cArgs) tce@(TCE tm atm) = do
+    let argCount = case cArgs of
+            _ -> length cArgs
     checkExistingType t tce
     let at@(FAlgType _ argTypes atvs) = atm ! name
-    atm <- checkConstructorExistence name cName atvs
+    atm <- checkConstructorExistence name cName argCount atvs
     atm_ <- getCorrectedConstructor atm at args
     checkMatchingConstructors atm_ pmc tce
     registerConstructor atm_ pmc tce
@@ -123,7 +148,6 @@ checkIntExpressionInt :: String -> FValueStatement -> FValueStatement -> TCE -> 
 checkIntExpressionInt funName vs1 vs2 tce = do
     checkFunctionBody funName (FTypeB "Int" []) vs1 tce
     checkFunctionBody funName (FTypeB "Int" []) vs2 tce
-    return ()
 
 checkIntExpression :: String -> FValueStatementExpr -> TCE -> Err ()
 checkIntExpression funName (FEEQ vs1 vs2) = checkIntExpressionInt funName vs1 vs2
@@ -183,7 +207,6 @@ checkFunctionBody funName t (FIfValueStatement ifvs vs1 vs2) tce = do
     checkFunctionBody funName (FTypeB "Int" []) ifvs tce
     checkFunctionBody funName t vs1 tce
     checkFunctionBody funName t vs2 tce
-    return ()
 checkFunctionBody _ (FTypeB "Int" []) (FIValueStatement _) _ = return ()
 checkFunctionBody funName (FTypeB "String" []) (FIValueStatement _) _ = fail $ "function " ++ funName ++ " has an Int () value while expecting String ()"
 checkFunctionBody funName (FTypeB "Int" []) (FLitStrValueStatement _) _ = fail $ "function " ++ funName ++ " has a String () value while expecting Int ()"
@@ -193,6 +216,13 @@ checkFunctionBody funName (FTypeT types) (FTValueStatement vss) tce = checkTuple
 checkFunctionBody funName t (FValueStatementB assignments vs) tce = do
     tce2 <- registerAssignments funName assignments tce
     checkFunctionBody funName t vs tce2
+checkFunctionBody funName t@(FTypeB atName atArgs) (FCValueStatement cName [tvs@(FTValueStatement cArgs)]) tce@(TCE tm atm) = do
+    let argCount = length cArgs
+    checkExistingType t tce
+    let at@(FAlgType _ _ atvs) = atm ! atName
+    atm <- checkConstructorExistence atName cName argCount atvs
+    (FAlgTypeVal _ atmArgs) <- getCorrectedConstructor atm at atArgs
+    checkFunctionBody funName atmArgs tvs tce
 checkFunctionBody _ t vs _ = traceD (show t ++ show vs) undefined
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
