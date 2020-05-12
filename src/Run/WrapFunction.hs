@@ -3,7 +3,7 @@ module Run.WrapFunction where
 import StaticCheck.Format
 import Util.State
 import Util.Env
-import Run.OneStepEvaluation
+import Run.RunVS
 
 wrapFunction :: FValueStatement -> [FPatternMatch] -> [FValueStatement] -> E -> S -> (S, FValueStatement)
 wrapFunction vs pms vss env s = undefined

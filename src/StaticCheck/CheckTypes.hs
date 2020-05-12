@@ -183,9 +183,10 @@ checkIntOrString vs tce =
 
 checkFunctionApplicationType :: String -> FType -> String -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT []) "print" [x] tce =
-    if checkIntOrString x tce
-        then return ()
-        else fail $ "argument of function print is not Int () or String () in function " ++ funName
+    return ()
+    -- if checkIntOrString x tce
+        -- then return ()
+        -- else fail $ "argument of function print is not Int () or String () in function " ++ funName
 checkFunctionApplicationType funName (FTypeT []) "yield" [] _ = return ()
 -- checkFunctionApplicationType _ _ "print" _ _ = ...
 checkFunctionApplicationType funName t name args tce@(TCE tm atm) =
