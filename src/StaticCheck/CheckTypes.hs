@@ -47,8 +47,15 @@ registerArgs (t:types) (pm:pms) tce = do
     tce2 <- registerArg t pm tce
     registerArgs types pms tce2
 
+checkExistingTypes :: [FType] -> TCE -> Err ()
+checkExistingTypes [] _ = return ()
+checkExistingTypes (x:xs) tce = do
+    checkExistingType x tce
+    checkExistingTypes xs tce
+
 checkExistingType :: FType -> TCE -> Err ()
 checkExistingType (FTypeB "Int" []) tce = return ()
+checkExistingType (FTypeB "String" []) tce = return ()
 checkExistingType (FunFType t1 t2) tce = do
     checkExistingType t1 tce
     checkExistingType t2 tce
@@ -56,14 +63,24 @@ checkExistingType (FTypeT []) _ = return ()
 checkExistingType (FTypeT (x:xs)) tce = do
     checkExistingType x tce
     checkExistingType (FTypeT xs) tce
-checkExistingType t _ = traceD t undefined
+checkExistingType (FTypeB name args) tce@(TCE _ atm) =
+    if member name atm
+        then do
+            let (FAlgType name_ argTypes _) = atm ! name
+            if length argTypes == length args
+                then
+                    checkExistingTypes args tce
+                else
+                    fail $ "received wrong number of arguments for type " ++ name
+        else 
+            fail $ "type " ++ name ++ " doesn't exist"
 
 checkConstructorExistence :: String -> String -> [FAlgTypeVal] -> Err FAlgTypeVal
 checkConstructorExistence typeName cName [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
 checkConstructorExistence typeName cName (atv@(FAlgTypeVal cName_ _):atvs) =
     if cName == cName_
         then return atv
-        else checkConstructorExistence typeName cName_ atvs
+        else checkConstructorExistence typeName cName atvs
 
 getCorrectedConstructor :: FAlgTypeVal -> FAlgType -> [FType] -> Err FAlgTypeVal
 getCorrectedConstructor = undefined
@@ -86,9 +103,9 @@ registerArg t@(FunFType t1 t2) (FPatternMatchB x) tce@(TCE tm atm) = do
 registerArg t@(FTypeT _) (FPatternMatchB x) tce@(TCE tm atm) = do
     checkExistingType t tce
     return $ TCE (insert x t tm) atm
-registerArg t@(FTypeB name args) pmc@(FPatternMatchC (FPatternMatchB cName) _) (TCE tm atm) = do
+registerArg t@(FTypeB name args) pmc@(FPatternMatchC (FPatternMatchB cName) _) tce@(TCE tm atm) = do
     checkExistingType t tce
-    let at@(FAlgType _ args atvs) = atm ! name
+    let at@(FAlgType _ argTypes atvs) = atm ! name
     atm <- checkConstructorExistence name cName atvs
     atm_ <- getCorrectedConstructor atm at args
     checkMatchingConstructors atm_ pmc tce
