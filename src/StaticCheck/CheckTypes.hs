@@ -8,6 +8,15 @@ import Data.Map
 data TCE = TCE (Map String FType) (Map String FAlgType)
     deriving (Show)
 
+newTCE :: TCE
+newTCE = TCE empty $ insert "List" 
+    (FAlgType "List" ["a"] 
+        [
+            FAlgTypeVal "ListC" $ FTypeT [FTypeB "a" [], FTypeB "List" [FTypeB "a" []]],
+            FAlgTypeVal "EmptyListC" $ FTypeT []
+        ]
+    ) empty
+
 registerAlgTypes :: [FAlgType] -> TCE -> TCE
 registerAlgTypes [] tce = tce
 registerAlgTypes (at@(FAlgType name _ _):algTypes) (TCE mt mat) =
@@ -49,6 +58,24 @@ checkExistingType (FTypeT (x:xs)) tce = do
     checkExistingType (FTypeT xs) tce
 checkExistingType t _ = traceD t undefined
 
+checkConstructorExistence :: String -> String -> [FAlgTypeVal] -> Err ()
+checkConstructorExistence typeName cName [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
+checkConstructorExistence typeName cName (FAlgTypeVal cName_ t:atvs) =
+    if cName == cName_
+        then return ()
+        else checkConstructorExistence typeName cName_ atvs
+
+checkATPM :: FAlgType -> [FType] -> FPatternMatch -> TCE -> Err ()
+checkATPM (FAlgType name typeArgs algTypeVals) argTypes (FPatternMatchC (FPatternMatchB cName) cArgs) tce = do
+    checkConstructorExistence name cName algTypeVals
+
+checkPatternMatchC :: FType -> FPatternMatch -> TCE -> Err ()
+checkPatternMatchC (FTypeB "Int" args) (FPatternMatchC (FPatternMatchB cName) cArgs) (TCE tm atm) = undefined
+checkPatternMatchC (FTypeB "String" args) (FPatternMatchC (FPatternMatchB cName) cArgs) (TCE tm atm) = undefined
+checkPatternMatchC (FTypeB name args) pm@(FPatternMatchC (FPatternMatchB cName) cArgs) tce@(TCE tm atm) = do
+    let at@(FAlgType name typeArgs algTypeVals) = atm ! name
+    checkATPM at args pm tce
+
 registerArg :: FType -> FPatternMatch -> TCE -> Err TCE
 registerArg t@(FTypeB _ _) (FPatternMatchB x) tce@(TCE tm atm) = do
     checkExistingType t tce
@@ -61,6 +88,11 @@ registerArg t@(FunFType t1 t2) (FPatternMatchB x) tce@(TCE tm atm) = do
 registerArg t@(FTypeT _) (FPatternMatchB x) tce@(TCE tm atm) = do
     checkExistingType t tce
     return $ TCE (insert x t tm) atm
+registerArg t@(FTypeB name args) pmc@(FPatternMatchC (FPatternMatchB _) _) tce = do
+    checkExistingType t tce
+    checkPatternMatchC t pmc tce
+    undefined
+    -- registerAlgTypeArg t pmc tce
 registerArg t pm tce = traceD (show t ++ show pm) undefined
 
 registerAssignments :: String -> [FAssignment] -> TCE -> Err TCE
