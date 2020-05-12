@@ -83,6 +83,7 @@ convertFunctionDef (SusFunctionDef t ident argList vs) =
 convertType :: Type -> FType
 convertType (TypeB i tl) = FTypeB (unwrapIdent i) (convertTypeList tl)
 convertType (FunType argType resType) = FunFType (convertType argType) (convertType resType)
+convertType (TType [t]) = convertType t
 convertType (TType tl) = FTypeT $ convertTypeList tl
 
 convertTypeList :: [Type] -> [FType]
@@ -94,6 +95,7 @@ convertFunctionArg (FunctionArgB pm) = convertPatternMatch pm
 convertPatternMatch :: PatternMatch -> FPatternMatch
 convertPatternMatch (PatternMatchI i) = FPatternMatchI $ fromIntegral i
 convertPatternMatch (PatternMatchB i) = FPatternMatchB $ unwrapIdent i
+convertPatternMatch (TPatternMatch [pm]) = convertPatternMatch pm
 convertPatternMatch (TPatternMatch l) = 
   FPatternMatchT $ convertPatternMatchList l
 convertPatternMatch (CPatternMatch pm l) = 
@@ -115,6 +117,8 @@ convertValueStatement (IfValueStatement condvs ifvs elsevs) =
   FIfValueStatement (convertValueStatement condvs) (convertValueStatement ifvs) (convertValueStatement elsevs)
 convertValueStatement (LValueStatement (ListValueStatementB l)) = 
   FLValueStatement $ convertValueStatementList l
+convertValueStatement (TValueStatement (TupleValueStatementB [t])) =
+  convertValueStatement t
 convertValueStatement (TValueStatement (TupleValueStatementB l)) = 
   FTValueStatement $ convertValueStatementList l
 convertValueStatement (AValueStatement funAppl) = 
