@@ -4,7 +4,6 @@ import StaticCheck.Format
 import Util.Util
 import Util.Env
 import Util.State
-import Run.OneStepEvaluation
 import Run.RunVS
 
 run :: NProgramFormat -> IO ()
