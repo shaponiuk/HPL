@@ -170,7 +170,7 @@ checkFunctionApplicationTypeInt funName t1 name (FunFType t21 t22) (vs:vss) tce 
 checkFunctionApplicationTypeInt funName t1 name t2 [] _ =
     if t1 == t2
         then return ()
-        else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName ++ show t1 ++ show t2
+        else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName
 checkFunctionApplicationTypeInt _ t1 _ t2 vss _ = traceD (show t1 ++ show t2 ++ show vss) undefined
 
 checkIntOrString :: FValueStatement -> TCE -> Bool
