@@ -134,14 +134,14 @@ registerArg t@(FTypeT _) (FPatternMatchB x) tce@(TCE tm atm) = do
     checkExistingType t tce
     return $ TCE (insert x t tm) atm
 registerArg t@(FTypeB name args) pmc@(FPatternMatchC (FPatternMatchB cName) cArgs) tce@(TCE tm atm) = do
-    let argCount = case cArgs of
-            _ -> length cArgs
+    let argCount = length cArgs
     checkExistingType t tce
     let at@(FAlgType _ argTypes atvs) = atm ! name
     atm <- checkConstructorExistence name cName argCount atvs
     atm_ <- getCorrectedConstructor atm at args
     checkMatchingConstructors atm_ pmc tce
     registerConstructor atm_ pmc tce
+registerArg (FTypeB "Int" []) (FPatternMatchI _) tce = return tce
 registerArg t pm tce = traceD (show t ++ show pm) undefined
 
 registerAssignments :: String -> [FAssignment] -> TCE -> Err TCE

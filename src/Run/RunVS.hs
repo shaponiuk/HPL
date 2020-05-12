@@ -277,6 +277,8 @@ convertBApplicationsToRApplications (FCValueStatement name vss) env =
     FCValueStatement name $ map (`convertBApplicationsToRApplications` env) vss
 convertBApplicationsToRApplications (FTValueStatement vss) env =
     FTValueStatement $ map (`convertBApplicationsToRApplications` env) vss
+convertBApplicationsToRApplications (FExpr (FEMul vs1 vs2)) env =
+    FExpr $ FEMul (convertBApplicationsToRApplications vs1 env) (convertBApplicationsToRApplications vs2 env)
 convertBApplicationsToRApplications a b = traceD ("convertBApplicationsToRApplications " ++ show a) undefined
 
 forceRegisterAssignments :: Int -> [FAssignment] -> S -> E -> IO (S, E)
