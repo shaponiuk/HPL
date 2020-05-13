@@ -19,7 +19,7 @@ lookupLoc :: String -> E -> [Int]
 lookupLoc name (E nameMap) =
   if member name nameMap
     then nameMap ! name
-    else traceD ("lookupLoc " ++ show name) undefined
+    else traceD ("lookupLoc " ++ show name ++ show nameMap) undefined
 
 lookupFirstLoc :: String -> E -> Int
 lookupFirstLoc name env = head $ lookupLoc name env

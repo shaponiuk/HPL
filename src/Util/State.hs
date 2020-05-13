@@ -23,7 +23,7 @@ stateLookup :: Int -> S -> (Bool, E, FType, FValueStatement)
 stateLookup loc (S varsMap _ _ _ _) = 
   if member loc varsMap
     then varsMap ! loc
-    else traceD ("loc not found in state " ++ show loc ++ "\nhaving vars: ") undefined
+    else traceD ("loc not found in state " ++ show loc ++ "\nhaving vars: " ++ show (length varsMap)) undefined
 
 funArgNamesLookup :: S -> Int -> [FPatternMatch]
 funArgNamesLookup (S _ _ funArgs _ _) loc =

@@ -12,7 +12,7 @@ run (NSIT env state) = do
     let mainloc = lookupFirstLoc "main" env
     let (_, nenv, t, vs) = stateLookup mainloc nstate
     let nnstate = putInLoc nloc (False, nenv, t, vs) nstate
-    (s, vsf) <- interpretVS 0 vs nenv [] nloc nnstate []
+    (s, _, _) <- interpretVS 0 vs nenv [] nloc nnstate []
     runLoop s
 
 runLoop :: S -> IO ()

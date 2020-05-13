@@ -58,6 +58,7 @@ data FPatternMatch =
   | FPatternMatchB String
   | FPatternMatchT [FPatternMatch]
   | FPatternMatchC FPatternMatch [FPatternMatch]
+  | FPatternMatchS Int -- should be put in loc directly
   deriving (Eq,Ord,Show)
 
 data FType =
@@ -76,6 +77,7 @@ data FValueStatement =
   | FIValueStatement Int
   | FLitStrValueStatement String
   | FFValueStatement String FValueStatement
+  | FFValueStatementR Int FValueStatement
   | FCValueStatement String [FValueStatement]
   | FExpr FValueStatementExpr
   | FRefAddr Int
