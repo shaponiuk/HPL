@@ -73,7 +73,6 @@ runLambdaWrapper queueId (loc:locs) vss env state = do
 
 runNotSpecialFunction :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
 runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funArgVss_)) outerEnv state = do
-    printD funName
     let firstLoc = lookupFirstLoc funName outerEnv
     let locs = lookupLoc funName outerEnv
     let funArgNames = funArgNamesLookup state firstLoc
@@ -88,7 +87,6 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
             if length funArgVss < length funArgNames
                 then do
                     (state, vs) <- wrapFunctionB queueId a innerEnv state
-                    printD vs
                     runVS queueId vs innerEnv state
                 else do
                     let tooManyAppliedResult = do
@@ -104,6 +102,7 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
                             if length funArgVss > length funArgNames
                                 then tooManyAppliedResult
                                 else do
+                                    when (funName == "first") $ printD funName >> printD funArgVss >> printD funArgNames >> printD locs
                                     tryRunVSFunApplR queueId locs funArgVss state innerEnv
                         else if length funArgVss > length funArgNames
                             then tooManyAppliedResult
@@ -190,6 +189,7 @@ tryRunVSFunApplR _ [] _ _ _ = undefined
 tryRunVSFunApplR queueId (x:xs) args state outerEnv = do
     let (ifFunction, innerEnv, _, vs) = stateLookup x state
     let argNames = funArgNamesLookup state x
+    when (x == 4) $ printD x >> printD vs >> printD ifFunction >> printD argNames >> printD args
     (fits, state, args) <- fitPatternMatchs queueId state outerEnv argNames args
     if fits
         then
