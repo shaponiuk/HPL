@@ -15,4 +15,4 @@ checkProgramFormat pf = do
     checkUniqueDefinitions pf
     checkTypes pf
     -- check main function
-    traceD pf $ return pf
+    return pf
