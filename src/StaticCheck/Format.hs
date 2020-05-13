@@ -77,7 +77,6 @@ data FValueStatement =
   | FIValueStatement Int
   | FLitStrValueStatement String
   | FFValueStatement String FValueStatement
-  | FFValueStatementR Int FValueStatement
   | FCValueStatement String [FValueStatement]
   | FExpr FValueStatementExpr
   | FRefAddr Int
