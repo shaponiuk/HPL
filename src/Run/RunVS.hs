@@ -43,7 +43,9 @@ runLambda queueId (FFValueStatement argName vs) (argVs:argVss) env state = do
     let (newLoc, newState) = getNewLoc state
     let newEnv = registerLoc False env argName newLoc
     let newerState = putInLoc newLoc (True, newEnv, FTypeT [], argVs) newState
+    printD vs
     let nvs = convertBApplicationsToRApplications vs newEnv
+    printD nvs
     runLambda queueId nvs argVss newEnv newerState
 runLambda queueId vs [] env state = do
     let nvs = convertBApplicationsToRApplications vs env
@@ -71,6 +73,7 @@ runLambdaWrapper queueId (loc:locs) vss env state = do
 
 runNotSpecialFunction :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
 runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funArgVss_)) outerEnv state = do
+    printD funName
     let firstLoc = lookupFirstLoc funName outerEnv
     let locs = lookupLoc funName outerEnv
     let funArgNames = funArgNamesLookup state firstLoc
@@ -85,6 +88,7 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
             if length funArgVss < length funArgNames
                 then do
                     (state, vs) <- wrapFunctionB queueId a innerEnv state
+                    printD vs
                     runVS queueId vs innerEnv state
                 else do
                     let tooManyAppliedResult = do
@@ -126,7 +130,6 @@ runVS queueId vs@FSusValueStatement{} = runVSSusSt queueId vs
 runVS queueId vs@FSuspendedValue{} = runVSSusVal queueId vs
 runVS queueId vs@FSemaphore{} = runVSSem queueId vs
 runVS queueId vs@FValueStatementB{} = runVSLazyLet queueId vs
-runVS queueId vs@FFValueStatementR{} = runVSLamR queueId vs
 runVS _ vs = traceD vs undefined
 
 runVSMul :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement) 
@@ -235,10 +238,6 @@ runVSLam :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
 runVSLam queueId a@(FFValueStatement argName vs) e s =
     return (s, e, a)
 
-runVSLamR :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
-runVSLamR queueId a@(FFValueStatementR loc vs) e s =
-    return (s, e, a)
-
 runVSSusSt :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
 runVSSusSt queueId (FSusValueStatement vs) e s = do
     let queueId = getFreeQueueId s
@@ -284,7 +283,7 @@ convertBApplicationsToRApplications (FExpr (FESub vs1 vs2)) e =
         nvs2 = convertBApplicationsToRApplications vs2 e
 convertBApplicationsToRApplications (FAValueStatement (FFunApplicationB funName funArgs)) e =
     FAValueStatement $ FFunApplicationR locs (convertBApplicationsToRApplicationsM funArgs e) where
-        locs = lookupLoc funName e
+        locs = traceD funName $ lookupLoc funName e
 convertBApplicationsToRApplications a@(FIValueStatement _) _ = a
 convertBApplicationsToRApplications (FCValueStatement name vss) env =
     FCValueStatement name $ map (`convertBApplicationsToRApplications` env) vss
@@ -557,7 +556,6 @@ appendFAVSInt :: FValueStatement -> [FValueStatement] -> (FValueStatement, Bool,
 appendFAVSInt (FAValueStatement (FFunApplicationB funName vss)) addVss = (FAValueStatement $ FFunApplicationB funName (vss ++ addVss), False, [])
 appendFAVSInt (FFValueStatement name vs) addVSS = (vs, True, [FPatternMatchB name])
 appendFAVSInt (FAValueStatement (FFunApplicationR locs vss)) addVss = (FAValueStatement $ FFunApplicationR locs (vss ++ addVss), False, [])
-appendFAVSInt (FFValueStatementR loc vs) addVSS = (vs, True, [FPatternMatchS loc])
 appendFAVSInt x y = traceD ("appendFAVSInt " ++ show x ++ "\n" ++ show y) undefined
 
 fitPatternMatchs :: Int -> S -> E -> [FPatternMatch] -> [FValueStatement] -> IO (Bool, S, [FValueStatement])
@@ -610,16 +608,17 @@ wrapFunctionBInt queueId (loc:locs) vs@(FAValueStatement (FFunApplicationB x vss
         then do
             let d = length funArgNames - length vss
             let (newLocs, newState) = getNNewLocs state d
-            return (newState, wrapFunctionBIntNNewLambdas d vs newLocs)
+            let newLambdas = map show newLocs
+            return (newState, wrapFunctionBIntNNewLambdas d vs newLambdas)
         else 
             wrapFunctionBInt queueId locs vs env state
 
-wrapFunctionBIntNNewLambdas :: Int -> FValueStatement -> [Int] -> FValueStatement
+wrapFunctionBIntNNewLambdas :: Int -> FValueStatement -> [String] -> FValueStatement
 wrapFunctionBIntNNewLambdas d (FAValueStatement (FFunApplicationB x vss)) locs = 
     let
         argVss = map makeFunApplicationNoArg locs
-    in foldl (flip FFValueStatementR) (FAValueStatement (FFunApplicationB x (vss ++ argVss))) locs
+    in foldl (flip FFValueStatement) (FAValueStatement (FFunApplicationB x (vss ++ argVss))) locs
 
 
-makeFunApplicationNoArg :: Int -> FValueStatement
-makeFunApplicationNoArg x = FAValueStatement (FFunApplicationR [x] [])
+makeFunApplicationNoArg :: String -> FValueStatement
+makeFunApplicationNoArg x = FAValueStatement (FFunApplicationB x [])
