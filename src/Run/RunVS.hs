@@ -19,11 +19,15 @@ interpretVS queueId vs env argNames loc s vss =
             let (s_, vs) = wrapFunction vs argNames vss env s
             runVS queueId vs env s_
         else do
-            when (loc == 11) $ printD loc
+            -- when (loc == 11) $ printD loc >> printD vs
             (newEnv, newState) <- registerArgs queueId env s argNames vss
             (ns, ne, nvs) <- runVS queueId vs newEnv newState
             let (b, ne, t, _) = stateLookup loc ns
             let nns = putInLoc loc (b, ne, t, nvs) ns
+            printD "HAHAHA"
+            printD loc
+            printD ne
+            printD nvs
             return (nns, ne, nvs)
 
 runSpecialFunction :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
@@ -44,9 +48,10 @@ runLambda queueId (FFValueStatement argName vs) (argVs:argVss) env state = do
     let (newLoc, newState) = getNewLoc state
     let newEnv = registerLoc False env argName newLoc
     let newerState = putInLoc newLoc (True, newEnv, FTypeT [], argVs) newState
-    printD vs
+    printD "heeereee"
+    -- printD vs
     let nvs = convertBApplicationsToRApplications vs newEnv
-    printD nvs
+    -- printD nvs
     runLambda queueId nvs argVss newEnv newerState
 runLambda queueId vs [] env state = do
     let nvs = convertBApplicationsToRApplications vs env
@@ -78,6 +83,7 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
     let locs = lookupLoc funName outerEnv
     let funArgNames = funArgNamesLookup state firstLoc
     let (ifFunction, innerEnv, _, vs) = stateLookup firstLoc state
+    -- when (funName == "x") $ printD funName >> printD vs >> printD firstLoc >> printD funArgNames
     (state, funArgVss_) <- foldl (runVSInFoldF outerEnv) (return (state, [])) funArgVss_
     let funArgVss = reverse funArgVss_
     if isLambda vs 
@@ -88,27 +94,29 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
             if length funArgVss < length funArgNames
                 then do
                     (state, vs) <- wrapFunctionB queueId a innerEnv state
-                    runVS queueId vs innerEnv state
+                    printD "wrapped"
+                    printD vs
+                    return (state, innerEnv, vs)
                 else do
                     let tooManyAppliedResult = do
                         (innerEnv, favsAppend, b, pms, state) <- appendFAVS queueId locs funArgVss state
                         if b
                             then do
                                 (innerEnv, state) <- registerArgs queueId innerEnv state pms funArgVss
-                                runVS queueId vs innerEnv state
+                                runVS queueId favsAppend innerEnv state
                             else
-                                runVS queueId vs innerEnv state
+                                runVS queueId favsAppend innerEnv state
                     if ifFunction
                         then
                             if length funArgVss > length funArgNames
                                 then tooManyAppliedResult
                                 else do
-                                    when (funName == "first") $ printD funName >> printD funArgVss >> printD funArgNames >> printD locs
+                                    -- when (funName == "first") $ printD funName >> printD funArgVss >> printD funArgNames >> printD locs
                                     tryRunVSFunApplR queueId locs funArgVss state innerEnv
                         else if length funArgVss > length funArgNames
                             then tooManyAppliedResult
                             else do
-                                when (funName == "a") $ printD funName >> printD vs >> printD firstLoc
+                                -- when (funName == "a") $ printD funName >> printD vs >> printD firstLoc
                                 (state, innerEnv, vs) <- interpretVS queueId vs innerEnv funArgNames firstLoc state funArgVss
                                 return (state, innerEnv, vs)
 
@@ -161,7 +169,9 @@ runVSI queueId vs@(FIValueStatement i) e s = return (s, e, vs)
 
 runVSIf :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
 runVSIf queueId (FIfValueStatement condvs res1vs res2vs) env state = do
+    printD condvs >> printD env
     (newState, _, FIValueStatement condVal) <- runVS queueId condvs env state
+    printD "jfdklas;jfkdsla;jkadsl"
     if condVal /= 0
         then runVS queueId res1vs env newState
         else runVS queueId res2vs env newState
@@ -193,6 +203,7 @@ tryRunVSFunApplR queueId (x:xs) args_ state outerEnv = do
     let argNames = funArgNamesLookup state x
     (fits, state, args_, outerEnv) <- fitPatternMatchs queueId state outerEnv argNames args_
     let args = convertBApplicationsToRApplicationsM args_ outerEnv
+    when (x == 7) $ printD x
     if fits
         then
             if length args > length argNames
@@ -204,10 +215,14 @@ tryRunVSFunApplR queueId (x:xs) args_ state outerEnv = do
                             runVS queueId updatedVS innerEnv state
                         else 
                             runVS queueId updatedVS innerEnv state
-                else do
-                    (innerEnv, state) <- registerArgs queueId innerEnv state argNames args
-                    when (x == 4) $ printD x >> printD vs >> printD ifFunction >> printD argNames >> printD args >> printD fits >> printD innerEnv
-                    runVS queueId vs innerEnv state
+                else
+                    if length args < length argNames then undefined
+                        else do
+                            (innerEnv, state) <- registerArgs queueId innerEnv state argNames args
+                            -- when (x == 2) $ printD x >> printD args >> printD argNames >> printD vs >> printD innerEnv
+                            -- when (x == 4) $ printD x >> printD vs >> printD ifFunction >> printD argNames >> printD args >> printD fits >> printD innerEnv
+                            -- when (x == 10) $ printD x >> printD vs >> printD innerEnv
+                            runVS queueId vs innerEnv state
         else 
             tryRunVSFunApplR queueId xs args state outerEnv
 
@@ -286,7 +301,7 @@ convertBApplicationsToRApplications (FExpr (FESub vs1 vs2)) e =
         nvs2 = convertBApplicationsToRApplications vs2 e
 convertBApplicationsToRApplications (FAValueStatement (FFunApplicationB funName funArgs)) e =
     FAValueStatement $ FFunApplicationR locs (convertBApplicationsToRApplicationsM funArgs e) where
-        locs = traceD funName $ lookupLoc funName e
+        locs = lookupLoc funName e
 convertBApplicationsToRApplications a@(FIValueStatement _) _ = a
 convertBApplicationsToRApplications (FCValueStatement name vss) env =
     FCValueStatement name $ map (`convertBApplicationsToRApplications` env) vss
@@ -339,12 +354,13 @@ setPM :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
     (vss, newState, newEnv, _) <- forceGetTupleVSS qId vs state env
     foldl (setPMInFoldF qId) (return (newState, newEnv)) $ tList types pmL vss
-setPM qId t (FPatternMatchB x) vs@(FAValueStatement _) state env = do
-    let (loc, newState) = getNewLoc state
-    let newEnv = registerLoc False env x loc
-    (newerState, _, nvs) <- runVS qId vs newEnv newState
-    let newererState = putInLoc loc (False, newEnv, t, nvs) newerState
-    return (newererState, newEnv)
+setPM qId t (FPatternMatchB x) vs@(FAValueStatement _) state__ env_ = do
+    printD "setPM" >> printD x >> printD env_ >> printD vs
+    let (loc, state_) = getNewLoc state__
+    let env = registerLoc False env_ x loc
+    (state_, inenv, nvs) <- runVS qId vs env state_
+    let state = putInLoc loc (False, inenv, t, nvs) state_
+    return (state, env)
 setPM qId t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
