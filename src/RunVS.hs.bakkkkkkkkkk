@@ -1,0 +1,25 @@
+module Run.RunVS where
+
+import StaticCheck.Format
+import Util.Util
+import Util.State
+import Util.Env
+
+runVS :: Int -> FValueStatement -> E -> S -> IO (S, E, FValueStatement)
+runVS queueId (FSusValueStatement vs) e s = do
+    let queueId = getFreeQueueId s
+    let ns = putQueue s (QueueT e vs queueId False False [] [])
+    return (ns, e, FSusValueStatement vs)
+runVS queueId (FForceValueStatement assignments vs) e s = do
+    (e, s) <- forceRegisterAssignments queueId assignments e s
+    runVS queueId vs e s
+runVS queueId vs e s = traceD ("runVS " ++ show vs) undefined
+
+runQueue :: QueueT -> S -> IO S
+runQueue (QueueT e vs queueId _ _ _ _) s = do
+    (ns, _, nvs) <- runVS queueId vs e s
+    return $ putInQueue queueId (QueueT e nvs queueId True False [] []) ns
+
+forceRegisterAssignments :: Int -> [FAssignment] -> E -> S -> IO (E, S)
+forceRegisterAssignments queueId (FAssignmentB t (FPatternMatchB x) vs) e s =
+    

@@ -11,14 +11,15 @@ run (NSIT env state) = do
     let mainloc = lookupFirstLoc "main" env
     let (_, nenv, t, vs) = stateLookup mainloc state
     (state, _, _) <- runVS 0 vs nenv state
-    runLoop state
+    runLoopSingle state
 
-runLoop :: S -> IO ()
-runLoop state =
+runLoopSingle :: S -> IO ()
+runLoopSingle state =
     if anyAvailibleQueue state then do
         let availibleQueue = getAvailibleQueue state
-        newState <- runQueue availibleQueue state
-        runLoop newState
+        _ <- runQueue availibleQueue state
+        return ()
+        -- runLoop newState
     else
-        printD "No availible queue to run"
+        fail "No availible queue to run"
 
