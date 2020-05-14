@@ -12,6 +12,7 @@
         force let
             (Int () -> (Int (), Int ())) :: x = tple();
             () :: () = print (first(x (4)));
-            //() :: () = print (x (4));
-            //() :: () = print (tple (4));
+            () :: () = print (x (4));
+            () :: () = print (tple (4));
+            () :: () = print (first (tple (4)));
         in 0;
