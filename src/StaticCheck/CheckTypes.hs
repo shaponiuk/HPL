@@ -254,4 +254,4 @@ checkTypes pf@(SITList functionDefs refDefs algTypes) = do
     let tce2 = registerRefDefs refDefs tce1
     checkFunctionDefs functionDefs tce2
     checkRefDefs refDefs tce2
-    traceD tce2 $ return pf
+    return pf
