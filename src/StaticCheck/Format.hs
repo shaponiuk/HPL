@@ -8,7 +8,9 @@ data QueueT = QueueT {
   valueStatement :: FValueStatement, 
   queueId :: Int, 
   finished :: Bool, 
-  yielding :: Bool
+  yielding :: Bool,
+  printQ :: [String],
+  getLineQ :: [String]
 } deriving (Show)
 
 data SemaphoreT = SemaphoreT {
