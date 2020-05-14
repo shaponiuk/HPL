@@ -90,7 +90,7 @@ data FValueStatement =
 data FFunApplication =
     FSFunApplication String FFunApplication
   | FFunApplicationB String [FValueStatement]
-  | FFunApplicationR [Int] [FValueStatement]
+  | FFunApplicationR Int
   deriving (Eq,Ord,Show)
 
 data FAssignment =
