@@ -3,7 +3,7 @@
     
     fun (Int () -> (Int (), Int ())) tple (x) = 
         force let
-            //() :: () = print ("hahaha");
+            () :: () = print ("hahaha");
         in (sil (x ()), sil (x ()));
     
     fun ((Int (), Int ()) -> Int ()) first ((a, b)) = a ();
@@ -11,7 +11,7 @@
     sus fun (Int ()) main () =
         force let
             (Int () -> (Int (), Int ())) :: x = tple();
-            Int () :: y = first (x (4));
+            () :: y = print (first (x (4)));
             //() :: () = print (first(x (4)));
             //() :: () = print (x (4));
             //() :: () = print (tple (4));

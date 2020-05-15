@@ -1,0 +1,19 @@
+fun () e () =
+    force let
+        () :: () = print ("you should see it once");
+    in ();
+
+fun (() -> ()) ee (x) =
+    force let
+        () :: () = x ();
+        () :: () = x ();
+    in ();
+
+sus fun (Int ()) main () =
+    let
+        () :: x = e ();
+    in force let 
+        () :: () = print ("here");
+        () :: () = ee (x ());
+        () :: () = print ("nice");
+    in 0;
