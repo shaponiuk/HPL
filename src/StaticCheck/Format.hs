@@ -85,6 +85,7 @@ data FValueStatement =
   | FSusValueStatement FValueStatement
   | FSuspendedValue Int
   | FSemaphore Int
+  | FNTValueStatement Int FValueStatement
   deriving (Eq,Ord,Show)
 
 data FFunApplication =
