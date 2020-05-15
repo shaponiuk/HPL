@@ -55,3 +55,9 @@ cutFirst d (x:xs) =
 
 takeLast :: (Show a) => Int -> [a] -> [a]
 takeLast d l = cutFirst (length l - d) l
+
+second :: (a, b) -> b
+second (_, b) = b
+
+takeNth 0 (x:_) = x
+takeNth d (_:xs) = takeNth (d - 1) xs
