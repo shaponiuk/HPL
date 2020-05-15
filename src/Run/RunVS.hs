@@ -56,6 +56,7 @@ runLambdaWrapper queueId (loc:locs) vss outerEnv state = do
 
 runNotSpecialFunction :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funArgVss_)) outerEnv state = do
+    printD funName >> printD outerEnv
     let firstLoc = lookupFirstLoc funName outerEnv
     let locs = lookupLoc funName outerEnv
     let funArgNames = funArgNamesLookup state firstLoc
@@ -83,9 +84,9 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
                     if length funArgVss > length funArgNames
                         then tooManyAppliedResult
                         else do
-                                -- when (funName == "a") $ printD funName >> printD vs >> printD innerEnv >> printD (stateLookup 15 state)
-                                registerArgs queueId innerEnv outerEnv state funArgNames funArgVss
-                                runVS queueId vs innerEnv state
+                            registerArgs queueId innerEnv outerEnv state funArgNames funArgVss
+                            when (funName == "first") $ printD 
+                            runVS queueId vs innerEnv state
 
 runVS :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVS queueId vs@FForceValueStatement{} e s = runVSForceLet queueId vs e s
@@ -399,14 +400,23 @@ oneStepEvaluation queueId s e vs = traceD ("oneStepEvaluation " ++ show vs) unde
 oneStepRunLocs :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, E, FValueStatement)
 oneStepRunLocs queueId (x:xs) args env state = do
     let funArgNames = funArgNamesLookup state x
+    let (iff, e, t, vs) = stateLookup x state
     fits <- fitPatternMatchs queueId state env funArgNames args
     if fits
-        then do
-            let (iff, e, t, vs) = stateLookup x state
-            (e, state) <- registerArgs queueId e env state funArgNames args
-            let nstate = putInLoc x (iff, e, t, vs) state
-            oneStepRunLoc queueId x nstate
+        then 
+            if isLambda vs
+                then oneStepRunLocsLambda queueId vs args e env state
+                else do
+                    (e, state) <- registerArgs queueId e env state funArgNames args
+                    let nstate = putInLoc x (iff, e, t, vs) state
+                    oneStepRunLoc queueId x nstate
         else oneStepRunLocs queueId xs args env state
+
+oneStepRunLocsLambda _ vs [] innerEnv _ state = return (state, innerEnv, vs)
+oneStepRunLocsLambda queueId vs (arg:args) innerEnv outerEnv state = do
+    let (FFValueStatement name nvs) = vs
+    (inner, state) <- registerArgs queueId innerEnv outerEnv state [FPatternMatchB name] [arg]
+    oneStepRunLocsLambda queueId nvs args innerEnv outerEnv state
 
 oneStepRunLoc :: Int -> Int -> S -> IO (S, E, FValueStatement)
 oneStepRunLoc queueId x state = do
@@ -414,8 +424,11 @@ oneStepRunLoc queueId x state = do
     return (state, env, vs)
 
 registerArgs :: Int -> E -> E -> S -> [FPatternMatch] -> [FValueStatement] -> IO (E, S)
-registerArgs queueId innerEnv argEnv state argNames vss = 
-    foldl (registerArgsInFoldF queueId argEnv) (return (innerEnv, state)) $ dList argNames vss
+registerArgs queueId innerEnv argEnv state argNames vss = do
+    (e, s) <- foldl (registerArgsInFoldF queueId argEnv) (return (innerEnv, state)) $ dList argNames vss
+    printD "registerArgs"
+    printD e
+    return (e, s)
 
 registerArgsInFoldF :: Int -> E -> IO (E, S) -> (FPatternMatch, FValueStatement) -> IO (E, S)
 registerArgsInFoldF queueId argEnv acc (FPatternMatchB str, vs) = do
@@ -431,6 +444,16 @@ registerArgsInFoldF queueId argEnv acc (FPatternMatchC _ pms, FCValueStatement _
 registerArgsInFoldF queueId argEnv acc a@(FPatternMatchT t1, FTValueStatement t2) = do
     (e, s) <- acc
     registerArgs queueId e argEnv s t1 t2
+registerArgsInFoldF queueId argEnv acc (pm@FPatternMatchT{}, vs@FAValueStatement{}) = do
+    printD pm
+    (innerEnv, state) <- acc
+    (state, argEnv, vs) <- oneStepEvaluation queueId state argEnv vs
+    printD vs
+    registerArgsInFoldF queueId argEnv (return (innerEnv, state)) (pm, vs)
+registerArgsInFoldF queueId argEnv acc (pm@FPatternMatchT{}, vs@FForceValueStatement{}) = do
+    (innerEnv, state) <- acc
+    (state, argEnv, vs) <- oneStepEvaluation queueId state argEnv vs
+    registerArgsInFoldF queueId argEnv (return (innerEnv, state)) (pm, vs)
 registerArgsInFoldF _ _ _ el = traceD ("registerArgsInFoldF " ++ show el) undefined
 
 appendFAVS :: Int -> [Int] -> [FValueStatement] -> S -> IO (E, FValueStatement, Bool, [FPatternMatch], S)
