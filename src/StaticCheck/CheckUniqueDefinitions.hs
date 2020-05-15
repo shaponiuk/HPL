@@ -5,7 +5,7 @@ import Bnfc.ErrM
 import Util.Util
 import Data.Map
 import Data.Char
-import Control.Monad.State
+import Control.Monad.State (lift)
 import Control.Monad.Trans.State as ST
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Identity
