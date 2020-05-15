@@ -43,7 +43,7 @@ runLambdaWrapper :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, E, FVa
 runLambdaWrapper _ [] _ _ _ = undefined
 runLambdaWrapper queueId (loc:locs) vss outerEnv state = do
     let argPMs = funArgNamesLookup state loc
-    fits <- fitPatternMatchs queueId state outerEnv argPMs vss
+    (fits, state, vss) <- fitPatternMatchs queueId state outerEnv argPMs vss
     if fits
         then do
             let (_, innerEnv, _, vs) = stateLookup loc state
@@ -400,11 +400,11 @@ oneStepRunLocs :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, E, FValu
 oneStepRunLocs queueId (x:xs) args env state = do
     let funArgNames = funArgNamesLookup state x
     let (iff, e, t, vs) = stateLookup x state
-    fits <- fitPatternMatchs queueId state env funArgNames args
+    (fits, state, args) <- fitPatternMatchs queueId state env funArgNames args
     if fits
         then 
             if isLambda vs
-                then do
+                then
                     oneStepRunLocsLambda queueId vs args e env state
                 else do
                     (e, state) <- registerArgs queueId e env state funArgNames args
@@ -469,7 +469,7 @@ appendFAVS _ [] vss state = fail "Non exhaustive pattern matches"
 appendFAVS queueId (loc:xs) addVss state = do
     let argNames = funArgNamesLookup state loc
     let (_, e, _, vs) = stateLookup loc state
-    fits <- fitPatternMatchs queueId state e argNames addVss
+    (fits, state, addVss) <- fitPatternMatchs queueId state e argNames addVss
     if fits
         then do
             let (appendedVS, b, pms) = appendFAVSInt vs addVss
@@ -482,36 +482,46 @@ appendFAVSInt (FAValueStatement (FFunApplicationB funName vss)) addVss = (FAValu
 appendFAVSInt (FFValueStatement name vs) addVSS = (vs, True, [FPatternMatchB name])
 appendFAVSInt x y = traceD ("appendFAVSInt " ++ show x ++ "\n" ++ show y) undefined
 
-fitPatternMatchs :: Int -> S -> E -> [FPatternMatch] -> [FValueStatement] -> IO Bool
-fitPatternMatchs _ s e _ [] = return True
-fitPatternMatchs _ s e [] _ = return True
+fitPatternMatchs :: Int -> S -> E -> [FPatternMatch] -> [FValueStatement] -> IO (Bool, S, [FValueStatement])
+fitPatternMatchs _ s e _ [] = return (True, s, [])
+fitPatternMatchs _ s e [] vss = return (True, s, vss)
 fitPatternMatchs queueId s e (pm:pms) (vs:vss) = do
-    b <- fitPatternMatch queueId s e (pm, vs)
-    if b 
-        then fitPatternMatchs queueId s e pms vss
-        else return False
+    (b, s, vs) <- fitPatternMatch queueId s e (pm, vs)
+    if b
+        then do
+            (b_, s, vss) <- fitPatternMatchs queueId s e pms vss
+            return (b_, s, vs:vss)
+        else return (False, s, vs:vss)
 
-fitPatternMatch :: Int -> S -> E -> (FPatternMatch, FValueStatement) -> IO Bool
-fitPatternMatch _ s e (FPatternMatchI i1, vs@(FIValueStatement i2)) = return $ i1 == i2
+fitPatternMatch :: Int -> S -> E -> (FPatternMatch, FValueStatement) -> IO (Bool, S, FValueStatement)
+fitPatternMatch _ s e (FPatternMatchI i1, vs@(FIValueStatement i2)) = do
+    let (nloc, ns) = getNewLoc s
+    let nns = putInLoc nloc (False, e, FTypeT [], vs) ns
+    return (i1 == i2, nns, FAValueStatement $ FFunApplicationR nloc)
 fitPatternMatch queueId s e a@(FPatternMatchC (FPatternMatchB name1) pms, FCValueStatement name2 vss) = do
-    res1 <- fitPatternMatchs queueId s e pms vss
-    return $ name1 == name2 && res1
-fitPatternMatch queueId s e (FPatternMatchB _, vs) = return True
+    (res1, s, vss) <- fitPatternMatchs queueId s e pms vss
+    return (name1 == name2 && res1, s, FCValueStatement name2 vss)
+fitPatternMatch queueId s e (FPatternMatchB _, vs) = do
+    let (nloc, ns) = getNewLoc s
+    let nns = putInLoc nloc (False, e, FTypeT [], vs) ns
+    return (True, nns, FAValueStatement $ FFunApplicationR nloc)
 fitPatternMatch queueId s e (pm@FPatternMatchC{}, vs@FAValueStatement{}) = do
-    (ns, ne, nvs) <- oneStepEvaluation queueId s e vs
-    fitPatternMatch queueId ns ne (pm, nvs)
-fitPatternMatch queueId s e a@(FPatternMatchT tuple, vs@FAValueStatement{}) = do
-    (ns, ne, nvs) <- oneStepEvaluation queueId s e vs
-    fitPatternMatch queueId ns ne (FPatternMatchT tuple, nvs)
-fitPatternMatch queueId s e a@(FPatternMatchT tuple, vs@FForceValueStatement{}) = do
-    (ns, ne, nvs) <- oneStepEvaluation queueId s e vs
-    fitPatternMatch queueId ns ne (FPatternMatchT tuple, nvs)
-fitPatternMatch queueId s e (FPatternMatchT tuple, FTValueStatement tuple_) =
-    fitPatternMatchs queueId s e tuple tuple_
+    (s, e, vs) <- oneStepEvaluation queueId s e vs
+    fitPatternMatch queueId s e (pm, vs)
+fitPatternMatch queueId s e (t@FPatternMatchT{}, vs@FAValueStatement{}) = do
+    (s, e, vs) <- oneStepEvaluation queueId s e vs
+    fitPatternMatch queueId s e (t, vs)
+fitPatternMatch queueId s e a@(t@FPatternMatchT{}, vs@FForceValueStatement{}) = do
+    (s, e, vs) <- oneStepEvaluation queueId s e vs
+    fitPatternMatch queueId s e (t, vs)
+fitPatternMatch queueId s e (FPatternMatchT tuple, FTValueStatement tuple_) = do
+    (fits, s, vss) <- fitPatternMatchs queueId s e tuple tuple_
+    let (nloc, ns) = getNewLoc s
+    let nns = putInLoc nloc (False, e, FTypeT [], FTValueStatement vss) ns
+    return (fits, nns, FAValueStatement $ FFunApplicationR nloc)
 fitPatternMatch queueId s e (pm , FForceValueStatement assignments vs) = do
-    (ns, ne) <- forceRegisterAssignments queueId assignments s e
-    fitPatternMatch queueId ns ne (pm, vs)
-fitPatternMatch queueId s e (pm, FSusValueStatement vs) = fitPatternMatch queueId s e (pm, vs)
+    (s, e) <- forceRegisterAssignments queueId assignments s e
+    fitPatternMatch queueId s e (pm, vs)
 fitPatternMatch _ _ _ a = traceD ("fitPatternMatch undefined " ++ show a) undefined
 
 wrapFunctionB :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
@@ -522,7 +532,7 @@ wrapFunctionB queueId vs@(FAValueStatement (FFunApplicationB x vss)) env state =
 wrapFunctionBInt :: Int -> [Int] -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 wrapFunctionBInt queueId (loc:locs) vs@(FAValueStatement (FFunApplicationB x vss)) env state = do
     let funArgNames = funArgNamesLookup state loc
-    fits <- fitPatternMatchs queueId state env funArgNames vss
+    (fits, state, vss) <- fitPatternMatchs queueId state env funArgNames vss
     if fits
         then do
             let d = length funArgNames - length vss
