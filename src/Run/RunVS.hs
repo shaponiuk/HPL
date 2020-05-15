@@ -81,7 +81,6 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
                         then tooManyAppliedResult
                         else do
                             (innerEnv, state) <- registerArgs queueId innerEnv outerEnv state funArgNames funArgVss
-                            when (funName == "first") $ printD funName >> printD innerEnv
                             runVS queueId vs innerEnv state
 
 runVS :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
@@ -93,7 +92,7 @@ runVS queueId vs@FIfValueStatement{} e s = runVSIf queueId vs e s
 runVS queueId vs@(FExpr FEEQ{}) e s = runVSEQ queueId vs e s
 runVS queueId vs@(FExpr FESub{}) e s = runVSSub queueId vs e s
 runVS queueId vs@(FExpr FEAdd{}) e s = runVSAdd queueId vs e s
-runVS queueId vs@(FAValueStatement (FFunApplicationR loc)) e s = runLoc queueId loc s
+runVS queueId vs@(FAValueStatement (FFunApplicationR loc)) e s = runVSFunApplR queueId vs e s
 runVS queueId vs@FLitStrValueStatement{} e s = runVSStr queueId vs e s
 runVS queueId vs@FCValueStatement{} e s = runVSC queueId vs e s
 runVS queueId vs@FTValueStatement{} e s = runVST queueId vs e s
@@ -107,9 +106,15 @@ runVS queueId vs@(FNTValueStatement n (FTValueStatement ts)) e s = runVS queueId
 runVS queueId vs@FNTValueStatement{} e s = runVSFNTNotTuple queueId vs e s
 runVS _ vs _ _ = traceD vs undefined
 
+runVSFunApplR :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSFunApplR queueId (FAValueStatement (FFunApplicationR loc)) e s = do
+    let (_, innerEnv, t, vs) = stateLookup loc s
+    (s, vs) <- runVS queueId vs innerEnv s
+    let s2 = putInLoc loc (False, innerEnv, t, vs) s
+    return (s2, vs)
+
 runVSFNTNotTuple :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSFNTNotTuple queueId (FNTValueStatement n vs) e s = do
-    -- printD vs
     (s, FTValueStatement ts) <- runVS queueId vs e s
     return (s, takeNth n ts)
 
@@ -263,12 +268,6 @@ setPM :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
     (vss, newState) <- forceGetTupleVSS qId vs state env
     foldl (setPMInFoldF qId) (return (newState, env)) $ tList types pmL vss
-setPM qId t (FPatternMatchB x) vs@(FAValueStatement _) state__ env_ = do
-    let (loc, state_) = getNewLoc state__
-    let env = registerLoc False env_ x loc
-    (state_, vs) <- runVS qId vs env state_
-    let state = putInLoc loc (False, env, t, vs) state_
-    return (state, env)
 setPM qId t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
@@ -281,9 +280,11 @@ setPMLazy :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S
 setPMLazy qId (FTypeT types) (FPatternMatchT pmL) vs state env = undefined
 setPMLazy qId t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
-    let newEnv = registerLoc False env x loc
-    let newerState = putInLoc loc (False, newEnv, t, vs) newState
-    return (newerState, newEnv)
+    let (loc2, newState2) = getNewLoc newState
+    let newEnv = registerLoc False env x loc2
+    let newerState = putInLoc loc (False, newEnv, t, vs) newState2
+    let newerState2 = putInLoc loc2 (False, newEnv, t, FAValueStatement $ FFunApplicationR loc) newerState
+    return (newerState2, newEnv)
 
 setPMInFoldF :: Int -> IO (S, E) -> (FType, FPatternMatch, FValueStatement) -> IO (S, E)
 setPMInFoldF queueId acc (t, pm, vs) = do
@@ -362,8 +363,7 @@ forceRunFunApplication queueId a@(FFunApplicationR loc) state env = do
 forceRunFunApplication queueId a _ _ = traceD ("forceRunFunApplication " ++ show a) undefined
 
 runUntilSemReady :: Int -> Int -> S -> E -> IO (FValueStatement, S)
-runUntilSemReady queueId semId state env = do
-    printD $ "runUnitlSemReady " ++ show queueId
+runUntilSemReady queueId semId state env =
     if anyAvailibleQueue state
         then do
             let availibleQueue = getAvailibleQueue state
@@ -376,7 +376,6 @@ runUntilSemReady queueId semId state env = do
 
 tryYield :: Int -> S -> E -> IO (FValueStatement, S)
 tryYield queueId state env = do
-    printD $ "tryYield queueId = " ++ show queueId
     let newState = yieldQueue queueId state
     if anyAvailibleQueue newState
         then do
@@ -385,7 +384,6 @@ tryYield queueId state env = do
             let newestState = unyieldQueue queueId newerState
             return (FTValueStatement [], newestState)
         else do
-            printD "nothing to yield to"
             return (FTValueStatement [], state)
         
 oneStepEvaluation :: Int -> S -> E -> FValueStatement -> IO (S, E, FValueStatement)
@@ -427,7 +425,6 @@ oneStepRunLoc queueId x state = do
 
 registerArgs :: Int -> E -> E -> S -> [FPatternMatch] -> [FValueStatement] -> IO (E, S)
 registerArgs queueId innerEnv argEnv state argNames vss = do
-    -- printD "registerArgs" >> printD argNames >> printD vss
     (e, s) <- foldl (registerArgsInFoldF queueId argEnv) (return (innerEnv, state)) $ dList argNames vss
     return (e, s)
 
