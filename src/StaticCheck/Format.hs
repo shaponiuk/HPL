@@ -86,7 +86,7 @@ data FValueStatement =
   | FSuspendedValue Int
   | FSemaphore Int
   | FNTValueStatement Int FValueStatement
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord)
 
 data FFunApplication =
     FSFunApplication String FFunApplication
@@ -114,14 +114,17 @@ data FValueStatementExpr =
   | FEGQ FValueStatement FValueStatement
   | FEEQ FValueStatement FValueStatement
   | FENE FValueStatement FValueStatement
-  deriving (Eq,Ord, Show)
+  deriving (Eq,Ord)
 
--- instance Show FValueStatement where
-  -- show (FLitStrValueStatement str) = str
-  -- show (FIValueStatement i) = show i
-  -- show (FTValueStatement l) = showTupleList l
-  -- show (FCValueStatement constructorName args) = constructorName ++ " " ++ show args
-  -- show a = "???????? heeeerrreeeee ?????????"
+instance Show FValueStatement where
+  show (FLitStrValueStatement str) = str
+  show (FIValueStatement i) = show i
+  show (FTValueStatement l) = showTupleList l
+  show (FCValueStatement constructorName args) = constructorName ++ " " ++ showTupleList args
+  show (FExpr expr) = show expr
+
+instance Show FValueStatementExpr where
+  show (FEAdd vs1 vs2) = show vs1 ++ " + " ++ show vs2
 
 showTupleList [] = "()"
 showTupleList [x] = "(" ++ show x ++ ")"
