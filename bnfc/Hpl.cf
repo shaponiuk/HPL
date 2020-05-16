@@ -1,34 +1,24 @@
 -----Program------------------------------
 
-ProgramB. Program ::= [StructOrInterfaceOrType] ;
+ProgramB. Program ::= [FunctionOrRefOrType] ;
 
-StructOrInterfaceOrTypeS. StructOrInterfaceOrType ::= Struct ;
-StructOrInterfaceOrTypeT. StructOrInterfaceOrType ::= AlgType ;
+FunctionOrRefOrTypeF. FunctionOrRefOrType ::= FunctionDef ;
+FunctionOrRefOrTypeT. FunctionOrRefOrType ::= AlgType ;
+FunctionOrRefOrTypeR. FunctionOrRefOrType ::= RefDef ;
 
-separator StructOrInterfaceOrType "" ;
-
------Struct--------------------------------
-
-StructB. Struct ::= "struct" Ident "{" StructBody "}" ";" ;
-
-StructBodyB. StructBody ::= [StructField] ;
-
-StructFieldFunPr. StructField ::= "private" FunctionDef ;
-StructFieldFunPu. StructField ::= FunctionDef ;
-StructFieldRefPr. StructField ::= "private" RefDef ;
-StructFieldRefPu. StructField ::= RefDef ;
-
-separator StructField "" ;
+separator FunctionOrRefOrType "" ;
 
 -----Functions----------------------------
 
 FunctionDefB. FunctionDef ::= "fun" Type Ident "(" [FunctionArg] ")" "=" ValueStatement ";" ;
 
-SusFunctionDef. FunctionDef ::= "sus" FunctionDef ;
+SusFunctionDef. FunctionDef ::= "sus" "fun" Type Ident "(" [FunctionArg] ")" "=" ValueStatement ";" ;
 
 FunctionArgB. FunctionArg ::= PatternMatch ;
 
 separator FunctionArg "," ;
+
+separator FunctionDef "" ;
 
 -----Statements---------------------------
 
