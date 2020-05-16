@@ -25,25 +25,18 @@ checkSpecialFunctionName funName =
 isLambda (FFValueStatement _ _) = True
 isLambda _ = False
 
-runLambda :: Int -> FValueStatement -> [FValueStatement] -> E -> S -> IO (S, FValueStatement)
-runLambda queueId (FFValueStatement argName vs) (argVs:argVss) env state = do
-    printD "one"
-    printD vs
+runLambda :: Int -> FValueStatement -> [FValueStatement] -> E -> E -> S -> IO (S, FValueStatement)
+runLambda queueId (FFValueStatement argName vs) (argVs:argVss) innerEnv outerEnv state = do
     let (newLoc, newState) = getNewLoc state
-    let newEnv = registerLoc False env argName newLoc
-    let newerState = putInLoc newLoc (True, newEnv, FTypeT [], argVs) newState
-    printD newEnv
-    printD $ stateLookup 5 newerState
-    runLambda queueId vs argVss newEnv newerState
-runLambda queueId vs [] env state = do
-    printD "two"
-    printD vs
-    runVS queueId vs env state
-runLambda queueId vs args env state = do
-    printD "three"
-    (newState, nvs) <- runVS queueId vs env state
+    let ninnerEnv = registerLoc False innerEnv argName newLoc
+    let newerState = putInLoc newLoc (True, outerEnv, FTypeT [], argVs) newState
+    runLambda queueId vs argVss ninnerEnv outerEnv newerState
+runLambda queueId vs [] innerEnv outerEnv state = do
+    runVS queueId vs innerEnv state
+runLambda queueId vs args innerEnv outerEnv state = do
+    (newState, nvs) <- runVS queueId vs innerEnv state
     if isLambda nvs
-        then runLambda queueId nvs args env newState
+        then runLambda queueId nvs args innerEnv outerEnv newState
         else undefined -- infinite loop
 
 runLambdaWrapper :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, FValueStatement)
@@ -57,9 +50,7 @@ runLambdaWrapper queueId (loc:locs) vss outerEnv state = do
             let argVSs = take (length argPMs) vss
             let restVSs = takeLast (length vss - length argPMs) vss
             (innerEnv, newState) <- registerArgs queueId innerEnv outerEnv state argPMs argVSs
-            printD "hereeeeeee"
-            printD vs
-            runLambda queueId vs restVSs innerEnv newState
+            runLambda queueId vs restVSs innerEnv outerEnv newState
         else 
             runLambdaWrapper queueId locs vss outerEnv state
 
@@ -133,7 +124,7 @@ runVSMul queueId (FExpr (FEMul vs1 vs2)) env state = do
     return (newerState, FIValueStatement $ i1 * i2)
 
 runVSEQ :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
-runVSEQ queueId (FExpr (FEEQ vs1 vs2)) env state = do
+runVSEQ queueId vs@(FExpr (FEEQ vs1 vs2)) env state = do
     (newState, FIValueStatement i1) <- runVS queueId vs1 env state
     (newerState, FIValueStatement i2) <- runVS queueId vs2 env newState
     return (newerState, FIValueStatement $ if i1 == i2 then 1 else 0)
@@ -151,8 +142,6 @@ runVSForceLet queueId (FForceValueStatement assignments vs) env state = do
 
 runVSIf :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSIf queueId (FIfValueStatement condvs res1vs res2vs) env state = do
-    printD "runVSIf"
-    printD condvs
     (state, FIValueStatement condVal) <- runVS queueId condvs env state
     if condVal /= 0
         then runVS queueId res1vs env state
@@ -279,13 +268,9 @@ setPM qId (FTypeT types) (FPatternMatchT pmL) vs state env = do
     (vss, newState) <- forceGetTupleVSS qId vs state env
     foldl (setPMInFoldF qId) (return (newState, env)) $ tList types pmL vss
 setPM qId t (FPatternMatchB x) vs state env = do
-    printD "here"
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
-    printD "hereee"
-    printD vs
     (newerState, nvs) <- runVS qId vs newEnv newState
-    printD "hereeee"
     let newererState = putInLoc loc (False, newEnv, t, nvs) newerState
     return (newererState, newEnv)
 setPM _ _ _ _ _ _ = undefined

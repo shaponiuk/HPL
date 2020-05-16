@@ -6,10 +6,10 @@
     
     sus fun (Int ()) main () =
         force let
-            () :: x = { e -> sil (e ()) };
-            (Int () -> (Int () -> Int ())) :: y = { e -> sil (6) };
-            () :: z = x (3);
-            () :: zz = z();
+            (Int () -> Int ()) :: x = { e -> sil (e ()) };
+            (Int () -> Int ()) :: y = { e -> sil (6) };
+            Int () :: z = x (3);
+            Int () :: zz = z();
             () :: () = print (sil (4));
             () :: () = print (x (5));
             () :: () = print (y (1));

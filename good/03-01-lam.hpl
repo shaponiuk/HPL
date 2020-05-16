@@ -5,6 +5,7 @@ fun (Int () -> Int ()) sil () = { x ->
 sus fun (Int ()) main () =
     force let
         (Int () -> Int ()) :: x = sil ();
+        () :: () = print ("here");
         Int () :: y = sil (6);
         () :: () = print (sil (4));
         () :: () = print (x (5));
