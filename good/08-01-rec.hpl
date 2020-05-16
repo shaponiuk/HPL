@@ -4,9 +4,9 @@
             () :: () = print ("hehehehehe");
         in 0 then 1 else x () * sil (x () - 1);
 
-    sus fun (() -> Int ()) main () =
+    sus fun (Int ()) main () =
         force let
-            () :: x = sil (4);
+            Int () :: x = sil (4);
             () :: () = print (x ());
             () :: () = print (x ());
             () :: () = print (sil (4));

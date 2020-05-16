@@ -1,7 +1,7 @@
     fun (Int () -> Int ()) sil (4) = 4;
     fun (Int () -> Int ()) sil (3) = 3;
 
-    sus fun (() -> Int ()) main () =
+    sus fun (Int ()) main () =
         force let
             () :: () = print (sil (4));
             () :: () = print (sil (3));

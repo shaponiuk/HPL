@@ -3,7 +3,7 @@
     fun (Int () -> Int ()) not_main (val) =
         val () * 2 * another_two(2);
 
-    sus fun (() -> Int ()) main () =
+    sus fun (Int ()) main () =
         force let
             Int () :: x = not_main (2);
             () :: () = print (x ());
