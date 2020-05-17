@@ -44,13 +44,13 @@ convertFunction env s (NonSusFFunctionDef t name argNames vs) =
         locs = lookupLoc name env
         loc = getUnsetLoc s locs
         ns_ = putArgNames s loc argNames
-        ns = putInLoc loc (True, env, t, vs) ns_
+        ns = putInLoc loc (env, vs) ns_
 convertFunction env s (SusFFunctionDef (NonSusFFunctionDef t name argNames vs)) =
     ns where
         locs = lookupLoc name env
         loc = getUnsetLoc s locs
         ns_ = putArgNames s loc argNames
-        ns = putInLoc loc (True, env, t, FSusValueStatement vs) ns_
+        ns = putInLoc loc (env, FSusValueStatement vs) ns_
 
 convertRefs :: E -> S -> [FRefDef] -> S
 convertRefs env = Prelude.foldl $ convertRef env
@@ -63,5 +63,5 @@ convertRef env state (FRefDef t name vs) =
     ns where
         loc = lookupFirstLoc name env
         (newLoc, ns_) = getNewLoc state
-        ns__ = putInLoc loc (False, env, t, FRefAddr newLoc) ns_
-        ns = putInLoc newLoc (False, env, unrefType t, vs) ns__
+        ns__ = putInLoc loc (env, FRefAddr newLoc) ns_
+        ns = putInLoc newLoc (env, vs) ns__

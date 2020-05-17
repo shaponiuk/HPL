@@ -15,11 +15,11 @@ getNNewLocs s n = Prelude.foldl (\(l, s_) _ ->
     in (x:l, ns_)
   ) ([], s) [1..n]
 
-putInLoc :: Int -> (Bool, E, FType, FValueStatement) -> S -> S
+putInLoc :: Int -> (E, FValueStatement) -> S -> S
 putInLoc loc thing (S varsMap newIntLoc funArgs semaphores queues) =
   S (insert loc thing varsMap) newIntLoc funArgs semaphores queues
 
-stateLookup :: Int -> S -> (Bool, E, FType, FValueStatement)
+stateLookup :: Int -> S -> (E, FValueStatement)
 stateLookup loc (S varsMap _ _ _ _) = 
   if member loc varsMap
     then varsMap ! loc
@@ -50,14 +50,14 @@ anyAvailibleQueue :: S -> Bool
 anyAvailibleQueue (S _ _ _ semaphores queues) = any (`notBlockedByAnyOfTheSemaphores` semaphores) queues
 
 notBlockedByAnyOfTheSemaphores :: QueueT -> [SemaphoreT] -> Bool
-notBlockedByAnyOfTheSemaphores (QueueT _ _ _ f y _ _) [] = not $ f || y
+notBlockedByAnyOfTheSemaphores (QueueT _ _ _ f y) [] = not $ f || y
 notBlockedByAnyOfTheSemaphores q semaphores = any (q `notBlockedBySemaphoreOrNotFinishedOrNotYielding`) semaphores
 
 checkNotBlocked :: QueueT -> S -> Bool
 checkNotBlocked queue (S _ _ _ semaphores _) = notBlockedByAnyOfTheSemaphores queue semaphores
 
 notBlockedBySemaphoreOrNotFinishedOrNotYielding :: QueueT -> SemaphoreT -> Bool
-notBlockedBySemaphoreOrNotFinishedOrNotYielding (QueueT _ _ queueId b y _ _) (SemaphoreT blockedQueues _ _) = queueId `notElem` blockedQueues && not b && not y
+notBlockedBySemaphoreOrNotFinishedOrNotYielding (QueueT _ _ queueId b y) (SemaphoreT blockedQueues _ _) = queueId `notElem` blockedQueues && not b && not y
 
 getAvailibleQueue :: S -> QueueT
 getAvailibleQueue (S _ _ _ semaphores queues) = first (`notBlockedByAnyOfTheSemaphores` semaphores) queues
@@ -70,13 +70,13 @@ putInQueue queueId q (S varsMap newIntLoc functionArgsMap semaphores queues) =
 
 updateQueues :: Int -> QueueT -> [QueueT] -> [QueueT]
 updateQueues qId q [] = undefined
-updateQueues qId q (QueueT e vs qId_ b y pq gq : queues) = 
+updateQueues qId q (QueueT e vs qId_ b y : queues) = 
   if qId == qId_ 
     then q:queues 
-    else QueueT e vs qId_ b y pq gq : updateQueues qId q queues
+    else QueueT e vs qId_ b y : updateQueues qId q queues
 
 getQueue :: Int -> S -> QueueT
-getQueue qId state = first (\(QueueT _ _ id _ _ _ _) -> id == qId) $ queues state
+getQueue qId state = first (\(QueueT _ _ id _ _) -> id == qId) $ queues state
 
 getNewSemaphore :: S -> (SemaphoreT, S)
 getNewSemaphore (S varsMap newIntLoc functionArgsMap semaphores queues) =
@@ -103,14 +103,14 @@ updateSemaphores semId s (SemaphoreT blockedQueues semValue semId_ : semaphores)
 yieldQueue :: Int -> S -> S
 yieldQueue queueId state =
   let
-    (QueueT e vs _ b _ pq gq) = getQueue queueId state
-  in putInQueue queueId (QueueT e vs queueId b True pq gq) state
+    (QueueT e vs _ b _) = getQueue queueId state
+  in putInQueue queueId (QueueT e vs queueId b True) state
 
 unyieldQueue :: Int -> S -> S
 unyieldQueue queueId state =
   let
-    (QueueT e vs _ b _ pq gq) = getQueue queueId state
-  in putInQueue queueId (QueueT e vs queueId b False pq gq) state
+    (QueueT e vs _ b _) = getQueue queueId state
+  in putInQueue queueId (QueueT e vs queueId b False) state
 
 getNewState :: S
 getNewState = S empty 0 empty [] []

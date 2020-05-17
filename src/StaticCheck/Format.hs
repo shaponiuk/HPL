@@ -8,9 +8,7 @@ data QueueT = QueueT {
   valueStatement :: FValueStatement, 
   queueId :: Int, 
   finished :: Bool, 
-  yielding :: Bool,
-  printQ :: [String],
-  getLineQ :: [String]
+  yielding :: Bool
 } deriving (Show)
 
 data SemaphoreT = SemaphoreT {
@@ -21,7 +19,7 @@ data SemaphoreT = SemaphoreT {
 
   -- if function (bool in vars)
 data S = S {
-  vars :: Map Int (Bool, E, FType, FValueStatement),
+  vars :: Map Int (E, FValueStatement),
   newInt :: Int,
   functionArgs :: Map Int [FPatternMatch],
   semaphores :: [SemaphoreT],
