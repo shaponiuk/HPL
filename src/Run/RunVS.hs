@@ -7,10 +7,10 @@ import Util.State
 import Control.Monad
 
 runQueue :: QueueT -> S -> IO S
-runQueue (QueueT env vs queueId _ _ _ _) state = do
+runQueue (QueueT env vs queueId _ _) state = do
     printD $ "running queue with id " ++ show queueId
     (ns, nvs) <- runVS queueId vs env state
-    return $ putInQueue queueId (QueueT env nvs queueId True False [] []) ns
+    return $ putInQueue queueId (QueueT env nvs queueId True False) ns
 
 runSpecialFunction :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runSpecialFunction queueId (FAValueStatement ap@(FFunApplicationB x r)) e s = do
@@ -29,7 +29,7 @@ runLambda :: Int -> FValueStatement -> [FValueStatement] -> E -> E -> S -> IO (S
 runLambda queueId (FFValueStatement argName vs) (argVs:argVss) innerEnv outerEnv state = do
     let (newLoc, newState) = getNewLoc state
     let ninnerEnv = registerLoc False innerEnv argName newLoc
-    let newerState = putInLoc newLoc (True, outerEnv, FTypeT [], argVs) newState
+    let newerState = putInLoc newLoc (outerEnv, argVs) newState
     runLambda queueId vs argVss ninnerEnv outerEnv newerState
 runLambda queueId vs [] innerEnv outerEnv state = do
     runVS queueId vs innerEnv state
@@ -46,7 +46,7 @@ runLambdaWrapper queueId (loc:locs) vss outerEnv state = do
     (fits, state, vss) <- fitPatternMatchs queueId state outerEnv argPMs vss
     if fits
         then do
-            let (_, innerEnv, _, vs) = stateLookup loc state
+            let (innerEnv, vs) = stateLookup loc state
             let argVSs = take (length argPMs) vss
             let restVSs = takeLast (length vss - length argPMs) vss
             (innerEnv, newState) <- registerArgs queueId innerEnv outerEnv state argPMs argVSs
@@ -59,7 +59,7 @@ runNotSpecialFunction queueId a@(FAValueStatement (FFunApplicationB funName funA
     let firstLoc = lookupFirstLoc funName outerEnv
     let locs = lookupLoc funName outerEnv
     let funArgNames = funArgNamesLookup state firstLoc
-    let (ifFunction, innerEnv, _, vs) = stateLookup firstLoc state
+    let (innerEnv, vs) = stateLookup firstLoc state
     if isLambda vs 
         then
             runLambdaWrapper queueId locs funArgVss outerEnv state
@@ -107,9 +107,9 @@ runVS _ vs _ _ = traceD vs undefined
 
 runVSFunApplR :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSFunApplR queueId (FAValueStatement (FFunApplicationR loc)) e s = do
-    let (_, innerEnv, t, vs) = stateLookup loc s
+    let (innerEnv, vs) = stateLookup loc s
     (s, vs) <- runVS queueId vs innerEnv s
-    let s2 = putInLoc loc (False, innerEnv, t, vs) s
+    let s2 = putInLoc loc (innerEnv, vs) s
     return (s2, vs)
 
 runVSFNTNotTuple :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
@@ -163,7 +163,7 @@ runVSAdd queueId vs@(FExpr (FEAdd vs1 vs2)) env state = do
     
 runLoc :: Int -> Int -> S -> IO (S, FValueStatement)
 runLoc queueId x state = do
-    let (_, innerEnv, _, vs) = stateLookup x state
+    let (innerEnv, vs) = stateLookup x state
     runVS queueId vs innerEnv state
 
 runVSStr :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
@@ -199,14 +199,14 @@ runVSSusSt :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSSusSt queueId (FSusValueStatement vs) e s = do
     let queueId = getFreeQueueId s
     let nvs = FSuspendedValue queueId
-    let ns = putQueue s (QueueT e vs queueId False False [] [])
+    let ns = putQueue s (QueueT e vs queueId False False)
     return (ns, nvs)
 
 runVSSusVal :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSSusVal queueId (FSuspendedValue qId) e s = do
-    let (QueueT env qvs _ b y gq pq) = getQueue qId s
+    let (QueueT env qvs _ b y) = getQueue qId s
     (ns, nvs) <- runVS qId qvs env s
-    let nns = putInQueue qId (QueueT env qvs qId True False gq pq) ns
+    let nns = putInQueue qId (QueueT env qvs qId True False) ns
     return (nns, nvs)
 
 runVSLazyLet :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
@@ -223,7 +223,7 @@ runVSInFoldF env acc vs = do
 makeRemoteArg :: E -> S -> FValueStatement -> IO (S, FValueStatement)
 makeRemoteArg e s vs = do
     let (newLoc, newState) = getNewLoc s
-    let newerState = putInLoc newLoc (False, e, FTypeT [], vs) newState
+    let newerState = putInLoc newLoc (e, vs) newState
     return (newerState, FAValueStatement $ FFunApplicationR newLoc)
 
 forceRegisterAssignments :: Int -> [FAssignment] -> S -> E -> IO (S, E)
@@ -250,9 +250,9 @@ forceRegisterAssignment queueId a@(FAssignmentB typ@(FTypeB "Ref" [t]) (FPattern
     let (vsLoc, newerState) = getNewLoc newState
     let refVS = FRefAddr vsLoc
     let newEnv = registerLoc False env name refLoc
-    let newererState = putInLoc refLoc (False, newEnv, typ, refVS) newerState
+    let newererState = putInLoc refLoc (newEnv, refVS) newerState
     (newerererState, nvs) <- runVS queueId vs newEnv newererState
-    let newererererState = putInLoc vsLoc (False, newEnv, t, nvs) newerererState
+    let newererererState = putInLoc vsLoc (newEnv, nvs) newerererState
     return (newererererState, newEnv)
 forceRegisterAssignment queueId a@(FAssignmentB t pm vs) state env =
     setPM queueId t pm vs state env
@@ -271,7 +271,7 @@ setPM qId t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
     (newerState, nvs) <- runVS qId vs newEnv newState
-    let newererState = putInLoc loc (False, newEnv, t, nvs) newerState
+    let newererState = putInLoc loc (newEnv, nvs) newerState
     return (newererState, newEnv)
 setPM _ _ _ _ _ _ = undefined
 
@@ -281,7 +281,7 @@ setPMLazy qId t (FPatternMatchB x) vs state env = do
     let (loc, newState) = getNewLoc state
     let (loc2, newState2) = getNewLoc newState
     let newEnv = registerLoc False env x loc2
-    let newerState = putInLoc loc (False, newEnv, t, vs) newState2
+    let newerState = putInLoc loc (newEnv, vs) newState2
     let newerState2 = putInLoc loc2 (newEnv, FAValueStatement $ FFunApplicationR loc) newerState
     return (newerState2, newEnv)
 

@@ -9,7 +9,7 @@ import Run.RunVS
 run :: NProgramFormat -> IO ()
 run (NSIT env state) = do
     let mainloc = lookupFirstLoc "main" env
-    let (_, nenv, t, vs) = stateLookup mainloc state
+    let (nenv, vs) = stateLookup mainloc state
     (state, _) <- runVS 0 vs nenv state
     runLoopSingle state
 
