@@ -30,7 +30,7 @@ makeEnvForRefs :: [FRefDef] -> E -> S -> (E, S)
 makeEnvForRefs l env s = Prelude.foldl makeEnvForRef (env, s) l
 
 makeEnvForRef :: (E, S) -> FRefDef -> (E, S)
-makeEnvForRef (e, s) (FRefDef _ name _) =
+makeEnvForRef (e, s) (FRefDef _ _ name _) =
     (ne, ns) where
         (loc, ns) = getNewLoc s
         ne = registerLoc False e name loc
@@ -59,7 +59,7 @@ unrefType :: FType -> FType
 unrefType (FTypeB "Ref" [t]) = t
 
 convertRef :: E -> S -> FRefDef -> S
-convertRef env state (FRefDef t name vs) =
+convertRef env state (FRefDef _ t name vs) =
     ns where
         loc = lookupFirstLoc name env
         (newLoc, ns_) = getNewLoc state

@@ -6,66 +6,66 @@ import Util.State
 import Data.Char
 import Debug.Trace
 
-initialConvertToProgramFormat :: Program -> ProgramFormat
+initialConvertToProgramFormat :: Program (Maybe (Int, Int)) -> ProgramFormat
 initialConvertToProgramFormat p = 
     SITList 
         (gatherAndConvertFunctionDefs p)
         (gatherAndConvertRefDefs p)
         (gatherAndConvertAlgTypes p)
 
-gatherAndConvertFunctionDefs :: Program -> [FFunctionDef]
+gatherAndConvertFunctionDefs :: Program (Maybe (Int, Int)) -> [FFunctionDef]
 gatherAndConvertFunctionDefs p = map convertFunctionDef $ gatherFunctionDefs p
 
-gatherFunctionDefs :: Program -> [FunctionDef]
+gatherFunctionDefs :: Program (Maybe (Int, Int)) -> [FunctionDef (Maybe (Int, Int))]
 gatherFunctionDefs (ProgramB l) = map sitToFunDef $ filter checkFunctionDef l
 
-gatherAndConvertRefDefs :: Program -> [FRefDef]
+gatherAndConvertRefDefs :: Program (Maybe (Int, Int)) -> [FRefDef]
 gatherAndConvertRefDefs p = map convertRefDef $ gatherRefDefs p
 
-gatherRefDefs :: Program -> [RefDef]
+gatherRefDefs :: Program (Maybe (Int, Int)) -> [RefDef (Maybe (Int, Int))]
 gatherRefDefs (ProgramB l) = map sitToRef $ filter checkRefDef l
 
-gatherAndConvertAlgTypes :: Program -> [FAlgType]
+gatherAndConvertAlgTypes :: Program (Maybe (Int, Int)) -> [FAlgType]
 gatherAndConvertAlgTypes p = map convertAlgType $ gatherAlgTypes p
 
-gatherAlgTypes :: Program -> [AlgType]
+gatherAlgTypes :: Program (Maybe (Int, Int)) -> [AlgType (Maybe (Int, Int))]
 gatherAlgTypes (ProgramB l) = map sitToAlgType $ filter checkAlgType l
 
-sitToAlgType :: FunctionOrRefOrType -> AlgType
+sitToAlgType :: FunctionOrRefOrType (Maybe (Int, Int)) -> AlgType (Maybe (Int, Int))
 sitToAlgType (FunctionOrRefOrTypeT t) = t
 
-sitToRef :: FunctionOrRefOrType -> RefDef
+sitToRef :: FunctionOrRefOrType (Maybe (Int, Int)) -> RefDef (Maybe (Int, Int))
 sitToRef (FunctionOrRefOrTypeR r) = r
 
-sitToFunDef :: FunctionOrRefOrType -> FunctionDef
+sitToFunDef :: FunctionOrRefOrType (Maybe (Int, Int)) -> FunctionDef (Maybe (Int, Int))
 sitToFunDef (FunctionOrRefOrTypeF f) = f
 
-checkFunctionDef :: FunctionOrRefOrType -> Bool
+checkFunctionDef :: FunctionOrRefOrType (Maybe (Int, Int)) -> Bool
 checkFunctionDef (FunctionOrRefOrTypeF _) = True
 checkFunctionDef _ = False
 
-checkRefDef :: FunctionOrRefOrType -> Bool
+checkRefDef :: FunctionOrRefOrType (Maybe (Int, Int)) -> Bool
 checkRefDef (FunctionOrRefOrTypeR _) = True
 checkRefDef _ = False
 
-checkAlgType :: FunctionOrRefOrType -> Bool
+checkAlgType :: FunctionOrRefOrType (Maybe (Int, Int)) -> Bool
 checkAlgType (FunctionOrRefOrTypeT _) = True
 checkAlgType _ = False
 
-convertAlgType :: AlgType -> FAlgType
+convertAlgType :: AlgType (Maybe (Int, Int)) -> FAlgType
 convertAlgType (AlgTypeB i taList atvList) = 
   FAlgType (unwrapIdent i) (convertTypeArgList taList) (convertAlgTypeValList atvList)
 
-convertTypeArg :: TypeArg -> String
+convertTypeArg :: TypeArg (Maybe (Int, Int)) -> String
 convertTypeArg (TypeArgB i) = unwrapIdent i
 
-convertTypeArgList :: [TypeArg] -> [String]
+convertTypeArgList :: [TypeArg (Maybe (Int, Int))] -> [String]
 convertTypeArgList = map convertTypeArg
 
-convertAlgTypeVal :: AlgTypeVal -> FAlgTypeVal
+convertAlgTypeVal :: AlgTypeVal (Maybe (Int, Int)) -> FAlgTypeVal
 convertAlgTypeVal (AlgTypeValB i t) = FAlgTypeVal (unwrapIdent i) (convertType t)
 
-convertAlgTypeValList :: [AlgTypeVal] -> [FAlgTypeVal]
+convertAlgTypeValList :: [AlgTypeVal (Maybe (Int, Int))] -> [FAlgTypeVal]
 convertAlgTypeValList = map convertAlgTypeVal
 
 unwrapIdent :: Ident -> String
@@ -74,25 +74,25 @@ unwrapIdent (Ident str) = str
 convertIdentList :: [Ident] -> [String]
 convertIdentList = map unwrapIdent
 
-convertFunctionDef :: FunctionDef -> FFunctionDef
+convertFunctionDef :: FunctionDef (Maybe (Int, Int)) -> FFunctionDef
 convertFunctionDef (FunctionDefB t ident argList vs) = 
   NonSusFFunctionDef (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
 convertFunctionDef (SusFunctionDef t ident argList vs) = 
   SusFFunctionDef $ NonSusFFunctionDef (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
 
-convertType :: Type -> FType
+convertType :: Type (Maybe (Int, Int)) -> FType
 convertType (TypeB i tl) = FTypeB (unwrapIdent i) (convertTypeList tl)
 convertType (FunType argType resType) = FunFType (convertType argType) (convertType resType)
 convertType (TType [t]) = convertType t
 convertType (TType tl) = FTypeT $ convertTypeList tl
 
-convertTypeList :: [Type] -> [FType]
+convertTypeList :: [Type (Maybe (Int, Int))] -> [FType]
 convertTypeList = map convertType
 
-convertFunctionArg :: FunctionArg -> FPatternMatch
+convertFunctionArg :: FunctionArg (Maybe (Int, Int)) -> FPatternMatch
 convertFunctionArg (FunctionArgB pm) = convertPatternMatch pm
 
-convertPatternMatch :: PatternMatch -> FPatternMatch
+convertPatternMatch :: PatternMatch (Maybe (Int, Int)) -> FPatternMatch
 convertPatternMatch (PatternMatchI i) = FPatternMatchI $ fromIntegral i
 convertPatternMatch (PatternMatchB i) = FPatternMatchB $ unwrapIdent i
 convertPatternMatch (TPatternMatch [pm]) = convertPatternMatch pm
@@ -101,52 +101,52 @@ convertPatternMatch (TPatternMatch l) =
 convertPatternMatch (CPatternMatch pm l) = 
   FPatternMatchC (convertPatternMatch pm) (convertPatternMatchList l)
 
-convertPatternMatchList :: [PatternMatch] -> [FPatternMatch]
-convertPatternMatchList [TPatternMatch []] = []
+convertPatternMatchList :: [PatternMatch (Maybe (Int, Int))] -> [FPatternMatch]
+convertPatternMatchList [TPatternMatch _ []] = []
 convertPatternMatchList l = map convertPatternMatch l
 
-convertArgList :: [FunctionArg] -> [FPatternMatch]
+convertArgList :: [FunctionArg (Maybe (Int, Int))] -> [FPatternMatch]
 convertArgList = map convertFunctionArg
 
-convertValueStatement :: ValueStatement -> FValueStatement
-convertValueStatement (ValueStatementB assignments vs) = 
-  FValueStatementB (convertAssignmentList assignments) (convertValueStatement vs)
-convertValueStatement (ForceValueStatement assignements vs) =
-  FForceValueStatement (convertAssignmentList assignements) (convertValueStatement vs)
-convertValueStatement (IfValueStatement condvs ifvs elsevs) =
-  FIfValueStatement (convertValueStatement condvs) (convertValueStatement ifvs) (convertValueStatement elsevs)
-convertValueStatement (LValueStatement (ListValueStatementB l)) = 
-  FLValueStatement $ convertValueStatementList l
-convertValueStatement (TValueStatement (TupleValueStatementB [t])) =
+convertValueStatement :: ValueStatement (Maybe (Int, Int)) -> FValueStatement
+convertValueStatement (ValueStatementB pos assignments vs) = 
+  FValueStatementB pos (convertAssignmentList assignments) (convertValueStatement vs)
+convertValueStatement (ForceValueStatement pos assignements vs) =
+  FForceValueStatement pos (convertAssignmentList assignements) (convertValueStatement vs)
+convertValueStatement (IfValueStatement pos condvs ifvs elsevs) =
+  FIfValueStatement pos (convertValueStatement condvs) (convertValueStatement ifvs) (convertValueStatement elsevs)
+convertValueStatement (LValueStatement pos (ListValueStatementB _ l)) = 
+  FLValueStatement pos $ convertValueStatementList l
+convertValueStatement (TValueStatement _ (TupleValueStatementB _ [t])) =
   convertValueStatement t
-convertValueStatement (TValueStatement (TupleValueStatementB l)) = 
-  FTValueStatement $ convertValueStatementList l
-convertValueStatement (AValueStatement funAppl) = 
+convertValueStatement (TValueStatement pos (TupleValueStatementB _ l)) = 
+  FTValueStatement pos $ convertValueStatementList l
+convertValueStatement (AValueStatement pos funAppl) = 
   if checkFunAppl funAppl
-    then FAValueStatement $ convertFunctionAppl funAppl
+    then FAValueStatement pos $ convertFunctionAppl funAppl
     else 
       let
-        (name, vss) = convertFunctionApplToTypeConstructor funAppl
-      in FCValueStatement name vss
-convertValueStatement (IValueStatement i) = FIValueStatement $ fromIntegral i
-convertValueStatement (LitStrValueStatement str) = FLitStrValueStatement str
-convertValueStatement (FValueStatement ident vs) = 
-  FFValueStatement (unwrapIdent ident) (convertValueStatement vs)
-convertValueStatement (Expr vs e) = exprFromLists (makeExprLists vs e)
+        (pos, name, vss) = convertFunctionApplToTypeConstructor funAppl
+      in FCValueStatement pos name vss
+convertValueStatement (IValueStatement pos i) = FIValueStatement pos $ fromIntegral i
+convertValueStatement (LitStrValueStatement pos str) = FLitStrValueStatement pos str
+convertValueStatement (FValueStatement pos ident vs) = 
+  FFValueStatement pos (unwrapIdent ident) (convertValueStatement vs)
+convertValueStatement (Expr pos vs e) = exprFromLists pos (makeExprLists vs e)
 
-checkFunAppl :: FunApplication -> Bool
-checkFunAppl (FunApplicationB name _) = isLower $ head $ unwrapIdent name
+checkFunAppl :: FunApplication (Maybe (Int, Int)) -> Bool
+checkFunAppl (FunApplicationB _ name _) = isLower $ head $ unwrapIdent name
 
-convertFunctionApplToTypeConstructor :: FunApplication -> (String, [FValueStatement])
-convertFunctionApplToTypeConstructor (FunApplicationB name functionArgAppls) = 
-  (unwrapIdent name, map convertFunctionArgApplToTypeConstructor functionArgAppls)
+convertFunctionApplToTypeConstructor :: FunApplication (Maybe (Int, Int)) -> ((Maybe (Int, Int)), String, [FValueStatement])
+convertFunctionApplToTypeConstructor (FunApplicationB pos name functionArgAppls) = 
+  (pos, unwrapIdent name, map convertFunctionArgApplToTypeConstructor functionArgAppls)
 convertFunctionApplToTypeConstructor a = trace (show a) undefined
 
-convertFunctionArgApplToTypeConstructor :: FunctionArgAppl -> FValueStatement
-convertFunctionArgApplToTypeConstructor (FunctionArgApplB vs) = convertValueStatement vs
+convertFunctionArgApplToTypeConstructor :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
+convertFunctionArgApplToTypeConstructor (FunctionArgApplB _ vs) = convertValueStatement vs
 
-exprFromLists :: ([String], [ValueStatement]) -> FValueStatement
-exprFromLists (strs, vss) = let
+exprFromLists :: (Maybe (Int, Int)) -> ([String], [ValueStatement (Maybe (Int, Int))]) -> FValueStatement
+exprFromLists pos (strs, vss) = let
     fvss = convertValueStatementList vss
   in mergeCmpVss $ mergeAddSubVss $ mergeMulDivModVss (strs, fvss)
 
@@ -156,12 +156,15 @@ mergeMulDivModVss x = let
   in if x == xaux then x else mergeMulDivModVss xaux
 
 mergeMulDivModVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
-mergeMulDivModVssAux ("*":strs, x:x2:xs) = (nstrs, (FExpr $ FEMul x x2):nxs) where
+mergeMulDivModVssAux ("*":strs, x:x2:xs) = (nstrs, FExpr pos (FEMul x x2):nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
-mergeMulDivModVssAux ("/":strs, x:x2:xs) = (nstrs, (FExpr $ FEDiv x x2):nxs) where
+  pos = getVSLoc x
+mergeMulDivModVssAux ("/":strs, x:x2:xs) = (nstrs, FExpr pos (FEDiv x x2):nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
-mergeMulDivModVssAux ("%":strs, x:x2:xs) = (nstrs, (FExpr $ FEMod x x2):nxs) where
+  pos = getVSLoc x
+mergeMulDivModVssAux ("%":strs, x:x2:xs) = (nstrs, FExpr pos (FEMod x x2):nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
+  pos = getVSLoc x
 mergeMulDivModVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
   (nstrs, nxs) = mergeMulDivModVssAux (strs, xs)
 mergeMulDivModVssAux x = x
@@ -172,76 +175,81 @@ mergeAddSubVss x = let
   in if x == xaux then x else mergeAddSubVss xaux
 
 mergeAddSubVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
-mergeAddSubVssAux ("+":strs, x:x2:xs) = (nstrs, (FExpr $ FEAdd x x2):nxs) where
+mergeAddSubVssAux ("+":strs, x:x2:xs) = (nstrs, (FExpr pos $ FEAdd x x2):nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
-mergeAddSubVssAux ("-":strs, x:x2:xs) = (nstrs, (FExpr $ FESub x x2):nxs) where
+  pos = getVSLoc x
+mergeAddSubVssAux ("-":strs, x:x2:xs) = (nstrs, (FExpr pos $ FESub x x2):nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
+  pos = getVSLoc x
 mergeAddSubVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
 mergeAddSubVssAux x = x
 
 mergeCmpVss :: ([String], [FValueStatement]) -> FValueStatement
 mergeCmpVss ([], [x]) = x
-mergeCmpVss ("<":strs, x:xs) = FExpr $ FEL x $ mergeCmpVss (strs, xs)
-mergeCmpVss ("<=":strs, x:xs) = FExpr $ FELQ x $ mergeCmpVss (strs, xs)
-mergeCmpVss (">":strs, x:xs) = FExpr $ FEG x $ mergeCmpVss (strs, xs)
-mergeCmpVss (">=":strs, x:xs) = FExpr $ FEGQ x $ mergeCmpVss (strs, xs)
-mergeCmpVss ("==":strs, x:xs) = FExpr $ FEEQ x $ mergeCmpVss (strs, xs)
-mergeCmpVss ("!=":strs, x:xs) = FExpr $ FENE x $ mergeCmpVss (strs, xs)
+mergeCmpVss ("<":strs, x:xs) = FExpr pos $ FEL x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
+mergeCmpVss ("<=":strs, x:xs) = FExpr pos $ FELQ x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
+mergeCmpVss (">":strs, x:xs) = FExpr pos $ FEG x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
+mergeCmpVss (">=":strs, x:xs) = FExpr pos $ FEGQ x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
+mergeCmpVss ("==":strs, x:xs) = FExpr pos $ FEEQ x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
+mergeCmpVss ("!=":strs, x:xs) = FExpr pos $ FENE x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
 
-makeExprLists :: ValueStatement -> ValueStatementExpr -> ([String], [ValueStatement])
+getVSLoc :: FValueStatement -> (Maybe (Int, Int))
+getVSLoc = undefined
+
+makeExprLists :: ValueStatement (Maybe (Int, Int)) -> ValueStatementExpr (Maybe (Int, Int)) -> ([String], [ValueStatement (Maybe (Int, Int))])
 makeExprLists vs1 vs2 = (signs, vs1:vss) where
   (signs, vss) = makeExprListsAux vs2
 
 insertPairToList :: (a, b) -> ([a], [b]) -> ([a], [b])
 insertPairToList (a, b) (as, bs) = (a:as, b:bs)
 
-makeExprListsAux :: ValueStatementExpr -> ([String], [ValueStatement])
-makeExprListsAux (EAdd (Expr vs1 e)) = insertPairToList ("+", vs1) (makeExprListsAux e)
-makeExprListsAux (ESub (Expr vs1 e)) = insertPairToList ("-", vs1) (makeExprListsAux e)
-makeExprListsAux (EMod (Expr vs1 e)) = insertPairToList ("%", vs1) (makeExprListsAux e)
-makeExprListsAux (EMul (Expr vs1 e)) = insertPairToList ("*", vs1) (makeExprListsAux e)
-makeExprListsAux (EDiv (Expr vs1 e)) = insertPairToList ("/", vs1) (makeExprListsAux e)
-makeExprListsAux (EL (Expr vs1 e)) = insertPairToList ("<", vs1) (makeExprListsAux e)
-makeExprListsAux (ELQ (Expr vs1 e)) = insertPairToList ("<=", vs1) (makeExprListsAux e)
-makeExprListsAux (EG (Expr vs1 e)) = insertPairToList (">", vs1) (makeExprListsAux e)
-makeExprListsAux (EGQ (Expr vs1 e)) = insertPairToList (">=", vs1) (makeExprListsAux e)
-makeExprListsAux (EEQ (Expr vs1 e)) = insertPairToList ("==", vs1) (makeExprListsAux e)
-makeExprListsAux (ENE (Expr vs1 e)) = insertPairToList ("!=", vs1) (makeExprListsAux e)
-makeExprListsAux (EAdd vs) = (["+"], [vs])
-makeExprListsAux (ESub vs) = (["-"], [vs])
-makeExprListsAux (EMod vs) = (["%"], [vs])
-makeExprListsAux (EMul vs) = (["*"], [vs])
-makeExprListsAux (EDiv vs) = (["/"], [vs])
-makeExprListsAux (EL vs) = (["<"], [vs])
-makeExprListsAux (ELQ vs) = (["<="], [vs])
-makeExprListsAux (EG vs) = ([">"], [vs])
-makeExprListsAux (EGQ vs) = ([">="], [vs])
-makeExprListsAux (EEQ vs) = (["=="], [vs])
-makeExprListsAux (ENE vs) = (["!="], [vs])
+makeExprListsAux :: ValueStatementExpr (Maybe (Int, Int)) -> ([String], [ValueStatement (Maybe (Int, Int))])
+makeExprListsAux (EAdd _ (Expr _ vs1 e)) = insertPairToList ("+", vs1) (makeExprListsAux e)
+makeExprListsAux (ESub _ (Expr _ vs1 e)) = insertPairToList ("-", vs1) (makeExprListsAux e)
+makeExprListsAux (EMod _ (Expr _ vs1 e)) = insertPairToList ("%", vs1) (makeExprListsAux e)
+makeExprListsAux (EMul _ (Expr _ vs1 e)) = insertPairToList ("*", vs1) (makeExprListsAux e)
+makeExprListsAux (EDiv _ (Expr _ vs1 e)) = insertPairToList ("/", vs1) (makeExprListsAux e)
+makeExprListsAux (EL _ (Expr _ vs1 e)) = insertPairToList ("<", vs1) (makeExprListsAux e)
+makeExprListsAux (ELQ _ (Expr _ vs1 e)) = insertPairToList ("<=", vs1) (makeExprListsAux e)
+makeExprListsAux (EG _ (Expr _ vs1 e)) = insertPairToList (">", vs1) (makeExprListsAux e)
+makeExprListsAux (EGQ _ (Expr _ vs1 e)) = insertPairToList (">=", vs1) (makeExprListsAux e)
+makeExprListsAux (EEQ _ (Expr _ vs1 e)) = insertPairToList ("==", vs1) (makeExprListsAux e)
+makeExprListsAux (ENE _ (Expr _ vs1 e)) = insertPairToList ("!=", vs1) (makeExprListsAux e)
+makeExprListsAux (EAdd _ vs) = (["+"], [vs])
+makeExprListsAux (ESub _ vs) = (["-"], [vs])
+makeExprListsAux (EMod _ vs) = (["%"], [vs])
+makeExprListsAux (EMul _ vs) = (["*"], [vs])
+makeExprListsAux (EDiv _ vs) = (["/"], [vs])
+makeExprListsAux (EL _ vs) = (["<"], [vs])
+makeExprListsAux (ELQ _ vs) = (["<="], [vs])
+makeExprListsAux (EG _ vs) = ([">"], [vs])
+makeExprListsAux (EGQ _ vs) = ([">="], [vs])
+makeExprListsAux (EEQ _ vs) = (["=="], [vs])
+makeExprListsAux (ENE _ vs) = (["!="], [vs])
 
-convertFunctionAppl :: FunApplication -> FFunApplication
-convertFunctionAppl (FunApplicationB i fArgApplList) = FFunApplicationB (unwrapIdent i) (convertFunctionArgApplList fArgApplList)
-convertFucntionAppl (SFunApplication i fAppl) = FSFunApplication (unwrapIdent i) (convertFunctionAppl fAppl)
+convertFunctionAppl :: FunApplication (Maybe (Int, Int)) -> FFunApplication
+convertFunctionAppl (FunApplicationB pos i fArgApplList) = FFunApplicationB pos (unwrapIdent i) (convertFunctionArgApplList fArgApplList)
+convertFucntionAppl (SFunApplication pos i fAppl) = FSFunApplication pos (unwrapIdent i) (convertFunctionAppl fAppl)
 
-convertFunctionArgAppl :: FunctionArgAppl -> FValueStatement
-convertFunctionArgAppl (FunctionArgApplB vs) = convertValueStatement vs
+convertFunctionArgAppl :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
+convertFunctionArgAppl (FunctionArgApplB _ vs) = convertValueStatement vs
 
-convertFunctionArgApplList :: [FunctionArgAppl] -> [FValueStatement]
+convertFunctionArgApplList :: [FunctionArgAppl (Maybe (Int, Int))] -> [FValueStatement]
 convertFunctionArgApplList = map convertFunctionArgAppl
  
-convertFunctionArgList :: [FunctionArg] -> [FPatternMatch]
+convertFunctionArgList :: [FunctionArg (Maybe (Int, Int))] -> [FPatternMatch]
 convertFunctionArgList = map convertFunctionArg
 
-convertValueStatementList :: [ValueStatement] -> [FValueStatement]
+convertValueStatementList :: [ValueStatement (Maybe (Int, Int))] -> [FValueStatement]
 convertValueStatementList = map convertValueStatement
 
-convertAssignment :: Assignment -> FAssignment
-convertAssignment (AssignmentB t pm vs) = FAssignmentB (convertType t) (convertPatternMatch pm) (convertValueStatement vs)
-convertAssignment (RefAssignment refdef) = FRefAssignment $ convertRefDef refdef
+convertAssignment :: Assignment (Maybe (Int, Int)) -> FAssignment
+convertAssignment (AssignmentB pos t pm vs) = FAssignmentB pos (convertType t) (convertPatternMatch pm) (convertValueStatement vs)
+convertAssignment (RefAssignment pos refdef) = FRefAssignment pos $ convertRefDef refdef
 
-convertAssignmentList :: [Assignment] -> [FAssignment]
+convertAssignmentList :: [Assignment (Maybe (Int, Int))] -> [FAssignment]
 convertAssignmentList = map convertAssignment
 
-convertRefDef :: RefDef -> FRefDef
-convertRefDef (RefDefB t i vs) = FRefDef (convertType t) (unwrapIdent i) (convertValueStatement vs)
+convertRefDef :: RefDef (Maybe (Int, Int)) -> FRefDef
+convertRefDef (RefDefB pos t i vs) = FRefDef pos (convertType t) (unwrapIdent i) (convertValueStatement vs)

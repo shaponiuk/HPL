@@ -37,7 +37,7 @@ data ProgramFormat = SITList [FFunctionDef] [FRefDef] [FAlgType]
   deriving (Eq,Ord,Show)
 
 convertStringToPM :: String -> FPatternMatch
-convertStringToPM = FPatternMatchB
+convertStringToPM = FPatternMatchB Nothing
 
 convertStringsToPMs :: [String] -> [FPatternMatch]
 convertStringsToPMs = Prelude.map convertStringToPM
@@ -50,15 +50,14 @@ data FFunctionDef =
   | SusFFunctionDef FFunctionDef
   deriving (Eq,Ord,Show)
 
-data FRefDef = FRefDef FType String FValueStatement
+data FRefDef = FRefDef (Maybe (Int, Int)) FType String FValueStatement
   deriving (Eq,Ord,Show)
 
 data FPatternMatch =
-    FPatternMatchI Int
-  | FPatternMatchB String
-  | FPatternMatchT [FPatternMatch]
-  | FPatternMatchC FPatternMatch [FPatternMatch]
-  | FPatternMatchS Int -- should be put in loc directly
+    FPatternMatchI (Maybe (Int, Int)) Int
+  | FPatternMatchB (Maybe (Int, Int)) String
+  | FPatternMatchT (Maybe (Int, Int)) [FPatternMatch]
+  | FPatternMatchC (Maybe (Int, Int)) FPatternMatch [FPatternMatch]
   deriving (Eq,Ord,Show)
 
 data FType =
@@ -68,17 +67,17 @@ data FType =
   deriving (Eq,Ord,Show)
 
 data FValueStatement =
-    FValueStatementB [FAssignment] FValueStatement
-  | FForceValueStatement [FAssignment] FValueStatement
-  | FIfValueStatement FValueStatement FValueStatement FValueStatement
-  | FLValueStatement [FValueStatement]
-  | FTValueStatement [FValueStatement]
-  | FAValueStatement FFunApplication
-  | FIValueStatement Int
-  | FLitStrValueStatement String
-  | FFValueStatement String FValueStatement
-  | FCValueStatement String [FValueStatement]
-  | FExpr FValueStatementExpr
+    FValueStatementB (Maybe (Int, Int)) [FAssignment] FValueStatement
+  | FForceValueStatement (Maybe (Int, Int)) [FAssignment] FValueStatement
+  | FIfValueStatement (Maybe (Int, Int)) FValueStatement FValueStatement FValueStatement
+  | FLValueStatement (Maybe (Int, Int)) [FValueStatement]
+  | FTValueStatement (Maybe (Int, Int)) [FValueStatement]
+  | FAValueStatement (Maybe (Int, Int)) FFunApplication
+  | FIValueStatement (Maybe (Int, Int)) Int
+  | FLitStrValueStatement (Maybe (Int, Int)) String
+  | FFValueStatement (Maybe (Int, Int)) String FValueStatement
+  | FCValueStatement (Maybe (Int, Int)) String [FValueStatement]
+  | FExpr (Maybe (Int, Int)) FValueStatementExpr
   | FRefAddr Int
   | FSusValueStatement FValueStatement
   | FSuspendedValue Int
@@ -87,14 +86,14 @@ data FValueStatement =
   deriving (Eq,Ord)
 
 data FFunApplication =
-    FSFunApplication String FFunApplication
-  | FFunApplicationB String [FValueStatement]
+    FSFunApplication (Maybe (Int, Int)) String FFunApplication
+  | FFunApplicationB (Maybe (Int, Int)) String [FValueStatement]
   | FFunApplicationR Int
   deriving (Eq,Ord,Show)
 
 data FAssignment =
-    FAssignmentB FType FPatternMatch FValueStatement
-  | FRefAssignment FRefDef
+    FAssignmentB (Maybe (Int, Int)) FType FPatternMatch FValueStatement
+  | FRefAssignment (Maybe (Int, Int)) FRefDef
   deriving (Eq,Ord,Show)
 
 data FAlgTypeVal = FAlgTypeVal String FType
@@ -115,11 +114,11 @@ data FValueStatementExpr =
   deriving (Eq,Ord)
 
 instance Show FValueStatement where
-  show (FLitStrValueStatement str) = str
-  show (FIValueStatement i) = show i
-  show (FTValueStatement l) = showTupleList l
-  show (FCValueStatement constructorName args) = constructorName ++ " " ++ showTupleList args
-  show (FExpr expr) = show expr
+  show (FLitStrValueStatement _ str) = str
+  show (FIValueStatement _ i) = show i
+  show (FTValueStatement _ l) = showTupleList l
+  show (FCValueStatement _ constructorName args) = constructorName ++ " " ++ showTupleList args
+  show (FExpr _ expr) = show expr
 
 instance Show FValueStatementExpr where
   show (FEAdd vs1 vs2) = show vs1 ++ " + " ++ show vs2
