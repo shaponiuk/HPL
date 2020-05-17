@@ -32,12 +32,12 @@ The set of reserved words is the set of terminals appearing in the grammar. Thos
 
 The reserved words used in Hpl are the following:
   | ``data`` | ``else`` | ``force`` | ``fun``
-  | ``if`` | ``in`` | ``let`` | ``ref``
-  | ``sus`` | ``then`` |  | 
+  | ``if`` | ``in`` | ``let`` | ``private``
+  | ``ref`` | ``struct`` | ``sus`` | ``then``
 
 The symbols used in Hpl are the following:
-  | ( | ) | = | ;
-  | , | { | -> | }
+  | { | } | ; | (
+  | ) | = | , | ->
   | | | :: | . | [
   | ] | + | - | %
   | * | / | < | <=
@@ -52,20 +52,25 @@ The symbols -> (production),  **|**  (union)
 and **eps** (empty rule) belong to the BNF notation. 
 All other symbols are terminals.
 
-  | //Program// | -> | //[FunctionOrRefOrType]// 
-  | //FunctionOrRefOrType// | -> | //FunctionDef// 
+  | //Program// | -> | //[StructOrInterfaceOrType]// 
+  | //StructOrInterfaceOrType// | -> | //Struct// 
   |  |  **|**  | //AlgType// 
+  | //[StructOrInterfaceOrType]// | -> | **eps**
+  |  |  **|**  | //StructOrInterfaceOrType// //[StructOrInterfaceOrType]// 
+  | //Struct// | -> | ``struct`` //Ident// ``{`` //StructBody// ``}`` ``;`` 
+  | //StructBody// | -> | //[StructField]// 
+  | //StructField// | -> | ``private`` //FunctionDef// 
+  |  |  **|**  | //FunctionDef// 
+  |  |  **|**  | ``private`` //RefDef// 
   |  |  **|**  | //RefDef// 
-  | //[FunctionOrRefOrType]// | -> | **eps**
-  |  |  **|**  | //FunctionOrRefOrType// //[FunctionOrRefOrType]// 
+  | //[StructField]// | -> | **eps**
+  |  |  **|**  | //StructField// //[StructField]// 
   | //FunctionDef// | -> | ``fun`` //Type// //Ident// ``(`` //[FunctionArg]// ``)`` ``=`` //ValueStatement// ``;`` 
-  |  |  **|**  | ``sus`` ``fun`` //Type// //Ident// ``(`` //[FunctionArg]// ``)`` ``=`` //ValueStatement// ``;`` 
+  |  |  **|**  | ``sus`` //FunctionDef// 
   | //FunctionArg// | -> | //PatternMatch// 
   | //[FunctionArg]// | -> | **eps**
   |  |  **|**  | //FunctionArg// 
   |  |  **|**  | //FunctionArg// ``,`` //[FunctionArg]// 
-  | //[FunctionDef]// | -> | **eps**
-  |  |  **|**  | //FunctionDef// //[FunctionDef]// 
   | //ValueStatement// | -> | ``let`` //[Assignment]// ``in`` //ValueStatement// 
   |  |  **|**  | ``force`` ``let`` //[Assignment]// ``in`` //ValueStatement// 
   |  |  **|**  | ``if`` //ValueStatement// ``then`` //ValueStatement// ``else`` //ValueStatement// 

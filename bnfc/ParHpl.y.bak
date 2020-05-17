@@ -9,12 +9,15 @@ import ErrM
 }
 
 %name pProgram Program
-%name pFunctionOrRefOrType FunctionOrRefOrType
-%name pListFunctionOrRefOrType ListFunctionOrRefOrType
+%name pStructOrInterfaceOrType StructOrInterfaceOrType
+%name pListStructOrInterfaceOrType ListStructOrInterfaceOrType
+%name pStruct Struct
+%name pStructBody StructBody
+%name pStructField StructField
+%name pListStructField ListStructField
 %name pFunctionDef FunctionDef
 %name pFunctionArg FunctionArg
 %name pListFunctionArg ListFunctionArg
-%name pListFunctionDef ListFunctionDef
 %name pValueStatement ValueStatement
 %name pListValueStatement ListValueStatement
 %name pRefDef RefDef
@@ -69,12 +72,14 @@ import ErrM
  'if' { PT _ (TS _ 26) }
  'in' { PT _ (TS _ 27) }
  'let' { PT _ (TS _ 28) }
- 'ref' { PT _ (TS _ 29) }
- 'sus' { PT _ (TS _ 30) }
- 'then' { PT _ (TS _ 31) }
- '{' { PT _ (TS _ 32) }
- '|' { PT _ (TS _ 33) }
- '}' { PT _ (TS _ 34) }
+ 'private' { PT _ (TS _ 29) }
+ 'ref' { PT _ (TS _ 30) }
+ 'struct' { PT _ (TS _ 31) }
+ 'sus' { PT _ (TS _ 32) }
+ 'then' { PT _ (TS _ 33) }
+ '{' { PT _ (TS _ 34) }
+ '|' { PT _ (TS _ 35) }
+ '}' { PT _ (TS _ 36) }
 
 L_ident  { PT _ (TV $$) }
 L_integ  { PT _ (TI $$) }
@@ -89,23 +94,42 @@ Integer :: { Integer } : L_integ  { (read ( $1)) :: Integer }
 String  :: { String }  : L_quoted {  $1 }
 
 Program :: { Program }
-Program : ListFunctionOrRefOrType { ProgramB (reverse $1) } 
+Program : ListStructOrInterfaceOrType { ProgramB (reverse $1) } 
 
 
-FunctionOrRefOrType :: { FunctionOrRefOrType }
-FunctionOrRefOrType : FunctionDef { FunctionOrRefOrTypeF $1 } 
-  | AlgType { FunctionOrRefOrTypeT $1 }
-  | RefDef { FunctionOrRefOrTypeR $1 }
+StructOrInterfaceOrType :: { StructOrInterfaceOrType }
+StructOrInterfaceOrType : Struct { StructOrInterfaceOrTypeS $1 } 
+  | AlgType { StructOrInterfaceOrTypeT $1 }
 
 
-ListFunctionOrRefOrType :: { [FunctionOrRefOrType] }
-ListFunctionOrRefOrType : {- empty -} { [] } 
-  | ListFunctionOrRefOrType FunctionOrRefOrType { flip (:) $1 $2 }
+ListStructOrInterfaceOrType :: { [StructOrInterfaceOrType] }
+ListStructOrInterfaceOrType : {- empty -} { [] } 
+  | ListStructOrInterfaceOrType StructOrInterfaceOrType { flip (:) $1 $2 }
+
+
+Struct :: { Struct }
+Struct : 'struct' Ident '{' StructBody '}' ';' { StructB $2 $4 } 
+
+
+StructBody :: { StructBody }
+StructBody : ListStructField { StructBodyB (reverse $1) } 
+
+
+StructField :: { StructField }
+StructField : 'private' FunctionDef { StructFieldFunPr $2 } 
+  | FunctionDef { StructFieldFunPu $1 }
+  | 'private' RefDef { StructFieldRefPr $2 }
+  | RefDef { StructFieldRefPu $1 }
+
+
+ListStructField :: { [StructField] }
+ListStructField : {- empty -} { [] } 
+  | ListStructField StructField { flip (:) $1 $2 }
 
 
 FunctionDef :: { FunctionDef }
 FunctionDef : 'fun' Type Ident '(' ListFunctionArg ')' '=' ValueStatement ';' { FunctionDefB $2 $3 $5 $8 } 
-  | 'sus' 'fun' Type Ident '(' ListFunctionArg ')' '=' ValueStatement ';' { SusFunctionDef $3 $4 $6 $9 }
+  | 'sus' FunctionDef { SusFunctionDef $2 }
 
 
 FunctionArg :: { FunctionArg }
@@ -116,11 +140,6 @@ ListFunctionArg :: { [FunctionArg] }
 ListFunctionArg : {- empty -} { [] } 
   | FunctionArg { (:[]) $1 }
   | FunctionArg ',' ListFunctionArg { (:) $1 $3 }
-
-
-ListFunctionDef :: { [FunctionDef] }
-ListFunctionDef : {- empty -} { [] } 
-  | ListFunctionDef FunctionDef { flip (:) $1 $2 }
 
 
 ValueStatement :: { ValueStatement }

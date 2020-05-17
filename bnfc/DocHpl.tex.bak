@@ -47,16 +47,16 @@ The reserved words used in Hpl are the following: \\
 \begin{tabular}{lll}
 {\reserved{data}} &{\reserved{else}} &{\reserved{force}} \\
 {\reserved{fun}} &{\reserved{if}} &{\reserved{in}} \\
-{\reserved{let}} &{\reserved{ref}} &{\reserved{sus}} \\
-{\reserved{then}} & & \\
+{\reserved{let}} &{\reserved{private}} &{\reserved{ref}} \\
+{\reserved{struct}} &{\reserved{sus}} &{\reserved{then}} \\
 \end{tabular}\\
 
 The symbols used in Hpl are the following: \\
 
 \begin{tabular}{lll}
+{\symb{\{}} &{\symb{\}}} &{\symb{;}} \\
 {\symb{(}} &{\symb{)}} &{\symb{{$=$}}} \\
-{\symb{;}} &{\symb{,}} &{\symb{\{}} \\
-{\symb{{$-$}{$>$}}} &{\symb{\}}} &{\symb{{$|$}}} \\
+{\symb{,}} &{\symb{{$-$}{$>$}}} &{\symb{{$|$}}} \\
 {\symb{::}} &{\symb{.}} &{\symb{[}} \\
 {\symb{]}} &{\symb{{$+$}}} &{\symb{{$-$}}} \\
 {\symb{\%}} &{\symb{*}} &{\symb{/}} \\
@@ -74,23 +74,42 @@ and {\emptyP} (empty rule) belong to the BNF notation.
 All other symbols are terminals.\\
 
 \begin{tabular}{lll}
-{\nonterminal{Program}} & {\arrow}  &{\nonterminal{ListFunctionOrRefOrType}}  \\
+{\nonterminal{Program}} & {\arrow}  &{\nonterminal{ListStructOrInterfaceOrType}}  \\
 \end{tabular}\\
 
 \begin{tabular}{lll}
-{\nonterminal{FunctionOrRefOrType}} & {\arrow}  &{\nonterminal{FunctionDef}}  \\
+{\nonterminal{StructOrInterfaceOrType}} & {\arrow}  &{\nonterminal{Struct}}  \\
  & {\delimit}  &{\nonterminal{AlgType}}  \\
+\end{tabular}\\
+
+\begin{tabular}{lll}
+{\nonterminal{ListStructOrInterfaceOrType}} & {\arrow}  &{\emptyP} \\
+ & {\delimit}  &{\nonterminal{StructOrInterfaceOrType}} {\nonterminal{ListStructOrInterfaceOrType}}  \\
+\end{tabular}\\
+
+\begin{tabular}{lll}
+{\nonterminal{Struct}} & {\arrow}  &{\terminal{struct}} {\nonterminal{Ident}} {\terminal{\{}} {\nonterminal{StructBody}} {\terminal{\}}} {\terminal{;}}  \\
+\end{tabular}\\
+
+\begin{tabular}{lll}
+{\nonterminal{StructBody}} & {\arrow}  &{\nonterminal{ListStructField}}  \\
+\end{tabular}\\
+
+\begin{tabular}{lll}
+{\nonterminal{StructField}} & {\arrow}  &{\terminal{private}} {\nonterminal{FunctionDef}}  \\
+ & {\delimit}  &{\nonterminal{FunctionDef}}  \\
+ & {\delimit}  &{\terminal{private}} {\nonterminal{RefDef}}  \\
  & {\delimit}  &{\nonterminal{RefDef}}  \\
 \end{tabular}\\
 
 \begin{tabular}{lll}
-{\nonterminal{ListFunctionOrRefOrType}} & {\arrow}  &{\emptyP} \\
- & {\delimit}  &{\nonterminal{FunctionOrRefOrType}} {\nonterminal{ListFunctionOrRefOrType}}  \\
+{\nonterminal{ListStructField}} & {\arrow}  &{\emptyP} \\
+ & {\delimit}  &{\nonterminal{StructField}} {\nonterminal{ListStructField}}  \\
 \end{tabular}\\
 
 \begin{tabular}{lll}
 {\nonterminal{FunctionDef}} & {\arrow}  &{\terminal{fun}} {\nonterminal{Type}} {\nonterminal{Ident}} {\terminal{(}} {\nonterminal{ListFunctionArg}} {\terminal{)}} {\terminal{{$=$}}} {\nonterminal{ValueStatement}} {\terminal{;}}  \\
- & {\delimit}  &{\terminal{sus}} {\terminal{fun}} {\nonterminal{Type}} {\nonterminal{Ident}} {\terminal{(}} {\nonterminal{ListFunctionArg}} {\terminal{)}} {\terminal{{$=$}}} {\nonterminal{ValueStatement}} {\terminal{;}}  \\
+ & {\delimit}  &{\terminal{sus}} {\nonterminal{FunctionDef}}  \\
 \end{tabular}\\
 
 \begin{tabular}{lll}
@@ -101,11 +120,6 @@ All other symbols are terminals.\\
 {\nonterminal{ListFunctionArg}} & {\arrow}  &{\emptyP} \\
  & {\delimit}  &{\nonterminal{FunctionArg}}  \\
  & {\delimit}  &{\nonterminal{FunctionArg}} {\terminal{,}} {\nonterminal{ListFunctionArg}}  \\
-\end{tabular}\\
-
-\begin{tabular}{lll}
-{\nonterminal{ListFunctionDef}} & {\arrow}  &{\emptyP} \\
- & {\delimit}  &{\nonterminal{FunctionDef}} {\nonterminal{ListFunctionDef}}  \\
 \end{tabular}\\
 
 \begin{tabular}{lll}
