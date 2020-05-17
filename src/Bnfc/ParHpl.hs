@@ -4,10 +4,10 @@
 {-# OPTIONS_GHC -XPartialTypeSignatures #-}
 #endif
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns -fno-warn-overlapping-patterns #-}
-module ParHpl where
-import AbsHpl
-import LexHpl
-import ErrM
+module Bnfc.ParHpl where
+import Bnfc.AbsHpl as AbsHpl
+import Bnfc.LexHpl
+import Bnfc.ErrM
 import qualified Data.Array as Happy_Data_Array
 import qualified Data.Bits as Bits
 import qualified GHC.Exts as Happy_GHC_Exts
