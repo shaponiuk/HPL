@@ -2,7 +2,7 @@ module Start.Start where
 
 import Bnfc.LexHpl ( Token )
 import Bnfc.ParHpl
-import Bnfc.PrintHpl ( Print )
+import Bnfc.PrintHpl
 import Bnfc.ErrM
 import Bnfc.AbsHpl
 import StaticCheck.StaticCheck ( staticCheck )
@@ -26,7 +26,9 @@ runAux p s = let ts = myLLexer s in case p ts of
                         putStrLn "\nParse Failed... TODO\n"
                         print ts
                         putStrLn s
-         Ok tree    -> checkAndRunTree tree 
+         Ok tree    -> do
+                        print tree
+                        checkAndRunTree tree 
 
 checkAndRunTree :: Program -> IO ()
 checkAndRunTree x = tryRun $ staticCheck x

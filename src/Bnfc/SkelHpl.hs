@@ -16,37 +16,20 @@ transIdent x = case x of
 
 transProgram :: Program -> Result
 transProgram x = case x of
-  ProgramB structorinterfaceortypes  -> failure x
+  ProgramB functionorrefortypes  -> failure x
 
 
-transStructOrInterfaceOrType :: StructOrInterfaceOrType -> Result
-transStructOrInterfaceOrType x = case x of
-  StructOrInterfaceOrTypeS struct  -> failure x
-  StructOrInterfaceOrTypeT algtype  -> failure x
-
-
-transStruct :: Struct -> Result
-transStruct x = case x of
-  StructB id structbody  -> failure x
-
-
-transStructBody :: StructBody -> Result
-transStructBody x = case x of
-  StructBodyB structfields  -> failure x
-
-
-transStructField :: StructField -> Result
-transStructField x = case x of
-  StructFieldFunPr functiondef  -> failure x
-  StructFieldFunPu functiondef  -> failure x
-  StructFieldRefPr refdef  -> failure x
-  StructFieldRefPu refdef  -> failure x
+transFunctionOrRefOrType :: FunctionOrRefOrType -> Result
+transFunctionOrRefOrType x = case x of
+  FunctionOrRefOrTypeF functiondef  -> failure x
+  FunctionOrRefOrTypeT algtype  -> failure x
+  FunctionOrRefOrTypeR refdef  -> failure x
 
 
 transFunctionDef :: FunctionDef -> Result
 transFunctionDef x = case x of
   FunctionDefB type' id functionargs valuestatement  -> failure x
-  SusFunctionDef functiondef  -> failure x
+  SusFunctionDef type' id functionargs valuestatement  -> failure x
 
 
 transFunctionArg :: FunctionArg -> Result
