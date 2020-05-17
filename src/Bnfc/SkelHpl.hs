@@ -11,121 +11,85 @@ failure x = Bad $ "Undefined case: " ++ show x
 
 transIdent :: Ident -> Result
 transIdent x = case x of
-  Ident str  -> failure x
-
-
-transProgram :: Program -> Result
+  Ident string -> failure x
+transProgram :: Show a => Program a -> Result
 transProgram x = case x of
-  ProgramB functionorrefortypes  -> failure x
-
-
-transFunctionOrRefOrType :: FunctionOrRefOrType -> Result
+  ProgramB _ functionorrefortypes -> failure x
+transFunctionOrRefOrType :: Show a => FunctionOrRefOrType a -> Result
 transFunctionOrRefOrType x = case x of
-  FunctionOrRefOrTypeF functiondef  -> failure x
-  FunctionOrRefOrTypeT algtype  -> failure x
-  FunctionOrRefOrTypeR refdef  -> failure x
-
-
-transFunctionDef :: FunctionDef -> Result
+  FunctionOrRefOrTypeF _ functiondef -> failure x
+  FunctionOrRefOrTypeT _ algtype -> failure x
+  FunctionOrRefOrTypeR _ refdef -> failure x
+transFunctionDef :: Show a => FunctionDef a -> Result
 transFunctionDef x = case x of
-  FunctionDefB type' id functionargs valuestatement  -> failure x
-  SusFunctionDef type' id functionargs valuestatement  -> failure x
-
-
-transFunctionArg :: FunctionArg -> Result
+  FunctionDefB _ type_ ident functionargs valuestatement -> failure x
+  SusFunctionDef _ type_ ident functionargs valuestatement -> failure x
+transFunctionArg :: Show a => FunctionArg a -> Result
 transFunctionArg x = case x of
-  FunctionArgB patternmatch  -> failure x
-
-
-transValueStatement :: ValueStatement -> Result
+  FunctionArgB _ patternmatch -> failure x
+transValueStatement :: Show a => ValueStatement a -> Result
 transValueStatement x = case x of
-  ValueStatementB assignments valuestatement  -> failure x
-  ForceValueStatement assignments valuestatement  -> failure x
-  IfValueStatement valuestatement0 valuestatement1 valuestatement  -> failure x
-  LValueStatement listvaluestatementr  -> failure x
-  TValueStatement tuplevaluestatementr  -> failure x
-  AValueStatement funapplication  -> failure x
-  IValueStatement n  -> failure x
-  LitStrValueStatement str  -> failure x
-  FValueStatement id valuestatement  -> failure x
-  Expr valuestatement valuestatementexpr  -> failure x
-
-
-transRefDef :: RefDef -> Result
+  ValueStatementB _ assignments valuestatement -> failure x
+  ForceValueStatement _ assignments valuestatement -> failure x
+  IfValueStatement _ valuestatement1 valuestatement2 valuestatement3 -> failure x
+  LValueStatement _ listvaluestatementr -> failure x
+  TValueStatement _ tuplevaluestatementr -> failure x
+  AValueStatement _ funapplication -> failure x
+  IValueStatement _ integer -> failure x
+  LitStrValueStatement _ string -> failure x
+  FValueStatement _ ident valuestatement -> failure x
+  Expr _ valuestatement valuestatementexpr -> failure x
+transRefDef :: Show a => RefDef a -> Result
 transRefDef x = case x of
-  RefDefB type' id valuestatement  -> failure x
-
-
-transType :: Type -> Result
+  RefDefB _ type_ ident valuestatement -> failure x
+transType :: Show a => Type a -> Result
 transType x = case x of
-  TypeB id types  -> failure x
-  FunType type'0 type'  -> failure x
-  TType types  -> failure x
-
-
-transAlgType :: AlgType -> Result
+  TypeB _ ident types -> failure x
+  FunType _ type_1 type_2 -> failure x
+  TType _ types -> failure x
+transAlgType :: Show a => AlgType a -> Result
 transAlgType x = case x of
-  AlgTypeB id typeargs algtypevals  -> failure x
-
-
-transTypeArg :: TypeArg -> Result
+  AlgTypeB _ ident typeargs algtypevals -> failure x
+transTypeArg :: Show a => TypeArg a -> Result
 transTypeArg x = case x of
-  TypeArgB id  -> failure x
-
-
-transAlgTypeVal :: AlgTypeVal -> Result
+  TypeArgB _ ident -> failure x
+transAlgTypeVal :: Show a => AlgTypeVal a -> Result
 transAlgTypeVal x = case x of
-  AlgTypeValB id type'  -> failure x
-
-
-transPatternMatch :: PatternMatch -> Result
+  AlgTypeValB _ ident type_ -> failure x
+transPatternMatch :: Show a => PatternMatch a -> Result
 transPatternMatch x = case x of
-  PatternMatchI n  -> failure x
-  PatternMatchB id  -> failure x
-  TPatternMatch patternmatchs  -> failure x
-  CPatternMatch patternmatch patternmatchs  -> failure x
-
-
-transAssignment :: Assignment -> Result
+  PatternMatchI _ integer -> failure x
+  PatternMatchB _ ident -> failure x
+  TPatternMatch _ patternmatchs -> failure x
+  CPatternMatch _ patternmatch patternmatchs -> failure x
+transAssignment :: Show a => Assignment a -> Result
 transAssignment x = case x of
-  AssignmentB type' patternmatch valuestatement  -> failure x
-  RefAssignment refdef  -> failure x
-
-
-transFunApplication :: FunApplication -> Result
+  AssignmentB _ type_ patternmatch valuestatement -> failure x
+  RefAssignment _ refdef -> failure x
+transFunApplication :: Show a => FunApplication a -> Result
 transFunApplication x = case x of
-  SFunApplication id funapplication  -> failure x
-  FunApplicationB id functionargappls  -> failure x
-
-
-transFunctionArgAppl :: FunctionArgAppl -> Result
+  SFunApplication _ ident funapplication -> failure x
+  FunApplicationB _ ident functionargappls -> failure x
+transFunctionArgAppl :: Show a => FunctionArgAppl a -> Result
 transFunctionArgAppl x = case x of
-  FunctionArgApplB valuestatement  -> failure x
-
-
-transListValueStatementr :: ListValueStatementr -> Result
+  FunctionArgApplB _ valuestatement -> failure x
+transListValueStatementr :: Show a => ListValueStatementr a -> Result
 transListValueStatementr x = case x of
-  ListValueStatementB valuestatements  -> failure x
-
-
-transTupleValueStatementr :: TupleValueStatementr -> Result
+  ListValueStatementB _ valuestatements -> failure x
+transTupleValueStatementr :: Show a => TupleValueStatementr a -> Result
 transTupleValueStatementr x = case x of
-  TupleValueStatementB valuestatements  -> failure x
-
-
-transValueStatementExpr :: ValueStatementExpr -> Result
+  TupleValueStatementB _ valuestatements -> failure x
+transValueStatementExpr :: Show a => ValueStatementExpr a -> Result
 transValueStatementExpr x = case x of
-  EAdd valuestatement  -> failure x
-  ESub valuestatement  -> failure x
-  EMod valuestatement  -> failure x
-  EMul valuestatement  -> failure x
-  EDiv valuestatement  -> failure x
-  EL valuestatement  -> failure x
-  ELQ valuestatement  -> failure x
-  EG valuestatement  -> failure x
-  EGQ valuestatement  -> failure x
-  EEQ valuestatement  -> failure x
-  ENE valuestatement  -> failure x
-
-
+  EAdd _ valuestatement -> failure x
+  ESub _ valuestatement -> failure x
+  EMod _ valuestatement -> failure x
+  EMul _ valuestatement -> failure x
+  EDiv _ valuestatement -> failure x
+  EL _ valuestatement -> failure x
+  ELQ _ valuestatement -> failure x
+  EG _ valuestatement -> failure x
+  EGQ _ valuestatement -> failure x
+  EEQ _ valuestatement -> failure x
+  ENE _ valuestatement -> failure x
 
