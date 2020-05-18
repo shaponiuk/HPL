@@ -17,20 +17,19 @@ type ParseFun a = [Token] -> Err a
 
 myLLexer = myLexer
 
-runFileAux :: ParseFun Program -> FilePath -> IO ()
+runFileAux :: ParseFun (Program (Maybe (Int, Int))) -> FilePath -> IO ()
 runFileAux p f = readFile f >>= runAux p
 
-runAux :: ParseFun Program -> String -> IO ()
+runAux :: ParseFun (Program (Maybe (Int, Int))) -> String -> IO ()
 runAux p s = let ts = myLLexer s in case p ts of
          Bad s      -> do 
                         putStrLn "\nParse Failed... TODO\n"
                         print ts
                         putStrLn s
-         Ok tree    -> do
-                        print tree
+         Ok tree    ->
                         checkAndRunTree tree 
 
-checkAndRunTree :: Program -> IO ()
+checkAndRunTree :: Program (Maybe (Int, Int)) -> IO ()
 checkAndRunTree x = tryRun $ staticCheck x
 
 tryRun :: Err NProgramFormat -> IO ()

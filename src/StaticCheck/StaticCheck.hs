@@ -6,7 +6,7 @@ import StaticCheck.CheckProgramFormat (checkProgramFormat)
 import Bnfc.AbsHpl
 import Bnfc.ErrM
 
-staticCheck :: Program -> Err NProgramFormat
+staticCheck :: Program (Maybe (Int, Int)) -> Err NProgramFormat
 staticCheck p = do
   let pf = initialConvertToProgramFormat p
   cpf <- checkProgramFormat pf

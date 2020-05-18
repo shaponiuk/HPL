@@ -137,7 +137,7 @@ convertValueStatement (Expr pos vs e) = exprFromLists pos (makeExprLists vs e)
 checkFunAppl :: FunApplication (Maybe (Int, Int)) -> Bool
 checkFunAppl (FunApplicationB _ name _) = isLower $ head $ unwrapIdent name
 
-convertFunctionApplToTypeConstructor :: FunApplication (Maybe (Int, Int)) -> ((Maybe (Int, Int)), String, [FValueStatement])
+convertFunctionApplToTypeConstructor :: FunApplication (Maybe (Int, Int)) -> (Maybe (Int, Int), String, [FValueStatement])
 convertFunctionApplToTypeConstructor (FunApplicationB pos name functionArgAppls) = 
   (pos, unwrapIdent name, map convertFunctionArgApplToTypeConstructor functionArgAppls)
 convertFunctionApplToTypeConstructor a = trace (show a) undefined
@@ -145,7 +145,7 @@ convertFunctionApplToTypeConstructor a = trace (show a) undefined
 convertFunctionArgApplToTypeConstructor :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
 convertFunctionArgApplToTypeConstructor (FunctionArgApplB _ vs) = convertValueStatement vs
 
-exprFromLists :: (Maybe (Int, Int)) -> ([String], [ValueStatement (Maybe (Int, Int))]) -> FValueStatement
+exprFromLists :: Maybe (Int, Int) -> ([String], [ValueStatement (Maybe (Int, Int))]) -> FValueStatement
 exprFromLists pos (strs, vss) = let
     fvss = convertValueStatementList vss
   in mergeCmpVss $ mergeAddSubVss $ mergeMulDivModVss (strs, fvss)
@@ -175,10 +175,10 @@ mergeAddSubVss x = let
   in if x == xaux then x else mergeAddSubVss xaux
 
 mergeAddSubVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
-mergeAddSubVssAux ("+":strs, x:x2:xs) = (nstrs, (FExpr pos $ FEAdd x x2):nxs) where
+mergeAddSubVssAux ("+":strs, x:x2:xs) = (nstrs, FExpr pos $ FEAdd x x2:nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
   pos = getVSLoc x
-mergeAddSubVssAux ("-":strs, x:x2:xs) = (nstrs, (FExpr pos $ FESub x x2):nxs) where
+mergeAddSubVssAux ("-":strs, x:x2:xs) = (nstrs, FExpr pos $ FESub x x2:nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
   pos = getVSLoc x
 mergeAddSubVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where
@@ -194,7 +194,7 @@ mergeCmpVss (">=":strs, x:xs) = FExpr pos $ FEGQ x $ mergeCmpVss (strs, xs) wher
 mergeCmpVss ("==":strs, x:xs) = FExpr pos $ FEEQ x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
 mergeCmpVss ("!=":strs, x:xs) = FExpr pos $ FENE x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
 
-getVSLoc :: FValueStatement -> (Maybe (Int, Int))
+getVSLoc :: FValueStatement -> Maybe (Int, Int)
 getVSLoc = undefined
 
 makeExprLists :: ValueStatement (Maybe (Int, Int)) -> ValueStatementExpr (Maybe (Int, Int)) -> ([String], [ValueStatement (Maybe (Int, Int))])
