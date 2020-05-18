@@ -1,0 +1,8 @@
+ref Int () x = 0;
+
+sus fun (Int ()) main () =
+    force let
+        () :: () = set (x (), 1);
+        Int () :: y = get (x ());
+        () :: () = print (y ());
+    in 0;
