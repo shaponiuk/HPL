@@ -54,8 +54,14 @@ checkExistingTypes (x:xs) tce = do
     checkExistingTypes xs tce
 
 checkExistingType :: FType -> TCE -> Err ()
-checkExistingType (FTypeB _ "Int" []) tce = return ()
-checkExistingType (FTypeB _ "String" []) tce = return ()
+checkExistingType (FTypeB _ "Ref" [x]) tce = checkExistingType x tce
+checkExistingType (FTypeB _ "Ref" _) _ = undefined
+checkExistingType (FTypeB _ "Semaphore" []) _ = return ()
+checkExistingType (FTypeB _ "Semaphore" _) _ = undefined
+checkExistingType (FTypeB _ "Int" []) _ = return ()
+checkExistingType (FTypeB _ "Int" _) _ = undefined
+checkExistingType (FTypeB _ "String" []) _ = return ()
+checkExistingType (FTypeB _ "String" _) _ = undefined
 checkExistingType (FunFType _ t1 t2) tce = do
     checkExistingType t1 tce
     checkExistingType t2 tce
@@ -75,7 +81,6 @@ checkExistingType (FTypeB (Just pos) name args) tce@(TCE _ atm) =
         else 
             fail $ "type " ++ name ++ " doesn't exist " ++ show pos
 
-checkConstructorExistence :: String -> String -> Int -> [FAlgTypeVal] -> Err FAlgTypeVal
 checkConstructorExistence typeName cName _ [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
 checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal _ cName_ FTypeB{}):atvs) =
     if cName == cName_ && argCount == 1
@@ -176,6 +181,20 @@ checkFunctionApplicationTypeInt _ t1 _ _ t2 vss _ = traceD (show t1 ++ show t2 +
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [_] tce = return ()
 checkFunctionApplicationType funName (FTypeT _ []) "yield" _ [] _ = return ()
+checkFunctionApplicationType funName (FTypeT _ []) "v" _ [x] tce =
+    checkFunctionBody funName (FTypeB Nothing "Semaphore" []) x tce
+checkFunctionApplicationType funName (FTypeT _ []) "p" _ [x] tce =
+    checkFunctionBody funName (FTypeB Nothing "Semaphore" []) x tce
+checkFunctionApplicationType funName t "get" _ [x] tce =
+    checkFunctionBody funName (FTypeB Nothing "Ref" [t]) x tce
+checkFunctionApplicationType funName (FTypeT _ []) "set" (Just pos) [FAValueStatement _ (FFunApplicationB _ name []), value] tce@(TCE tm atm) =
+    if member name tm
+        then
+            case tm ! name of
+                FTypeB _ "Ref" [t] ->
+                    checkFunctionBody funName t value tce
+                _ -> fail $ "the first argument of set at " ++ show pos ++ " is not a ref"
+        else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
 checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if member name tm
         then checkFunctionApplicationTypeInt funName t name (Just pos) (tm ! name) args tce
