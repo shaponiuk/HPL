@@ -40,12 +40,12 @@ convertFunctions env = Prelude.foldl $ convertFunction env
 
 convertFunction :: E -> S -> FFunctionDef -> S
 convertFunction env s (NonSusFFunctionDef _ t name argNames vs) =
-    convertFunctionInt vs name env s
+    convertFunctionInt vs name env s argNames
 convertFunction env s (SusFFunctionDef (NonSusFFunctionDef _ t name argNames vs)) =
-    convertFunctionInt (FSusValueStatement vs) name env s
+    convertFunctionInt (FSusValueStatement vs) name env s argNames
 
-convertFunctionInt :: FValueStatement -> String -> E -> S -> S
-convertFunctionInt vs name env s =
+convertFunctionInt :: FValueStatement -> String -> E -> S -> [FPatternMatch] -> S
+convertFunctionInt vs name env s argNames =
     ns where
         locs = lookupLoc name env
         loc = getUnsetLoc s locs

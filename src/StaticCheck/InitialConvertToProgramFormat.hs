@@ -175,10 +175,10 @@ mergeAddSubVss x = let
   in if x == xaux then x else mergeAddSubVss xaux
 
 mergeAddSubVssAux :: ([String], [FValueStatement]) -> ([String], [FValueStatement])
-mergeAddSubVssAux ("+":strs, x:x2:xs) = (nstrs, FExpr pos $ FEAdd x x2:nxs) where
+mergeAddSubVssAux ("+":strs, x:x2:xs) = (nstrs, FExpr pos (FEAdd x x2):nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
   pos = getVSLoc x
-mergeAddSubVssAux ("-":strs, x:x2:xs) = (nstrs, FExpr pos $ FESub x x2:nxs) where
+mergeAddSubVssAux ("-":strs, x:x2:xs) = (nstrs, FExpr pos (FESub x x2):nxs) where
   (nstrs, nxs) = mergeAddSubVssAux (strs, xs)
   pos = getVSLoc x
 mergeAddSubVssAux (s:strs, x:xs) = (s:nstrs, x:nxs) where

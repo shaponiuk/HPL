@@ -119,6 +119,7 @@ instance Show FValueStatement where
   show (FExpr _ expr) = show expr
   show FValueStatementB{} = "let statement"
   show FForceValueStatement{} = "force let statement"
+  show FIfValueStatement{} = "if statement"
 
 instance Show FValueStatementExpr where
   show (FEAdd vs1 vs2) = show vs1 ++ " + " ++ show vs2
