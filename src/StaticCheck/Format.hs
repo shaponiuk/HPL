@@ -120,9 +120,22 @@ instance Show FValueStatement where
   show FValueStatementB{} = "let statement"
   show FForceValueStatement{} = "force let statement"
   show FIfValueStatement{} = "if statement"
+  show (FLValueStatement _ l) = "List: " ++ show l
+  show (FAValueStatement _ (FFunApplicationB _ funName vss)) = "function application: " ++ funName ++ " with args: " ++ show vss
+  show (FAValueStatement _ (FFunApplicationR loc)) = "function application located at: " ++ show loc
+  show FFValueStatement{} = "lambda statement"
+  show (FRefAddr addr) = "reference at: " ++ show addr
+  show FSusValueStatement{} = "suspended value statement"
+  show FSuspendedValue{} = "suspended value"
+  show FSemaphore{} = "semaphore"
+  show FNTValueStatement{} = "tuple element value"
 
 instance Show FValueStatementExpr where
   show (FEAdd vs1 vs2) = show vs1 ++ " + " ++ show vs2
+  show (FESub vs1 vs2) = show vs1 ++ " - " ++ show vs2
+  show (FEDiv vs1 vs2) = show vs1 ++ " / " ++ show vs2
+  show (FEMul vs1 vs2) = show vs1 ++ " * " ++ show vs2
+  show (FEEQ vs1 vs2) = show vs1 ++ " == " ++ show vs2
 
 showTupleList [] = "()"
 showTupleList [x] = "(" ++ show x ++ ")"
@@ -136,8 +149,20 @@ getFunctionName (NonSusFFunctionDef _ _ name _ _) = name
 getFunctionName (SusFFunctionDef fd) = getFunctionName fd
 
 instance Eq FValueStatement where
+  (FAValueStatement _ (FFunApplicationB _ funName1 vss1)) == (FAValueStatement _ (FFunApplicationB _ funName2 vss2)) = 
+    funName1 == funName2 && vss1 == vss2
+  (FIValueStatement _ i1) == (FIValueStatement _ i2) = i1 == i2
+  (FExpr _ expr1) == (FExpr _ expr2) = expr1 == expr2
   vs1 == vs2 = traceD (show vs1 ++ show vs2) undefined
+
+instance Eq FValueStatementExpr where
+  (FEAdd vs11 vs12) == (FEAdd vs21 vs22) = vs11 == vs21 && vs12 == vs22
+  (FESub vs11 vs12) == (FESub vs21 vs22) = vs11 == vs21 && vs12 == vs22
+  (FEMul vs11 vs12) == (FEMul vs21 vs22) = vs11 == vs21 && vs12 == vs22
+  (FEDiv vs11 vs12) == (FEDiv vs21 vs22) = vs11 == vs21 && vs12 == vs22
 
 instance Eq FType where
   (FTypeT _ l1) == (FTypeT _ l2) = l1 == l2
+  (FTypeB _ tName1 tArgs1) == (FTypeB _ tName2 tArgs2) = tName1 == tName2 && tArgs1 == tArgs2
+  (FunFType _ t11 t12) == (FunFType _ t21 t22) = t11 == t21 && t12 == t22
   t1 == t2 = traceD (show t1 ++ show t2) undefined

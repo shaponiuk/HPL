@@ -20,5 +20,5 @@ runLoop state =
         state <- runQueue availibleQueue state
         runLoop state
     else
-        fail "No availible queue to run"
+        printD "No availible queue to run"
 
