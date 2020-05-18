@@ -17,53 +17,53 @@ gatherAndConvertFunctionDefs :: Program (Maybe (Int, Int)) -> [FFunctionDef]
 gatherAndConvertFunctionDefs p = map convertFunctionDef $ gatherFunctionDefs p
 
 gatherFunctionDefs :: Program (Maybe (Int, Int)) -> [FunctionDef (Maybe (Int, Int))]
-gatherFunctionDefs (ProgramB l) = map sitToFunDef $ filter checkFunctionDef l
+gatherFunctionDefs (ProgramB _ l) = map sitToFunDef $ filter checkFunctionDef l
 
 gatherAndConvertRefDefs :: Program (Maybe (Int, Int)) -> [FRefDef]
 gatherAndConvertRefDefs p = map convertRefDef $ gatherRefDefs p
 
 gatherRefDefs :: Program (Maybe (Int, Int)) -> [RefDef (Maybe (Int, Int))]
-gatherRefDefs (ProgramB l) = map sitToRef $ filter checkRefDef l
+gatherRefDefs (ProgramB _ l) = map sitToRef $ filter checkRefDef l
 
 gatherAndConvertAlgTypes :: Program (Maybe (Int, Int)) -> [FAlgType]
 gatherAndConvertAlgTypes p = map convertAlgType $ gatherAlgTypes p
 
 gatherAlgTypes :: Program (Maybe (Int, Int)) -> [AlgType (Maybe (Int, Int))]
-gatherAlgTypes (ProgramB l) = map sitToAlgType $ filter checkAlgType l
+gatherAlgTypes (ProgramB _ l) = map sitToAlgType $ filter checkAlgType l
 
 sitToAlgType :: FunctionOrRefOrType (Maybe (Int, Int)) -> AlgType (Maybe (Int, Int))
-sitToAlgType (FunctionOrRefOrTypeT t) = t
+sitToAlgType (FunctionOrRefOrTypeT _ t) = t
 
 sitToRef :: FunctionOrRefOrType (Maybe (Int, Int)) -> RefDef (Maybe (Int, Int))
-sitToRef (FunctionOrRefOrTypeR r) = r
+sitToRef (FunctionOrRefOrTypeR _ r) = r
 
 sitToFunDef :: FunctionOrRefOrType (Maybe (Int, Int)) -> FunctionDef (Maybe (Int, Int))
-sitToFunDef (FunctionOrRefOrTypeF f) = f
+sitToFunDef (FunctionOrRefOrTypeF _ f) = f
 
 checkFunctionDef :: FunctionOrRefOrType (Maybe (Int, Int)) -> Bool
-checkFunctionDef (FunctionOrRefOrTypeF _) = True
+checkFunctionDef (FunctionOrRefOrTypeF _ _) = True
 checkFunctionDef _ = False
 
 checkRefDef :: FunctionOrRefOrType (Maybe (Int, Int)) -> Bool
-checkRefDef (FunctionOrRefOrTypeR _) = True
+checkRefDef (FunctionOrRefOrTypeR _ _) = True
 checkRefDef _ = False
 
 checkAlgType :: FunctionOrRefOrType (Maybe (Int, Int)) -> Bool
-checkAlgType (FunctionOrRefOrTypeT _) = True
+checkAlgType (FunctionOrRefOrTypeT _ _) = True
 checkAlgType _ = False
 
 convertAlgType :: AlgType (Maybe (Int, Int)) -> FAlgType
-convertAlgType (AlgTypeB i taList atvList) = 
-  FAlgType (unwrapIdent i) (convertTypeArgList taList) (convertAlgTypeValList atvList)
+convertAlgType (AlgTypeB pos i taList atvList) = 
+  FAlgType pos (unwrapIdent i) (convertTypeArgList taList) (convertAlgTypeValList atvList)
 
 convertTypeArg :: TypeArg (Maybe (Int, Int)) -> String
-convertTypeArg (TypeArgB i) = unwrapIdent i
+convertTypeArg (TypeArgB _ i) = unwrapIdent i
 
 convertTypeArgList :: [TypeArg (Maybe (Int, Int))] -> [String]
 convertTypeArgList = map convertTypeArg
 
 convertAlgTypeVal :: AlgTypeVal (Maybe (Int, Int)) -> FAlgTypeVal
-convertAlgTypeVal (AlgTypeValB i t) = FAlgTypeVal (unwrapIdent i) (convertType t)
+convertAlgTypeVal (AlgTypeValB pos i t) = FAlgTypeVal pos (unwrapIdent i) (convertType t)
 
 convertAlgTypeValList :: [AlgTypeVal (Maybe (Int, Int))] -> [FAlgTypeVal]
 convertAlgTypeValList = map convertAlgTypeVal
@@ -75,31 +75,31 @@ convertIdentList :: [Ident] -> [String]
 convertIdentList = map unwrapIdent
 
 convertFunctionDef :: FunctionDef (Maybe (Int, Int)) -> FFunctionDef
-convertFunctionDef (FunctionDefB t ident argList vs) = 
-  NonSusFFunctionDef (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
-convertFunctionDef (SusFunctionDef t ident argList vs) = 
-  SusFFunctionDef $ NonSusFFunctionDef (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
+convertFunctionDef (FunctionDefB pos t ident argList vs) = 
+  NonSusFFunctionDef pos (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
+convertFunctionDef (SusFunctionDef pos t ident argList vs) = 
+  SusFFunctionDef $ NonSusFFunctionDef pos (convertType t) (unwrapIdent ident) (convertArgList argList) (convertValueStatement vs)
 
 convertType :: Type (Maybe (Int, Int)) -> FType
-convertType (TypeB i tl) = FTypeB (unwrapIdent i) (convertTypeList tl)
-convertType (FunType argType resType) = FunFType (convertType argType) (convertType resType)
-convertType (TType [t]) = convertType t
-convertType (TType tl) = FTypeT $ convertTypeList tl
+convertType (TypeB pos i tl) = FTypeB pos (unwrapIdent i) (convertTypeList tl)
+convertType (FunType pos argType resType) = FunFType pos (convertType argType) (convertType resType)
+convertType (TType _ [t]) = convertType t
+convertType (TType pos tl) = FTypeT pos $ convertTypeList tl
 
 convertTypeList :: [Type (Maybe (Int, Int))] -> [FType]
 convertTypeList = map convertType
 
 convertFunctionArg :: FunctionArg (Maybe (Int, Int)) -> FPatternMatch
-convertFunctionArg (FunctionArgB pm) = convertPatternMatch pm
+convertFunctionArg (FunctionArgB _ pm) = convertPatternMatch pm
 
 convertPatternMatch :: PatternMatch (Maybe (Int, Int)) -> FPatternMatch
-convertPatternMatch (PatternMatchI i) = FPatternMatchI $ fromIntegral i
-convertPatternMatch (PatternMatchB i) = FPatternMatchB $ unwrapIdent i
-convertPatternMatch (TPatternMatch [pm]) = convertPatternMatch pm
-convertPatternMatch (TPatternMatch l) = 
-  FPatternMatchT $ convertPatternMatchList l
-convertPatternMatch (CPatternMatch pm l) = 
-  FPatternMatchC (convertPatternMatch pm) (convertPatternMatchList l)
+convertPatternMatch (PatternMatchI pos i) = FPatternMatchI pos $ fromIntegral i
+convertPatternMatch (PatternMatchB pos i) = FPatternMatchB pos $ unwrapIdent i
+convertPatternMatch (TPatternMatch _ [pm]) = convertPatternMatch pm
+convertPatternMatch (TPatternMatch pos l) = 
+  FPatternMatchT pos $ convertPatternMatchList l
+convertPatternMatch (CPatternMatch pos pm l) = 
+  FPatternMatchC pos (convertPatternMatch pm) (convertPatternMatchList l)
 
 convertPatternMatchList :: [PatternMatch (Maybe (Int, Int))] -> [FPatternMatch]
 convertPatternMatchList [TPatternMatch _ []] = []

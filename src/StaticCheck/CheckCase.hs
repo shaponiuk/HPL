@@ -35,13 +35,13 @@ checkUpperAlgTypeVals name (FAlgTypeVal constructorName@(c:_) _:algTypeVals) =
 
 checkUpperCaseAlgTypes :: [FAlgType] -> Err ()
 checkUpperCaseAlgTypes [] = return ()
-checkUpperCaseAlgTypes (FAlgType name@(c:_) argNames algTypeVals:xs) =
+checkUpperCaseAlgTypes (FAlgType (Just pos) name@(c:_) argNames algTypeVals:xs) =
     if isUpper c
         then do
             checkLowerArgNames name argNames
             checkUpperAlgTypeVals name algTypeVals
             checkUpperCaseAlgTypes xs
-        else fail $ "algebraic type " ++ name ++ " doesn't start with an uppercase letter"
+        else fail $ "algebraic type " ++ name ++ " doesn't start with an uppercase letter " ++ show pos
 
 checkCase :: ProgramFormat -> Err ProgramFormat
 checkCase pf@(SITList functionDefs refDefs algTypes) = do

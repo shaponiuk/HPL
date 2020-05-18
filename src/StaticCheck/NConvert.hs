@@ -17,11 +17,11 @@ makeEnvForFunctions :: [FFunctionDef] -> E -> S -> (E, S)
 makeEnvForFunctions l env s = Prelude.foldl makeEnvForFunction (env, s) l
 
 makeEnvForFunction :: (E, S) -> FFunctionDef -> (E, S)
-makeEnvForFunction (e, s) (NonSusFFunctionDef _ name _ _) =
+makeEnvForFunction (e, s) (NonSusFFunctionDef _ _ name _ _) =
     (ne, ns) where
         (loc, ns) = getNewLoc s
         ne = registerLoc True e name loc
-makeEnvForFunction (e, s) (SusFFunctionDef (NonSusFFunctionDef _ name _ _)) =
+makeEnvForFunction (e, s) (SusFFunctionDef (NonSusFFunctionDef _ _ name _ _)) =
     (ne, ns) where
         (loc, ns) = getNewLoc s
         ne = registerLoc True e name loc
@@ -39,13 +39,13 @@ convertFunctions :: E -> S -> [FFunctionDef] -> S
 convertFunctions env = Prelude.foldl $ convertFunction env
 
 convertFunction :: E -> S -> FFunctionDef -> S
-convertFunction env s (NonSusFFunctionDef t name argNames vs) =
+convertFunction env s (NonSusFFunctionDef _ t name argNames vs) =
     ns where
         locs = lookupLoc name env
         loc = getUnsetLoc s locs
         ns_ = putArgNames s loc argNames
         ns = putInLoc loc (env, vs) ns_
-convertFunction env s (SusFFunctionDef (NonSusFFunctionDef t name argNames vs)) =
+convertFunction env s (SusFFunctionDef (NonSusFFunctionDef _ t name argNames vs)) =
     ns where
         locs = lookupLoc name env
         loc = getUnsetLoc s locs
@@ -56,7 +56,7 @@ convertRefs :: E -> S -> [FRefDef] -> S
 convertRefs env = Prelude.foldl $ convertRef env
 
 unrefType :: FType -> FType
-unrefType (FTypeB "Ref" [t]) = t
+unrefType (FTypeB _ "Ref" [t]) = t
 
 convertRef :: E -> S -> FRefDef -> S
 convertRef env state (FRefDef _ t name vs) =

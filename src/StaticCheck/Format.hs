@@ -42,11 +42,11 @@ convertStringToPM = FPatternMatchB Nothing
 convertStringsToPMs :: [String] -> [FPatternMatch]
 convertStringsToPMs = Prelude.map convertStringToPM
 
-data FAlgType = FAlgType String [String] [FAlgTypeVal]
+data FAlgType = FAlgType (Maybe (Int, Int)) String [String] [FAlgTypeVal]
   deriving (Eq,Ord,Show)
 
 data FFunctionDef =
-    NonSusFFunctionDef FType String [FPatternMatch] FValueStatement
+    NonSusFFunctionDef (Maybe (Int, Int)) FType String [FPatternMatch] FValueStatement
   | SusFFunctionDef FFunctionDef
   deriving (Eq,Ord,Show)
 
@@ -61,9 +61,9 @@ data FPatternMatch =
   deriving (Eq,Ord,Show)
 
 data FType =
-    FTypeB String [FType]
-  | FunFType FType FType
-  | FTypeT [FType]
+    FTypeB (Maybe (Int, Int)) String [FType]
+  | FunFType (Maybe (Int, Int)) FType FType
+  | FTypeT (Maybe (Int, Int)) [FType]
   deriving (Eq,Ord,Show)
 
 data FValueStatement =
@@ -96,7 +96,7 @@ data FAssignment =
   | FRefAssignment (Maybe (Int, Int)) FRefDef
   deriving (Eq,Ord,Show)
 
-data FAlgTypeVal = FAlgTypeVal String FType
+data FAlgTypeVal = FAlgTypeVal (Maybe (Int, Int)) String FType
   deriving (Eq,Ord,Show)
 
 data FValueStatementExpr =
@@ -131,5 +131,5 @@ showTupleList (x:x2:xs) =
   in "(" ++ show x ++ ", " ++ rest
 
 getFunctionName :: FFunctionDef -> String
-getFunctionName (NonSusFFunctionDef _ name _ _) = name
+getFunctionName (NonSusFFunctionDef _ _ name _ _) = name
 getFunctionName (SusFFunctionDef fd) = getFunctionName fd
