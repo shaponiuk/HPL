@@ -195,6 +195,7 @@ checkFunctionApplicationType funName (FTypeT _ []) "set" (Just pos) [FAValueStat
                     checkFunctionBody funName t value tce
                 _ -> fail $ "the first argument of set at " ++ show pos ++ " is not a ref"
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
+checkFunctionApplicationType funName (FTypeB _ "Ref" [FTypeB _ "Semaphore" []]) "make_semaphore" _ [] _ = return ()
 checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if member name tm
         then checkFunctionApplicationTypeInt funName t name (Just pos) (tm ! name) args tce
@@ -241,6 +242,8 @@ checkFunctionBody funName t@(FTypeB _ atName atArgs) (FCValueStatement pos cName
     atm <- checkConstructorExistence atName cName argCount atvs
     (FAlgTypeVal _ _ atmArgs) <- getCorrectedConstructor atm at atArgs
     checkFunctionBody funName atmArgs (FTValueStatement pos cArgs) tce
+checkFunctionBody funName t@(FunFType _ t1 t2) vs@(FIValueStatement (Just posVS) _) _ =
+    fail $ show vs ++ " " ++ show posVS " is not of the type " show t
 checkFunctionBody _ t vs _ = traceD (show t ++ show vs) undefined
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
