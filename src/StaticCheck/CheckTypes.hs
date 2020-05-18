@@ -163,33 +163,23 @@ checkIntExpression funName (FESub vs1 vs2) = checkIntExpressionInt funName vs1 v
 checkIntExpression funName (FEAdd vs1 vs2) = checkIntExpressionInt funName vs1 vs2
 checkIntExpression _ expr = traceD expr undefined
 
-checkFunctionApplicationTypeInt :: String -> FType -> String -> FType -> [FValueStatement] -> TCE -> Err ()
-checkFunctionApplicationTypeInt funName t1 name (FunFType t21 t22) (vs:vss) tce = do
+checkFunctionApplicationTypeInt :: String -> FType -> String -> Maybe (Int, Int) -> FType -> [FValueStatement] -> TCE -> Err ()
+checkFunctionApplicationTypeInt funName t1 name posM (FunFType _ t21 t22) (vs:vss) tce = do
     checkFunctionBody funName t21 vs tce
-    checkFunctionApplicationTypeInt funName t1 name t22 vss tce
-checkFunctionApplicationTypeInt funName t1 name t2 [] _ =
+    checkFunctionApplicationTypeInt funName t1 name posM t22 vss tce
+checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 [] _ =
     if t1 == t2
         then return ()
-        else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName
-checkFunctionApplicationTypeInt _ t1 _ t2 vss _ = traceD (show t1 ++ show t2 ++ show vss) undefined
+        else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName ++ " " ++ show pos
+checkFunctionApplicationTypeInt _ t1 _ _ t2 vss _ = traceD (show t1 ++ show t2 ++ show vss) undefined
 
-checkIntOrString :: FValueStatement -> TCE -> Bool
-checkIntOrString vs tce =
-    traceD vs $ case checkFunctionBody "" (FTypeB "Int" []) vs tce of
-        Bad _ -> case checkFunctionBody "" (FTypeB "String" []) vs tce of
-            Bad _ -> False
-            Ok _ -> True
-        Ok _ -> True
-
-checkFunctionApplicationType :: String -> FType -> String -> [FValueStatement] -> TCE -> Err ()
-checkFunctionApplicationType funName (FTypeT []) "print" [_] tce =
-    return ()
-checkFunctionApplicationType funName (FTypeT []) "yield" [] _ = return ()
--- checkFunctionApplicationType _ _ "print" _ _ = ...
-checkFunctionApplicationType funName t name args tce@(TCE tm atm) =
+checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
+checkFunctionApplicationType funName (FTypeT _ []) "print" _ [_] tce = return ()
+checkFunctionApplicationType funName (FTypeT _ []) "yield" _ [] _ = return ()
+checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if member name tm
-        then checkFunctionApplicationTypeInt funName t name (tm ! name) args tce
-        else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName
+        then checkFunctionApplicationTypeInt funName t name (Just pos) (tm ! name) args tce
+        else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
 
 checkTupleFunctionBody :: String -> [FType] -> [FValueStatement] -> TCE -> Err ()
 checkTupleFunctionBody _ [] [] tce = return ()
@@ -198,43 +188,45 @@ checkTupleFunctionBody funName (t:types) (vs:vss) tce = do
     checkTupleFunctionBody funName types vss tce
 
 checkFunctionBody :: String -> FType -> FValueStatement -> TCE -> Err ()
-checkFunctionBody funName (FunFType t1 t2) (FFValueStatement name vs) tce = do
-    tce2 <- registerArg t1 (FPatternMatchB name) tce
+checkFunctionBody funName (FunFType _ t1 t2) (FFValueStatement posM name vs) tce = do
+    tce2 <- registerArg t1 (FPatternMatchB posM name) tce
     checkFunctionBody funName t2 vs tce2
 checkFunctionBody funName t FFValueStatement{} _ = fail $ "function " ++ funName ++ " has a non function return type " ++ show t ++ " while it returns a function"
-checkFunctionBody funName t (FForceValueStatement assignments vs) tce = do
+checkFunctionBody funName t (FForceValueStatement _ assignments vs) tce = do
     tce2 <- registerAssignments funName assignments tce
     checkFunctionBody funName t vs tce2
-checkFunctionBody funName t (FAValueStatement (FFunApplicationB name args)) tce =
-    checkFunctionApplicationType funName t name args tce
-checkFunctionBody funName (FTypeB "Int" []) (FExpr expr) tce = checkIntExpression funName expr tce
-checkFunctionBody funName t (FIfValueStatement ifvs vs1 vs2) tce = do
-    checkFunctionBody funName (FTypeB "Int" []) ifvs tce
+checkFunctionBody funName t (FAValueStatement _ (FFunApplicationB pos name args)) tce =
+    checkFunctionApplicationType funName t name pos args tce
+checkFunctionBody funName (FTypeB _ "Int" []) (FExpr _ expr) tce = checkIntExpression funName expr tce
+checkFunctionBody funName t (FIfValueStatement posM ifvs vs1 vs2) tce = do
+    checkFunctionBody funName (FTypeB posM "Int" []) ifvs tce
     checkFunctionBody funName t vs1 tce
     checkFunctionBody funName t vs2 tce
-checkFunctionBody _ (FTypeB "Int" []) (FIValueStatement _) _ = return ()
-checkFunctionBody funName (FTypeB "String" []) (FIValueStatement _) _ = fail $ "function " ++ funName ++ " has an Int () value while expecting String ()"
-checkFunctionBody funName (FTypeB "Int" []) (FLitStrValueStatement _) _ = fail $ "function " ++ funName ++ " has a String () value while expecting Int ()"
-checkFunctionBody _ (FTypeB "String" []) (FLitStrValueStatement _) _ = return ()
-checkFunctionBody funName (FTypeT [t]) vs tce = checkFunctionBody funName t vs tce
-checkFunctionBody funName (FTypeT types) (FTValueStatement vss) tce = checkTupleFunctionBody funName types vss tce
-checkFunctionBody funName t (FValueStatementB assignments vs) tce = do
+checkFunctionBody _ (FTypeB _ "Int" []) (FIValueStatement _ _) _ = return ()
+checkFunctionBody funName (FTypeB _ "String" []) (FIValueStatement (Just posVS) _) _ = 
+    fail $ "function " ++ funName ++ " " ++ show posVS ++ " has an Int () value while expecting String ()"
+checkFunctionBody funName (FTypeB _ "Int" []) (FLitStrValueStatement (Just posVS) _) _ = 
+    fail $ "function " ++ funName ++ " " ++ show posVS ++ " has a String () value while expecting Int ()"
+checkFunctionBody _ (FTypeB _ "String" []) (FLitStrValueStatement _ _) _ = return ()
+checkFunctionBody funName (FTypeT _ [t]) vs tce = checkFunctionBody funName t vs tce
+checkFunctionBody funName (FTypeT _ types) (FTValueStatement _ vss) tce = checkTupleFunctionBody funName types vss tce
+checkFunctionBody funName t (FValueStatementB _ assignments vs) tce = do
     tce2 <- registerAssignments funName assignments tce
     checkFunctionBody funName t vs tce2
-checkFunctionBody funName t@FTypeB{} (FCValueStatement cName [FTValueStatement cArgs]) tce =
-    checkFunctionBody funName t (FCValueStatement cName cArgs) tce
-checkFunctionBody funName t@(FTypeB atName atArgs) (FCValueStatement cName cArgs) tce@(TCE tm atm) = do
+checkFunctionBody funName t@FTypeB{} (FCValueStatement pos cName [FTValueStatement _ cArgs]) tce =
+    checkFunctionBody funName t (FCValueStatement pos cName cArgs) tce
+checkFunctionBody funName t@(FTypeB _ atName atArgs) (FCValueStatement pos cName cArgs) tce@(TCE tm atm) = do
     let argCount = length cArgs
     checkExistingType t tce
-    let at@(FAlgType _ _ atvs) = atm ! atName
+    let at@(FAlgType _ _ _ atvs) = atm ! atName
     atm <- checkConstructorExistence atName cName argCount atvs
-    (FAlgTypeVal _ atmArgs) <- getCorrectedConstructor atm at atArgs
-    checkFunctionBody funName atmArgs (FTValueStatement cArgs) tce
+    (FAlgTypeVal _ _ atmArgs) <- getCorrectedConstructor atm at atArgs
+    checkFunctionBody funName atmArgs (FTValueStatement pos cArgs) tce
 checkFunctionBody _ t vs _ = traceD (show t ++ show vs) undefined
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
 checkFunctionDefs [] _ = return ()
-checkFunctionDefs (NonSusFFunctionDef t name pms vs:functionDefs) tce = do
+checkFunctionDefs (NonSusFFunctionDef _ t name pms vs:functionDefs) tce = do
     (argTypes, returnType) <- extractTypes name t pms
     tce2 <- registerArgs argTypes pms tce
     checkFunctionBody name returnType vs tce2
