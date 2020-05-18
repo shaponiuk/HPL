@@ -14,10 +14,10 @@ checkLowerCaseFunctionDefs (x:xs) = do
 
 checkLowerCaseRefDefs :: [FRefDef] -> Err ()
 checkLowerCaseRefDefs [] = return ()
-checkLowerCaseRefDefs (FRefDef _ name@(c:_) _:xs) =
+checkLowerCaseRefDefs (FRefDef (Just pos) _ name@(c:_) _:xs) =
     if isLower c
         then checkLowerCaseRefDefs xs
-        else fail $ "reference " ++ name ++ " doesn't start with a lowercase letter"
+        else fail $ "reference " ++ name ++ " doesn't start with a lowercase letter " ++ show pos
 
 checkLowerArgNames :: String -> [String] -> Err ()
 checkLowerArgNames _ [] = return ()
@@ -28,10 +28,10 @@ checkLowerArgNames name (arg@(c:_):args) =
 
 checkUpperAlgTypeVals :: String -> [FAlgTypeVal] -> Err ()
 checkUpperAlgTypeVals _ [] = return ()
-checkUpperAlgTypeVals name (FAlgTypeVal constructorName@(c:_) _:algTypeVals) =
+checkUpperAlgTypeVals name (FAlgTypeVal (Just pos) constructorName@(c:_) _:algTypeVals) =
     if isUpper c
         then checkUpperAlgTypeVals name algTypeVals
-        else fail $ "type constructor " ++ constructorName ++ " in algebraic type " ++ name ++ " doesn't start with an uppercase letter"
+        else fail $ "type constructor " ++ constructorName ++ " in algebraic type " ++ name ++ " doesn't start with an uppercase letter " ++ show pos
 
 checkUpperCaseAlgTypes :: [FAlgType] -> Err ()
 checkUpperCaseAlgTypes [] = return ()
