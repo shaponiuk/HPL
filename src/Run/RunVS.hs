@@ -100,6 +100,7 @@ runVS queueId vs@FSuspendedValue{} e s = runVSSusVal queueId vs e s
 runVS queueId vs@FSemaphore{} e s = return (s, vs)
 runVS queueId vs@FValueStatementB{} e s = runVSLazyLet queueId vs e s
 runVS queueId vs@(FNTValueStatement n (FTValueStatement _ ts)) e s = runVS queueId (takeNth n ts) e s
+runVS queueId vs@(FNTValueStatement n (FCValueStatement _ _ ts)) e s = runVS queueId (takeNth n ts) e s
 runVS queueId vs@FNTValueStatement{} e s = runVSFNTNotTuple queueId vs e s
 
 runVSFunApplR :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
@@ -111,8 +112,11 @@ runVSFunApplR queueId (FAValueStatement Nothing (FFunApplicationR loc)) e s = do
 
 runVSFNTNotTuple :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSFNTNotTuple queueId (FNTValueStatement n vs) e s = do
-    (s, FTValueStatement _ ts) <- runVS queueId vs e s
-    return (s, takeNth n ts)
+    a <- runVS queueId vs e s
+    case a of
+        (s, FTValueStatement _ ts) -> return (s, takeNth n ts)
+        (s, FCValueStatement _ _ ts) -> return (s, takeNth n ts)
+        _ -> undefined
 
 runVSMul :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement) 
 runVSMul queueId (FExpr _ (FEMul vs1 vs2)) env state = do
@@ -430,7 +434,13 @@ registerArgsInFoldF queueId argEnv acc (FPatternMatchC _ _ pms, FCValueStatement
 registerArgsInFoldF queueId argEnv acc a@(FPatternMatchT _ t1, FTValueStatement _ t2) = do
     (e, s) <- acc
     registerArgs queueId e argEnv s t1 t2
-registerArgsInFoldF queueId argEnv acc (pm@FPatternMatchT{}, vs@FAValueStatement{}) = do
+registerArgsInFoldF queueId argEnv acc (pm@FPatternMatchT{}, vs) = do
+    (innerEnv, state) <- acc
+    let (nloc, nstate_) = getNewLoc state
+    let nstate = putInLoc nloc (argEnv, vs) nstate_
+    let nvs = FAValueStatement Nothing $ FFunApplicationR nloc
+    registerArgsInFoldFTuple queueId innerEnv argEnv pm nvs nstate
+registerArgsInFoldF queueId argEnv acc (pm@FPatternMatchC{}, vs) = do
     (innerEnv, state) <- acc
     let (nloc, nstate_) = getNewLoc state
     let nstate = putInLoc nloc (argEnv, vs) nstate_
@@ -450,6 +460,14 @@ registerArgsInFoldFTuple queueId innerEnv argEnv (FPatternMatchT _ ts) vs state 
             return (c + 1, e, s)
         }) (return (0, innerEnv, state)) ts
     return (e, s)
+registerArgsInFoldFTuple _ innerEnv _ FPatternMatchI{} _ state = return (innerEnv, state)
+registerArgsInFoldFTuple queueId innerEnv argEnv (FPatternMatchC _ cName cArgs) vs state = do
+    (_, e, s) <- foldl (\es pm -> do {
+            (c, e, s) <- es;
+            (e, s) <- registerArgsInFoldFTuple queueId e argEnv pm (FNTValueStatement c vs) s;
+            return (c + 1, e, s)
+        }) (return (0, innerEnv, state)) cArgs
+    return (e, s)
 
 appendFAVS :: Int -> [Int] -> [FValueStatement] -> S -> IO (E, FValueStatement, Bool, [FPatternMatch], S)
 appendFAVS _ [] vss state = fail "Non exhaustive pattern matches"
@@ -467,6 +485,7 @@ appendFAVS queueId (loc:xs) addVss state = do
 appendFAVSInt :: FValueStatement -> [FValueStatement] -> (FValueStatement, Bool, [FPatternMatch])
 appendFAVSInt (FAValueStatement _ (FFunApplicationB _ funName vss)) addVss = (FAValueStatement Nothing $ FFunApplicationB Nothing funName (vss ++ addVss), False, [])
 appendFAVSInt (FFValueStatement _ name vs) addVSS = (vs, True, [FPatternMatchB Nothing name])
+appendFAVSInt _ _ = traceD "shouldn't be here" undefined
 
 fitPatternMatchs :: Int -> S -> E -> [FPatternMatch] -> [FValueStatement] -> IO (Bool, S, [FValueStatement])
 fitPatternMatchs _ s e _ [] = return (True, s, [])
@@ -508,13 +527,24 @@ fitPatternMatch queueId s e (FPatternMatchT _ tuple, FTValueStatement _ tuple_) 
 fitPatternMatch queueId s e (pm , FForceValueStatement _ assignments vs) = do
     (s, e) <- forceRegisterAssignments queueId assignments s e
     fitPatternMatch queueId s e (pm, vs)
+fitPatternMatch queueId s e (pm@FPatternMatchI{}, vs) = do
+    (s, e, vs) <- oneStepEvaluation queueId s e vs
+    fitPatternMatch queueId s e (pm, vs)
+fitPatternMatch queueId s e (pm@FPatternMatchT{}, vs) = do
+    (s, e, vs) <- oneStepEvaluation queueId s e vs
+    fitPatternMatch queueId s e (pm, vs)
+fitPatternMatch queueId s e (pm@FPatternMatchC{}, vs) = do
+    (s, e, vs) <- oneStepEvaluation queueId s e vs
+    fitPatternMatch queueId s e (pm, vs)
 
 wrapFunctionB :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 wrapFunctionB queueId vs@(FAValueStatement _ (FFunApplicationB _ x vss)) env state = do
     let locs = lookupLoc x env
     wrapFunctionBInt queueId locs vs env state
+wrapFunctionB _ _ _ _ = traceD "shouldn't be here" undefined
 
 wrapFunctionBInt :: Int -> [Int] -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+wrapFunctionBInt _ [] (FAValueStatement _ (FFunApplicationB _ name _)) _ _ = fail $ "pattern match not exhaustive for function " ++ name
 wrapFunctionBInt queueId (loc:locs) vs@(FAValueStatement _ (FFunApplicationB _ x vss)) env state = do
     let funArgNames = funArgNamesLookup state loc
     (fits, state, vss) <- fitPatternMatchs queueId state env funArgNames vss
@@ -526,12 +556,14 @@ wrapFunctionBInt queueId (loc:locs) vs@(FAValueStatement _ (FFunApplicationB _ x
             return (newState, wrapFunctionBIntNNewLambdas d vs newLambdas)
         else 
             wrapFunctionBInt queueId locs vs env state
+wrapFunctionBInt _ _ _ _ _ = traceD "shouldn't be here" undefined
 
 wrapFunctionBIntNNewLambdas :: Int -> FValueStatement -> [String] -> FValueStatement
 wrapFunctionBIntNNewLambdas d (FAValueStatement _ (FFunApplicationB _ x vss)) locs = 
     let
         argVss = map makeFunApplicationNoArg locs
     in foldl (flip $ FFValueStatement Nothing) (FAValueStatement Nothing (FFunApplicationB Nothing x (vss ++ argVss))) locs
+wrapFunctionBIntNNewLambdas _ _ _ = traceD "shouldn't be here" undefined
 
 makeFunApplicationNoArg :: String -> FValueStatement
 makeFunApplicationNoArg x = FAValueStatement Nothing (FFunApplicationB Nothing x [])

@@ -22,12 +22,14 @@ runFileAux p f = readFile f >>= runAux p
 
 runAux :: ParseFun (Program (Maybe (Int, Int))) -> String -> IO ()
 runAux p s = let ts = myLLexer s in case p ts of
-         Bad str      -> do 
-                        putStrLn "\nParse Failed... TODO\n"
-                        print ts
-                        putStrLn str
-         Ok tree    ->
-                        checkAndRunTree tree 
+        Bad str -> do 
+            putStrLn "\nParse Failed... TODO\n"
+            print ts
+            putStrLn str
+        Ok tree ->
+            checkAndRunTree tree 
+        _ -> undefined
+        
 
 checkAndRunTree :: Program (Maybe (Int, Int)) -> IO ()
 checkAndRunTree x = tryRun $ staticCheck x
@@ -35,4 +37,5 @@ checkAndRunTree x = tryRun $ staticCheck x
 tryRun :: Err NProgramFormat -> IO ()
 tryRun (Bad err) = putStrLn $ "ERROR: " ++ err
 tryRun (Ok tree) = run tree
+tryRun _ = undefined
                            
