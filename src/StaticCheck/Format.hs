@@ -70,7 +70,6 @@ data FValueStatement =
     FValueStatementB (Maybe (Int, Int)) [FAssignment] FValueStatement
   | FForceValueStatement (Maybe (Int, Int)) [FAssignment] FValueStatement
   | FIfValueStatement (Maybe (Int, Int)) FValueStatement FValueStatement FValueStatement
-  | FLValueStatement (Maybe (Int, Int)) [FValueStatement]
   | FTValueStatement (Maybe (Int, Int)) [FValueStatement]
   | FAValueStatement (Maybe (Int, Int)) FFunApplication
   | FIValueStatement (Maybe (Int, Int)) Int

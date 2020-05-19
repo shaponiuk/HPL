@@ -387,8 +387,17 @@ oneStepEvaluation queueId s e (FAValueStatement _ (FFunApplicationB _ name vss))
 oneStepEvaluation queueId s e (FForceValueStatement _ assignments vs) = do
     (ns, ne) <- forceRegisterAssignments queueId assignments s e
     return (ns, ne, vs)
+oneStepEvaluation queueId s e (FValueStatementB _ assignments vs) = do
+    (ns, ne) <- lazyRegisterAssignments queueId assignments s e
+    return (ns, ne, vs)
+oneStepEvaluation queueId s e (FIfValueStatement _ condvs vs1 vs2) = do
+    (s, FIValueStatement _ r) <- runVS queueId condvs e s
+    if r == 0
+        then return (s, e, vs2)
+        else return (s, e, vs1)
 
 oneStepRunLocs :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, E, FValueStatement)
+oneStepRunLocs _ [] _ _ _ = fail "pattern matches not exhaustive"
 oneStepRunLocs queueId (x:xs) args env state = do
     let funArgNames = funArgNamesLookup state x
     let (e, vs) = stateLookup x state
