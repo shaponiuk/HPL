@@ -115,8 +115,6 @@ convertValueStatement (ForceValueStatement pos assignements vs) =
   FForceValueStatement pos (convertAssignmentList assignements) (convertValueStatement vs)
 convertValueStatement (IfValueStatement pos condvs ifvs elsevs) =
   FIfValueStatement pos (convertValueStatement condvs) (convertValueStatement ifvs) (convertValueStatement elsevs)
-convertValueStatement (LValueStatement pos (ListValueStatementB _ l)) = 
-  FLValueStatement pos $ convertValueStatementList l
 convertValueStatement (TValueStatement _ (TupleValueStatementB _ [t])) =
   convertValueStatement t
 convertValueStatement (TValueStatement pos (TupleValueStatementB _ l)) = 
@@ -140,7 +138,6 @@ checkFunAppl (FunApplicationB _ name _) = isLower $ head $ unwrapIdent name
 convertFunctionApplToTypeConstructor :: FunApplication (Maybe (Int, Int)) -> (Maybe (Int, Int), String, [FValueStatement])
 convertFunctionApplToTypeConstructor (FunApplicationB pos name functionArgAppls) = 
   (pos, unwrapIdent name, map convertFunctionArgApplToTypeConstructor functionArgAppls)
-convertFunctionApplToTypeConstructor a = trace (show a) undefined
 
 convertFunctionArgApplToTypeConstructor :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
 convertFunctionArgApplToTypeConstructor (FunctionArgApplB _ vs) = convertValueStatement vs
@@ -195,7 +192,7 @@ mergeCmpVss ("==":strs, x:xs) = FExpr pos $ FEEQ x $ mergeCmpVss (strs, xs) wher
 mergeCmpVss ("!=":strs, x:xs) = FExpr pos $ FENE x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
 
 getVSLoc :: FValueStatement -> Maybe (Int, Int)
-getVSLoc = undefined
+getVSLoc (FAValueStatement loc _) = loc
 
 makeExprLists :: ValueStatement (Maybe (Int, Int)) -> ValueStatementExpr (Maybe (Int, Int)) -> ([String], [ValueStatement (Maybe (Int, Int))])
 makeExprLists vs1 vs2 = (signs, vs1:vss) where

@@ -119,7 +119,6 @@ instance Show FValueStatement where
   show FValueStatementB{} = "let statement"
   show FForceValueStatement{} = "force let statement"
   show FIfValueStatement{} = "if statement"
-  show (FLValueStatement _ l) = "List: " ++ show l
   show (FAValueStatement _ (FFunApplicationB _ funName vss)) = "function application: " ++ funName ++ " with args: " ++ show vss
   show (FAValueStatement _ (FFunApplicationR loc)) = "function application located at: " ++ show loc
   show FFValueStatement{} = "lambda statement"
