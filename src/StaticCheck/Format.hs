@@ -153,7 +153,6 @@ instance Eq FValueStatement where
     funName1 == funName2 && vss1 == vss2
   (FIValueStatement _ i1) == (FIValueStatement _ i2) = i1 == i2
   (FExpr _ expr1) == (FExpr _ expr2) = expr1 == expr2
-  vs1 == vs2 = traceD (show vs1 ++ show vs2) undefined
 
 instance Eq FValueStatementExpr where
   (FEAdd vs11 vs12) == (FEAdd vs21 vs22) = vs11 == vs21 && vs12 == vs22
@@ -165,4 +164,3 @@ instance Eq FType where
   (FTypeT _ l1) == (FTypeT _ l2) = l1 == l2
   (FTypeB _ tName1 tArgs1) == (FTypeB _ tName2 tArgs2) = tName1 == tName2 && tArgs1 == tArgs2
   (FunFType _ t11 t12) == (FunFType _ t21 t22) = t11 == t21 && t12 == t22
-  t1 == t2 = traceD (show t1 ++ show t2) undefined

@@ -97,7 +97,6 @@ mapType (FTypeB pos typeName typeArgs) m =
     if member typeName m
         then m ! typeName
         else FTypeB pos typeName $ Prelude.map (`mapType` m) typeArgs
-mapType t m = traceD t undefined
 
 getCorrectedConstructor :: FAlgTypeVal -> FAlgType -> [FType] -> Err FAlgTypeVal
 getCorrectedConstructor atv@(FAlgTypeVal pos cName ct) at@(FAlgType _ tName tArgs atvs) types = do
@@ -108,7 +107,6 @@ checkMatchingType :: FType -> FPatternMatch -> TCE -> Err ()
 checkMatchingType (FTypeB _ "Int" []) (FPatternMatchB _ _) _ = return ()
 checkMatchingType (FTypeB _ "String" []) (FPatternMatchB _ _) _ = return ()
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchB _ _) _ = return ()
-checkMatchingType t pm tce = traceD (show t ++ show pm) undefined
 
 checkMatchingTypes :: [FType] -> [FPatternMatch] -> TCE -> Err ()
 checkMatchingTypes [] [] _ = return ()
@@ -119,12 +117,10 @@ checkMatchingTypes (x:xs) (y:ys) tce = do
 checkMatchingConstructors :: FAlgTypeVal -> FPatternMatch -> TCE -> Err ()
 checkMatchingConstructors (FAlgTypeVal _ cName (FTypeT _ tArgs)) (FPatternMatchC _ _ cArgs) tce =
     checkMatchingTypes tArgs cArgs tce
-checkMatchingConstructors atv pm tce = traceD (show atv ++ show pm) undefined
 
 registerConstructor :: FAlgTypeVal -> FPatternMatch -> TCE -> Err TCE
 registerConstructor (FAlgTypeVal _ _ (FTypeT _ tArgs)) (FPatternMatchC _ _ cArgs) tce =
     registerArgs tArgs cArgs tce
-registerConstructor atv pm (TCE tm atm) = traceD (show atv ++ show pm) undefined
 
 registerArg :: FType -> FPatternMatch -> TCE -> Err TCE
 registerArg t@FTypeB{} (FPatternMatchB _ x) tce@(TCE tm atm) = do
@@ -147,7 +143,6 @@ registerArg t@(FTypeB _ name args) pmc@(FPatternMatchC _ (FPatternMatchB _ cName
     checkMatchingConstructors atm_ pmc tce
     registerConstructor atm_ pmc tce
 registerArg (FTypeB _ "Int" []) (FPatternMatchI _ _) tce = return tce
-registerArg t pm tce = traceD (show t ++ show pm) undefined
 
 registerAssignments :: String -> [FAssignment] -> TCE -> Err TCE
 registerAssignments _ [] tce = return tce
@@ -166,7 +161,6 @@ checkIntExpression funName (FEEQ vs1 vs2) = checkIntExpressionInt funName vs1 vs
 checkIntExpression funName (FEMul vs1 vs2) = checkIntExpressionInt funName vs1 vs2
 checkIntExpression funName (FESub vs1 vs2) = checkIntExpressionInt funName vs1 vs2
 checkIntExpression funName (FEAdd vs1 vs2) = checkIntExpressionInt funName vs1 vs2
-checkIntExpression _ expr = traceD expr undefined
 
 checkFunctionApplicationTypeInt :: String -> FType -> String -> Maybe (Int, Int) -> FType -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypeInt funName t1 name posM (FunFType _ t21 t22) (vs:vss) tce = do
@@ -176,7 +170,6 @@ checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 [] _ =
     if t1 == t2
         then return ()
         else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName ++ " " ++ show pos
-checkFunctionApplicationTypeInt _ t1 _ _ t2 vss _ = traceD (show t1 ++ show t2 ++ show vss) undefined
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [_] tce = return ()
@@ -244,7 +237,6 @@ checkFunctionBody funName t@(FTypeB _ atName atArgs) (FCValueStatement pos cName
     checkFunctionBody funName atmArgs (FTValueStatement pos cArgs) tce
 checkFunctionBody funName t@(FunFType _ t1 t2) vs@(FIValueStatement (Just posVS) _) _ =
     fail $ show vs ++ " " ++ show posVS ++ " is not of the type " ++ show t
-checkFunctionBody _ t vs _ = traceD (show t ++ show vs) undefined
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
 checkFunctionDefs [] _ = return ()
