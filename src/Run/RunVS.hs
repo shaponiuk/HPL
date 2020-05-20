@@ -410,6 +410,42 @@ oneStepEvaluation queueId s e (FExpr _ (FEAdd i1@FIValueStatement{} vs2)) = do
 oneStepEvaluation queueId s e (FExpr _ (FEAdd vs1 vs2)) = do
     (s, e, vs1) <- oneStepEvaluation queueId s e vs1
     return (s, e, FExpr Nothing $ FEAdd vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FESub (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ i1 - i2)
+oneStepEvaluation queueId s e (FExpr _ (FESub i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FESub i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FESub vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FESub vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEMul (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ i1 * i2)
+oneStepEvaluation queueId s e (FExpr _ (FEMul i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FEMul i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEMul vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FEMul vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEMod _ (FIValueStatement _ 0))) = fail "division by zero"
+oneStepEvaluation queueId s e (FExpr _ (FEMod (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ mod i1 i2)
+oneStepEvaluation queueId s e (FExpr _ (FEMod i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FEMod i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEMod vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FEMod vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEDiv _ (FIValueStatement _ 0))) = fail "division by zero"
+oneStepEvaluation queueId s e (FExpr _ (FEDiv (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ div i1 i2)
+oneStepEvaluation queueId s e (FExpr _ (FEDiv i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FEDiv i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEDiv vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FEDiv vs1 vs2)
+
+
 
 
 oneStepTupleEvaluation :: Int -> S -> E -> [FValueStatement] -> IO (S, E, [FValueStatement])
