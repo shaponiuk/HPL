@@ -395,6 +395,29 @@ oneStepEvaluation queueId s e (FIfValueStatement _ condvs vs1 vs2) = do
     if r == 0
         then return (s, e, vs2)
         else return (s, e, vs1)
+oneStepEvaluation queueId s e (FTValueStatement _ ts) = do
+    (s, e, ts) <- oneStepTupleEvaluation queueId s e ts
+    return (s, e, FTValueStatement Nothing ts)
+oneStepEvaluation queueId s e vs@FIValueStatement{} = return (s, e, vs)
+oneStepEvaluation queueId s e vs@FLitStrValueStatement{} = return (s, e, vs)
+oneStepEvaluation queueId s e vs@FFValueStatement{} = return (s, e, vs)
+oneStepEvaluation queueId s e vs@FRefAddr{} = return (s, e, vs)
+oneStepEvaluation queueId s e (FExpr _ (FEAdd (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ i1 + i2)
+oneStepEvaluation queueId s e (FExpr _ (FEAdd i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FEAdd i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEAdd vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FEAdd vs1 vs2)
+
+
+oneStepTupleEvaluation :: Int -> S -> E -> [FValueStatement] -> IO (S, E, [FValueStatement])
+oneStepTupleEvaluation _ s e [] = return (s, e, [])
+oneStepTupleEvaluation queueId s e (vs:vss) = do
+    (s, e, vs) <- oneStepEvaluation queueId s e vs
+    (s, e, vss) <- oneStepTupleEvaluation queueId s e vss
+    return (s, e, vs:vss)
 
 oneStepRunLocs :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, E, FValueStatement)
 oneStepRunLocs _ [] _ _ _ = fail "pattern matches not exhaustive"
