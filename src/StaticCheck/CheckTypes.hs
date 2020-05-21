@@ -151,17 +151,6 @@ registerAssignments funName (FAssignmentB (Just pos) t pm vs:assignments) tce = 
     tce2 <- registerArg t pm tce
     registerAssignments funName assignments tce2
 
-checkIntExpressionInt :: String -> FValueStatement -> FValueStatement -> TCE -> Err ()
-checkIntExpressionInt funName vs1 vs2 tce = do
-    checkFunctionBody funName (FTypeB Nothing "Int" []) vs1 tce
-    checkFunctionBody funName (FTypeB Nothing "Int" []) vs2 tce
-
-checkIntExpression :: String -> FValueStatementExpr -> TCE -> Err ()
-checkIntExpression funName (FEEQ vs1 vs2) = checkIntExpressionInt funName vs1 vs2
-checkIntExpression funName (FEMul vs1 vs2) = checkIntExpressionInt funName vs1 vs2
-checkIntExpression funName (FESub vs1 vs2) = checkIntExpressionInt funName vs1 vs2
-checkIntExpression funName (FEAdd vs1 vs2) = checkIntExpressionInt funName vs1 vs2
-
 checkFunctionApplicationTypeInt :: String -> FType -> String -> Maybe (Int, Int) -> FType -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypeInt funName t1 name posM (FunFType _ t21 t22) (vs:vss) tce = do
     checkFunctionBody funName t21 vs tce
@@ -210,7 +199,6 @@ checkFunctionBody funName t (FForceValueStatement _ assignments vs) tce = do
     checkFunctionBody funName t vs tce2
 checkFunctionBody funName t (FAValueStatement _ (FFunApplicationB pos name args)) tce =
     checkFunctionApplicationType funName t name pos args tce
-checkFunctionBody funName (FTypeB _ "Int" []) (FExpr _ expr) tce = checkIntExpression funName expr tce
 checkFunctionBody funName t (FIfValueStatement posM ifvs vs1 vs2) tce = do
     checkFunctionBody funName (FTypeB posM "Int" []) ifvs tce
     checkFunctionBody funName t vs1 tce
@@ -237,6 +225,59 @@ checkFunctionBody funName t@(FTypeB _ atName atArgs) (FCValueStatement pos cName
     checkFunctionBody funName atmArgs (FTValueStatement pos cArgs) tce
 checkFunctionBody funName t@(FunFType _ t1 t2) vs@(FIValueStatement (Just posVS) _) _ =
     fail $ show vs ++ " " ++ show posVS ++ " is not of the type " ++ show t
+checkFunctionBody funName FTypeB{} (FTValueStatement (Just pos) _) _ =
+    fail $ "tuple at " ++ show pos ++ " in function " ++ funName ++ " has a non tuple type"
+checkFunctionBody _ _ (FAValueStatement _ FFunApplicationR{}) _ = undefined
+checkFunctionBody funName t (FIValueStatement (Just loc) i) _ =
+    fail $ "int value " ++ show i ++ " at " ++ show loc ++ " is not of the type Int ()"
+checkFunctionBody _ _ (FIValueStatement Nothing _) _ = undefined
+checkFunctionBody funName t (FLitStrValueStatement (Just loc) i) _ =
+    fail $ "string value " ++ show i ++ " at " ++ show loc ++ " is not of the type String ()"
+checkFunctionBody _ _ (FLitStrValueStatement Nothing _) _ = undefined
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEAdd vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FESub vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEMul vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEDiv vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEMod vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEL vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FELQ vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEG vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEGQ vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEEQ vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FENE vs1 vs2)) tce = do
+    checkFunctionBody funName t vs1 tce
+    checkFunctionBody funName t vs2 tce
+checkFunctionBody funName _ (FExpr (Just loc) _) tce =
+    fail $ "expresion at " ++ show loc ++ " is not of the type Int ()"
+checkFunctionBody _ _ (FExpr Nothing _) _ = undefined
+checkFunctionBody _ _ FRefAddr{} _ = undefined
+checkFunctionBody _ _ FSusValueStatement{} _ = undefined
+checkFunctionBody _ _ FSuspendedValue{} _ = undefined
+checkFunctionBody _ _ FSemaphore{} _ = undefined
+checkFunctionBody _ _ FNTValueStatement{} _ = undefined
+checkFunctionBody funName _ (FTValueStatement (Just pos) _) _ =
+    fail $ "tuple at " ++ show pos ++ " in function " ++ funName ++ " is not of the tuple type"
+checkFunctionBody _ _ (FTValueStatement Nothing _) _ = undefined
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
 checkFunctionDefs [] _ = return ()
