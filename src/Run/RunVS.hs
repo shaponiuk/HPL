@@ -256,36 +256,39 @@ forceRegisterAssignment queueId a@(FAssignmentB _ typ@(FTypeB _ "Ref" [t]) (FPat
     let newererererState = putInLoc vsLoc (newEnv, nvs) newerererState
     return (newererererState, newEnv)
 forceRegisterAssignment queueId a@(FAssignmentB _ t pm vs) state env =
-    setPM queueId t pm vs state env
+    setPM queueId pm vs state env
 
 lazyRegisterAssignment :: Int -> FAssignment -> S -> E -> IO (S, E)
 lazyRegisterAssignment queueId (FAssignmentB _ t pm vs) =
-    setPMLazy queueId t pm vs
+    setPMLazy queueId pm vs
 
-setPM :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
-setPM qId (FTypeT _ types) (FPatternMatchT _ pmL) vs state env = do
+setPM :: Int -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
+setPM qId (FPatternMatchT _ pmL) vs state env = do
     (vss, newState) <- forceGetTupleVSS qId vs state env
-    foldl (setPMInFoldF qId) (return (newState, env)) $ tList types pmL vss
-setPM qId t (FPatternMatchB _ x) vs state env = do
+    foldl (setPMInFoldF qId) (return (newState, env)) $ dList pmL vss
+setPM qId (FPatternMatchB _ x) vs state env = do
     let (loc, newState) = getNewLoc state
     let newEnv = registerLoc False env x loc
     (newerState, nvs) <- runVS qId vs newEnv newState
     let newererState = putInLoc loc (newEnv, nvs) newerState
     return (newererState, newEnv)
+setPM qId FPatternMatchI{} vs state env = do
+    (state, _) <- runVS qId vs env state
+    return (state, env)
+setPM qId pm@FPatternMatchC{} vs state env = do
+    (state, vs) <- runVS qId vs env state
+    (env, state) <- registerArgs qId env env state [pm] [vs]
+    return (state, env)
 
-setPMLazy :: Int -> FType -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
-setPMLazy qId t (FPatternMatchB _ x) vs state env = do
-    let (loc, newState) = getNewLoc state
-    let (loc2, newState2) = getNewLoc newState
-    let newEnv = registerLoc False env x loc2
-    let newerState = putInLoc loc (newEnv, vs) newState2
-    let newerState2 = putInLoc loc2 (newEnv, FAValueStatement Nothing $ FFunApplicationR loc) newerState
-    return (newerState2, newEnv)
+setPMLazy :: Int -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
+setPMLazy queueId pm vs state env = do
+    (e, s) <- registerArgs queueId env env state [pm] [vs]
+    return (s, e)
 
-setPMInFoldF :: Int -> IO (S, E) -> (FType, FPatternMatch, FValueStatement) -> IO (S, E)
-setPMInFoldF queueId acc (t, pm, vs) = do
+setPMInFoldF :: Int -> IO (S, E) -> (FPatternMatch, FValueStatement) -> IO (S, E)
+setPMInFoldF queueId acc (pm, vs) = do
     (s, e) <- acc
-    setPM queueId t pm vs s e
+    setPM queueId pm vs s e
 
 unwrapSingleTuples :: FValueStatement -> [FValueStatement]
 unwrapSingleTuples (FTValueStatement _ [vs]) = unwrapSingleTuples vs
