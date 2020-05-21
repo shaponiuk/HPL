@@ -16,6 +16,7 @@ runSpecialFunction :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement
 runSpecialFunction queueId (FAValueStatement _ ap@(FFunApplicationB _ x r)) e s = do
     (nvs, ns) <- forceRunFunApplication queueId ap s e
     return (ns, nvs)
+runSpecialFunction _ _ _ _ = undefined
 
 checkSpecialFunctionName :: String -> Bool
 checkSpecialFunctionName funName =
@@ -39,6 +40,7 @@ runLambda queueId vs args innerEnv outerEnv state = do
         else undefined -- infinite loop
 
 runLambdaWrapper :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, FValueStatement)
+runLambdaWrapper _ [] _ _ _ = fail "pattern matching not exhaustive"
 runLambdaWrapper queueId (loc:locs) vss outerEnv state = do
     let argPMs = funArgNamesLookup state loc
     (fits, state, vss) <- fitPatternMatchs queueId state outerEnv argPMs vss
@@ -79,6 +81,7 @@ runNotSpecialFunction queueId a@(FAValueStatement _ (FFunApplicationB _ funName 
                         else do
                             (innerEnv, state) <- registerArgs queueId innerEnv outerEnv state funArgNames funArgVss
                             runVS queueId vs innerEnv state
+runNotSpecialFunction _ _ _ _ = undefined
 
 runVS :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVS queueId vs@FForceValueStatement{} e s = runVSForceLet queueId vs e s
@@ -102,6 +105,68 @@ runVS queueId vs@FValueStatementB{} e s = runVSLazyLet queueId vs e s
 runVS queueId vs@(FNTValueStatement n (FTValueStatement _ ts)) e s = runVS queueId (takeNth n ts) e s
 runVS queueId vs@(FNTValueStatement n (FCValueStatement _ _ ts)) e s = runVS queueId (takeNth n ts) e s
 runVS queueId vs@FNTValueStatement{} e s = runVSFNTNotTuple queueId vs e s
+runVS queueId vs@(FExpr _ FEMod{}) e s = runVSMod queueId vs e s
+runVS queueId vs@(FExpr _ FEDiv{}) e s = runVSDiv queueId vs e s
+runVS queueId vs@(FExpr _ FEL{}) e s = runVSL queueId vs e s
+runVS queueId vs@(FExpr _ FELQ{}) e s = runVSLQ queueId vs e s
+runVS queueId vs@(FExpr _ FEG{}) e s = runVSG queueId vs e s
+runVS queueId vs@(FExpr _ FEGQ{}) e s = runVSGQ queueId vs e s
+runVS queueId vs@(FExpr _ FENE{}) e s = runVSNE queueId vs e s
+
+runVSL :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSL queueId (FExpr _ (FEL vs1 vs2)) e s = do
+    (s, FIValueStatement _ i1) <- runVS queueId vs1 e s
+    (s, FIValueStatement _ i2) <- runVS queueId vs2 e s
+    return (s, FIValueStatement Nothing $ if i1 < i2 then 1 else 0)
+runVSL _ _ _ _ = undefined
+
+runVSLQ :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSLQ queueId (FExpr _ (FELQ vs1 vs2)) e s = do
+    (s, FIValueStatement _ i1) <- runVS queueId vs1 e s
+    (s, FIValueStatement _ i2) <- runVS queueId vs2 e s
+    return (s, FIValueStatement Nothing $ if i1 <= i2 then 1 else 0)
+runVSLQ _ _ _ _ = undefined
+
+runVSG :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSG queueId (FExpr _ (FEG vs1 vs2)) e s = do
+    (s, FIValueStatement _ i1) <- runVS queueId vs1 e s
+    (s, FIValueStatement _ i2) <- runVS queueId vs2 e s
+    return (s, FIValueStatement Nothing $ if i1 > i2 then 1 else 0)
+runVSG _ _ _ _ = undefined
+
+runVSGQ :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSGQ queueId (FExpr _ (FEGQ vs1 vs2)) e s = do
+    (s, FIValueStatement _ i1) <- runVS queueId vs1 e s
+    (s, FIValueStatement _ i2) <- runVS queueId vs2 e s
+    return (s, FIValueStatement Nothing $ if i1 >= i2 then 1 else 0)
+runVSGQ _ _ _ _ = undefined
+
+runVSNE :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSNE queueId (FExpr _ (FENE vs1 vs2)) e s = do
+    (s, FIValueStatement _ i1) <- runVS queueId vs1 e s
+    (s, FIValueStatement _ i2) <- runVS queueId vs2 e s
+    return (s, FIValueStatement Nothing $ if i1 /= i2 then 1 else 0)
+runVSNE _ _ _ _ = undefined
+
+runVSMod :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSMod queueId (FExpr _ (FEMod vs1 vs2)) e s = do
+    (s, FIValueStatement _ i2) <- runVS queueId vs2 e s
+    if i2 == 0
+        then fail "division by zero"
+        else do
+            (s, FIValueStatement _ i1) <- runVS queueId vs1 e s
+            return (s, FIValueStatement Nothing $ mod i1 i2)
+runVSMod _ _ _ _ = undefined
+
+runVSDiv :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
+runVSDiv queueId (FExpr _ (FEDiv vs1 vs2)) e s = do
+    (s, FIValueStatement _ i2) <- runVS queueId vs2 e s
+    if i2 == 0
+        then fail "division by zero"
+        else do
+            (s, FIValueStatement _ i1) <- runVS queueId vs1 e s
+            return (s, FIValueStatement Nothing $ div i1 i2)
+runVSDiv _ _ _ _ = undefined
 
 runVSFunApplR :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSFunApplR queueId (FAValueStatement Nothing (FFunApplicationR loc)) e s = do
@@ -109,6 +174,7 @@ runVSFunApplR queueId (FAValueStatement Nothing (FFunApplicationR loc)) e s = do
     (s, vs) <- runVS queueId vs innerEnv s
     let s2 = putInLoc loc (innerEnv, vs) s
     return (s2, vs)
+runVSFunApplR _ _ _ _ = undefined
 
 runVSFNTNotTuple :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSFNTNotTuple queueId (FNTValueStatement n vs) e s = do
@@ -117,6 +183,7 @@ runVSFNTNotTuple queueId (FNTValueStatement n vs) e s = do
         (s, FTValueStatement _ ts) -> return (s, takeNth n ts)
         (s, FCValueStatement _ _ ts) -> return (s, takeNth n ts)
         _ -> undefined
+runVSFNTNotTuple _ _ _ _ = undefined
 
 runVSMul :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement) 
 runVSMul queueId (FExpr _ (FEMul vs1 vs2)) env state = do
@@ -137,7 +204,7 @@ runVSSub queueId (FExpr _ (FESub vs1 vs2)) env state = do
     (newState, FIValueStatement _ i1) <- runVS queueId vs1 env state
     (newerState, FIValueStatement _ i2) <- runVS queueId vs2 env newState
     return (newerState, FIValueStatement Nothing (i1 - i2))
-runVSSusSt _ _ _ _ = undefined
+runVSSub _ _ _ _ = undefined
 
 runVSForceLet :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSForceLet queueId (FForceValueStatement _ assignments vs) env state = do
