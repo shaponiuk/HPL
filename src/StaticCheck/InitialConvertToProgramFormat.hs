@@ -227,7 +227,7 @@ makeExprListsAux (ENE _ vs) = (["!="], [vs])
 
 convertFunctionAppl :: FunApplication (Maybe (Int, Int)) -> FFunApplication
 convertFunctionAppl (FunApplicationB pos i fArgApplList) = FFunApplicationB pos (unwrapIdent i) (convertFunctionArgApplList fArgApplList)
-convertFucntionAppl (SFunApplication pos i fAppl) = FSFunApplication pos (unwrapIdent i) (convertFunctionAppl fAppl)
+convertFucntionAppl (SFunApplication pos i fAppl) = undefined
 
 convertFunctionArgAppl :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
 convertFunctionArgAppl (FunctionArgApplB _ vs) = convertValueStatement vs

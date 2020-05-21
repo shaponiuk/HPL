@@ -444,16 +444,82 @@ oneStepEvaluation queueId s e (FExpr _ (FEDiv i1@FIValueStatement{} vs2)) = do
 oneStepEvaluation queueId s e (FExpr _ (FEDiv vs1 vs2)) = do
     (s, e, vs1) <- oneStepEvaluation queueId s e vs1
     return (s, e, FExpr Nothing $ FEDiv vs1 vs2)
-
-
+oneStepEvaluation queueId s e (FExpr _ (FEL (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ if i1 < i2 then 1 else 0)
+oneStepEvaluation queueId s e (FExpr _ (FEL i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FEL i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEL vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FEL vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FELQ (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ if i1 <= i2 then 1 else 0)
+oneStepEvaluation queueId s e (FExpr _ (FELQ i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FELQ i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FELQ vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FELQ vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEG (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ if i1 > i2 then 1 else 0)
+oneStepEvaluation queueId s e (FExpr _ (FEG i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FEG i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEG vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FEG vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEGQ (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ if i1 >= i2 then 1 else 0)
+oneStepEvaluation queueId s e (FExpr _ (FEGQ i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FEGQ i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEGQ vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FEGQ vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEEQ (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ if i1 == i2 then 1 else 0)
+oneStepEvaluation queueId s e (FExpr _ (FEEQ i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FEEQ i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FEEQ vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FEEQ vs1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FENE (FIValueStatement _ i1) (FIValueStatement _ i2))) =
+    return (s, e, FIValueStatement Nothing $ if i1 /= i2 then 1 else 0)
+oneStepEvaluation queueId s e (FExpr _ (FENE i1@FIValueStatement{} vs2)) = do
+    (s, e, vs2) <- oneStepEvaluation queueId s e vs2
+    return (s, e, FExpr Nothing $ FENE i1 vs2)
+oneStepEvaluation queueId s e (FExpr _ (FENE vs1 vs2)) = do
+    (s, e, vs1) <- oneStepEvaluation queueId s e vs1
+    return (s, e, FExpr Nothing $ FENE vs1 vs2)
+oneStepEvaluation queueId s e vs@FSemaphore{} = return (s, e, vs)
+oneStepEvaluation queueId s e (FNTValueStatement n (FTValueStatement _ ts)) = return (s, e, takeNth n ts)
+oneStepEvaluation queueId s e (FNTValueStatement n vs) = do
+    (s, e, vs) <- oneStepEvaluation queueId s e vs
+    return (s, e, FNTValueStatement n vs)
+oneStepEvaluation queueId s e (FCValueStatement _ name args) = do
+    (s, e, FTValueStatement _ args) <- oneStepEvaluation queueId s e (FTValueStatement Nothing args)
+    return (s, e, FCValueStatement Nothing name args)
+oneStepEvaluation queueId s e (FSusValueStatement vs) = do
+    let queueId = getFreeQueueId s
+    let nvs = FSuspendedValue queueId
+    let ns = putQueue s (QueueT e vs queueId False False)
+    return (ns, e, nvs)
+oneStepEvaluation queueId s e (FSuspendedValue qId) = do
+    s <- runQueue (getQueue qId s) s
+    let (QueueT _ vs _ _ _) = getQueue qId s
+    return (s, e, vs)
 
 
 oneStepTupleEvaluation :: Int -> S -> E -> [FValueStatement] -> IO (S, E, [FValueStatement])
 oneStepTupleEvaluation _ s e [] = return (s, e, [])
 oneStepTupleEvaluation queueId s e (vs:vss) = do
-    (s, e, vs) <- oneStepEvaluation queueId s e vs
-    (s, e, vss) <- oneStepTupleEvaluation queueId s e vss
-    return (s, e, vs:vss)
+    (s, e, vs_) <- oneStepEvaluation queueId s e vs
+    if vs /= vs_
+        then return (s, e, vs_:vss)
+        else do
+            (s, e, vss) <- oneStepTupleEvaluation queueId s e vss
+            return (s, e, vs_:vss)
 
 oneStepRunLocs :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (S, E, FValueStatement)
 oneStepRunLocs _ [] _ _ _ = fail "pattern matches not exhaustive"
@@ -604,6 +670,7 @@ fitPatternMatch queueId s e (pm@FPatternMatchT{}, vs) = do
 fitPatternMatch queueId s e (pm@FPatternMatchC{}, vs) = do
     (s, e, vs) <- oneStepEvaluation queueId s e vs
     fitPatternMatch queueId s e (pm, vs)
+
 
 wrapFunctionB :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 wrapFunctionB queueId vs@(FAValueStatement _ (FFunApplicationB _ x vss)) env state = do

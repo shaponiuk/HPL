@@ -84,8 +84,7 @@ data FValueStatement =
   | FNTValueStatement Int FValueStatement
 
 data FFunApplication =
-    FSFunApplication (Maybe (Int, Int)) String FFunApplication
-  | FFunApplicationB (Maybe (Int, Int)) String [FValueStatement]
+  FFunApplicationB (Maybe (Int, Int)) String [FValueStatement]
   | FFunApplicationR Int
   deriving (Show)
 
