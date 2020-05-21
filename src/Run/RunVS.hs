@@ -123,23 +123,27 @@ runVSMul queueId (FExpr _ (FEMul vs1 vs2)) env state = do
     (newState, FIValueStatement _ i1) <- runVS queueId vs1 env state
     (newerState, FIValueStatement _ i2) <- runVS queueId vs2 env newState 
     return (newerState, FIValueStatement Nothing $ i1 * i2)
+runVSMul _ _ _ _ = undefined
 
 runVSEQ :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSEQ queueId vs@(FExpr _ (FEEQ vs1 vs2)) env state = do
     (newState, FIValueStatement _ i1) <- runVS queueId vs1 env state
     (newerState, FIValueStatement _ i2) <- runVS queueId vs2 env newState
     return (newerState, FIValueStatement Nothing $ if i1 == i2 then 1 else 0)
+runVSEQ _ _ _ _ = undefined
 
 runVSSub :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSSub queueId (FExpr _ (FESub vs1 vs2)) env state = do
     (newState, FIValueStatement _ i1) <- runVS queueId vs1 env state
     (newerState, FIValueStatement _ i2) <- runVS queueId vs2 env newState
     return (newerState, FIValueStatement Nothing (i1 - i2))
+runVSSusSt _ _ _ _ = undefined
 
 runVSForceLet :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSForceLet queueId (FForceValueStatement _ assignments vs) env state = do
     (newState, newEnv) <- forceRegisterAssignments queueId assignments state env
     seq newState $ runVS queueId vs newEnv newState
+runVSForceLet _ _ _ _ = undefined
 
 runVSIf :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSIf queueId (FIfValueStatement _ condvs res1vs res2vs) env state = do
@@ -147,6 +151,7 @@ runVSIf queueId (FIfValueStatement _ condvs res1vs res2vs) env state = do
     if condVal /= 0
         then runVS queueId res1vs env state
         else runVS queueId res2vs env state
+runVSIf _ _ _ _ = undefined
 
 runVSFunB :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSFunB queueId a@(FAValueStatement _ (FFunApplicationB _ funName _)) =
@@ -155,12 +160,14 @@ runVSFunB queueId a@(FAValueStatement _ (FFunApplicationB _ funName _)) =
             runSpecialFunction queueId a
         else 
             runNotSpecialFunction queueId a
+runVSFunB _ _ = undefined
 
 runVSAdd :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSAdd queueId vs@(FExpr _ (FEAdd vs1 vs2)) env state = do
     (newState, FIValueStatement _ i1) <- runVS queueId vs1 env state
     (newerState, FIValueStatement _ i2) <- runVS queueId vs2 env newState
     return (newerState, FIValueStatement Nothing (i1 + i2))
+runVSAdd _ _ _ _ = undefined
     
 runLoc :: Int -> Int -> S -> IO (S, FValueStatement)
 runLoc queueId x state = do
@@ -168,12 +175,14 @@ runLoc queueId x state = do
     runVS queueId vs innerEnv state
 
 runVSStr :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
-runVSStr queueIdStr vs@(FLitStrValueStatement _ _) e s = return (s, vs)
+runVSStr _ vs@FLitStrValueStatement{} _ s = return (s, vs)
+runVSStr _ _ _ _ = undefined
 
 runVSC :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSC queueId (FCValueStatement _ name vss) e s = do
     (new_state, newVss) <- foldl (cvsInFoldF queueId e) (return (s, [])) vss
     return (new_state, FCValueStatement Nothing name (reverse newVss))
+runVSC _ _ _ _ = undefined
 
 cvsInFoldF :: Int -> E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 cvsInFoldF queueId e acc vs = do
@@ -185,6 +194,7 @@ runVST :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVST queueId (FTValueStatement _ xss) e s = do
     (ns, xssc) <- foldl (runTVSInFoldF queueId e) (return (s, [])) xss
     return (ns, FTValueStatement Nothing xssc)
+runVST _ _ _ _ = undefined
 
 runTVSInFoldF :: Int -> E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
 runTVSInFoldF queueId env acc vs = do
@@ -195,6 +205,7 @@ runTVSInFoldF queueId env acc vs = do
 runVSLam :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSLam queueId a@(FFValueStatement _ argName vs) e s =
     return (s, a)
+runVSLam _ _ _ _ = undefined
 
 runVSSusSt :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSSusSt queueId (FSusValueStatement vs) e s = do
@@ -202,6 +213,7 @@ runVSSusSt queueId (FSusValueStatement vs) e s = do
     let nvs = FSuspendedValue queueId
     let ns = putQueue s (QueueT e vs queueId False False)
     return (ns, nvs)
+runVSSusSt _ _ _ _ = undefined
 
 runVSSusVal :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSSusVal queueId (FSuspendedValue qId) e s = do
