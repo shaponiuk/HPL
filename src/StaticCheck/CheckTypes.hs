@@ -81,6 +81,7 @@ checkExistingType (FTypeB (Just pos) name args) tce@(TCE _ atm) =
         else 
             fail $ "type " ++ name ++ " doesn't exist " ++ show pos
 
+checkConstructorExistence :: String -> String -> Int -> [FAlgTypeVal] -> Err FAlgTypeVal
 checkConstructorExistence typeName cName _ [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
 checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal _ cName_ FTypeB{}):atvs) =
     if cName == cName_ && argCount == 1
@@ -90,6 +91,9 @@ checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal _ cName_ (FT
     if cName == cName_ && argCount == length types
         then return atv
         else checkConstructorExistence typeName cName argCount atvs
+checkConstructorExistence _ _ _ (FAlgTypeVal (Just pos) _ FunFType{}:_) = 
+    fail $ "function type not allowed in algebraic type constructor type " ++ show pos
+checkConstructorExistence _ _ _ _ = undefined
 
 mapType :: FType -> Map String FType -> FType
 mapType (FTypeT pos types) m = FTypeT pos $ Prelude.map (`mapType` m) types
