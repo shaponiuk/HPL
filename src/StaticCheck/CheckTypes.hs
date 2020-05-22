@@ -97,6 +97,8 @@ mapType (FTypeB pos typeName typeArgs) m =
     if member typeName m
         then m ! typeName
         else FTypeB pos typeName $ Prelude.map (`mapType` m) typeArgs
+mapType (FunFType pos t1 t2) m =
+    FunFType pos (mapType t1 m) (mapType t2 m)
 
 getCorrectedConstructor :: FAlgTypeVal -> FAlgType -> [FType] -> Err FAlgTypeVal
 getCorrectedConstructor atv@(FAlgTypeVal pos cName ct) at@(FAlgType _ tName tArgs atvs) types = do
@@ -128,6 +130,15 @@ checkMatchingType FunFType{} (FPatternMatchI (Just loc) _) _ =
     fail $ "int value at " ++ show loc ++ " is not of the function type"
 checkMatchingType FunFType{} (FPatternMatchT (Just loc) _) _ =
     fail $ "tuple value at " ++ show loc ++ " is not of the function type"
+checkMatchingType (FTypeT _ ts) (FPatternMatchT (Just loc) ts_) tce =
+    if length ts /= length ts_
+        then fail $ "tuple length at " ++ show loc ++ " doesn't match the tuple length in its type declaration"
+        else checkMatchingTypes ts ts_ tce
+checkMatchingType FTypeT{} FPatternMatchB{} _ = return ()
+checkMatchingType FTypeT{} (FPatternMatchI (Just loc) _) _ =
+    fail $ "int value at " ++ show loc ++ " is not of the tuple type"
+checkMatchingType FTypeT{} (FPatternMatchC (Just loc) _ _) _ =
+    fail $ "type constructor at " ++ show loc ++ " is not of the tuple type"
 
 checkMatchingTypes :: [FType] -> [FPatternMatch] -> TCE -> Err ()
 checkMatchingTypes [] [] _ = return ()
