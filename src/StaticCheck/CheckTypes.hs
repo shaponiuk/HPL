@@ -104,23 +104,69 @@ getCorrectedConstructor atv@(FAlgTypeVal pos cName ct) at@(FAlgType _ tName tArg
     return $ FAlgTypeVal pos cName $ mapType ct m
     
 checkMatchingType :: FType -> FPatternMatch -> TCE -> Err ()
-checkMatchingType (FTypeB _ "Int" []) (FPatternMatchB _ _) _ = return ()
+checkMatchingType (FTypeB _ "Int" []) FPatternMatchB{} _ = return ()
+checkMatchingType (FTypeB _ "Int" []) FPatternMatchI{} _ = return ()
 checkMatchingType (FTypeB _ "String" []) (FPatternMatchB _ _) _ = return ()
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchB _ _) _ = return ()
+checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce =
+    if atName /= cName
+        then fail $ "wrong constructor name at " ++ show pos
+        else checkMatchingTypes atArgs cArgs tce
+checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) _ _) _ =
+    fail $ "wrong constructor syntax at " ++ show pos
+checkMatchingType _ (FPatternMatchC Nothing _ _) _ = undefined
+checkMatchingType t@FTypeB{} (FPatternMatchI (Just pos) _) _ =
+    fail $ "int value at " ++ show pos ++ " is not of the type " ++ show t
+checkMatchingType _ (FPatternMatchI Nothing _) _ = undefined
+checkMatchingType t@FTypeB{} (FPatternMatchT (Just pos) _) _ =
+    fail $ "tuple value at " ++ show pos ++ " is not of the type " ++ show t
+checkMatchingType _ (FPatternMatchT Nothing _) _ = undefined
+checkMatchingType FunFType{} FPatternMatchB{} _ = return ()
+checkMatchingType FunFType{} (FPatternMatchC (Just loc) _ _) _ =
+    fail $ "constructor at " ++ show loc ++ " is not of the function type"
+checkMatchingType FunFType{} (FPatternMatchI (Just loc) _) _ =
+    fail $ "int value at " ++ show loc ++ " is not of the function type"
+checkMatchingType FunFType{} (FPatternMatchT (Just loc) _) _ =
+    fail $ "tuple value at " ++ show loc ++ " is not of the function type"
 
 checkMatchingTypes :: [FType] -> [FPatternMatch] -> TCE -> Err ()
 checkMatchingTypes [] [] _ = return ()
 checkMatchingTypes (x:xs) (y:ys) tce = do
     checkMatchingType x y tce
     checkMatchingTypes xs ys tce
+checkMatchingTypes (FTypeB (Just pos) _ _:_) [] _ = 
+    fail $ "too many type arguments at " ++ show pos
+checkMatchingTypes (FTypeB Nothing _ _:_) _ _ = undefined
+checkMatchingTypes (FunFType (Just pos) _ _:_) [] _ =
+    fail $ "too many type arguments at " ++ show pos
+checkMatchingTypes (FunFType Nothing _ _:_) [] _ = undefined
+checkMatchingTypes (FTypeT (Just pos) _:_) [] _ =
+    fail $ "too many type arguments at " ++ show pos
+checkMatchingTypes (FTypeT Nothing _:_) [] _ = undefined
+checkMatchingTypes [] (FPatternMatchB (Just pos) _:_) _ =
+    fail $ "too many variables for the types at " ++ show pos
+checkMatchingTypes _ (FPatternMatchB Nothing _:_) _ = undefined
+checkMatchingTypes [] (FPatternMatchI (Just pos) _:_) _ =
+    fail $ "too many variables for the types at " ++ show pos
+checkMatchingTypes _ (FPatternMatchI Nothing _:_) _ = undefined
+checkMatchingTypes [] (FPatternMatchC (Just pos) _ _:_) _ =
+    fail $ "too many variables for the types at " ++ show pos
+checkMatchingTypes _ (FPatternMatchC Nothing _ _:_) _ = undefined
+checkMatchingTypes _ (FPatternMatchT (Just pos) _:_) _ =
+    fail $ "too many variables for the types at " ++ show pos
+checkMatchingTypes _ (FPatternMatchT Nothing _:_) _ = undefined
 
 checkMatchingConstructors :: FAlgTypeVal -> FPatternMatch -> TCE -> Err ()
-checkMatchingConstructors (FAlgTypeVal _ cName (FTypeT _ tArgs)) (FPatternMatchC _ _ cArgs) tce =
-    checkMatchingTypes tArgs cArgs tce
+checkMatchingConstructors (FAlgTypeVal _ cName (FTypeT _ tArgs)) (FPatternMatchC (Just pos) _ cArgs) tce =
+    if length tArgs /= length cArgs 
+        then fail $ "number of type arguments at " ++ show pos ++ " doesn't match the correct number of arguments for constructor " ++ cName
+        else checkMatchingTypes tArgs cArgs tce
+checkMatchingConstructors _ _ _ = undefined
 
 registerConstructor :: FAlgTypeVal -> FPatternMatch -> TCE -> Err TCE
 registerConstructor (FAlgTypeVal _ _ (FTypeT _ tArgs)) (FPatternMatchC _ _ cArgs) tce =
     registerArgs tArgs cArgs tce
+registerConstructor _ _ _ = undefined
 
 registerArg :: FType -> FPatternMatch -> TCE -> Err TCE
 registerArg t@FTypeB{} (FPatternMatchB _ x) tce@(TCE tm atm) = do
@@ -143,6 +189,15 @@ registerArg t@(FTypeB _ name args) pmc@(FPatternMatchC _ (FPatternMatchB _ cName
     checkMatchingConstructors atm_ pmc tce
     registerConstructor atm_ pmc tce
 registerArg (FTypeB _ "Int" []) (FPatternMatchI _ _) tce = return tce
+registerArg _ (FPatternMatchI (Just pos) _) _ =
+    fail $ "int value at " ++ show pos ++ " is not of the type Int ()"
+registerArg _ (FPatternMatchI Nothing _) _ = undefined
+registerArg _ (FPatternMatchT (Just pos) _) _ =
+    fail $ "tuple value at " ++ show pos ++ " is not of the tuple type"
+registerArg _ (FPatternMatchT Nothing _) _ = undefined
+registerArg _ (FPatternMatchC (Just pos) _ _) _ =
+    fail $ "algebraic type at " ++ show pos ++ " is not of the algebraic type"
+registerArg _ (FPatternMatchC Nothing _ _) _ = undefined
 
 registerAssignments :: String -> [FAssignment] -> TCE -> Err TCE
 registerAssignments _ [] tce = return tce
@@ -150,6 +205,12 @@ registerAssignments funName (FAssignmentB (Just pos) t pm vs:assignments) tce = 
     checkFunctionBody ("being an assignment " ++ show pos ++ " " ++ show pm ++ " in function " ++ funName) t vs tce
     tce2 <- registerArg t pm tce
     registerAssignments funName assignments tce2
+registerAssignments _ (FAssignmentB Nothing _ _ _:_) _ = undefined 
+registerAssignments funName (FRefAssignment (Just pos) (FRefDef refDefPos t name vs):assignments) tce = do
+    checkFunctionBody ("being a ref assignment " ++ show pos ++ " " ++ name ++ " in function " ++ funName) t vs tce
+    tce2 <- registerArg t (FPatternMatchB refDefPos name) tce
+    registerAssignments funName assignments tce2
+registerAssignments funName (FRefAssignment Nothing _:_) tce = undefined
 
 checkFunctionApplicationTypeInt :: String -> FType -> String -> Maybe (Int, Int) -> FType -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypeInt funName t1 name posM (FunFType _ t21 t22) (vs:vss) tce = do
@@ -159,6 +220,7 @@ checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 [] _ =
     if t1 == t2
         then return ()
         else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName ++ " " ++ show pos
+checkFunctionApplicationTypeInt _ _ _ _ _ _ _ = undefined
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [_] tce = return ()
@@ -182,12 +244,14 @@ checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if member name tm
         then checkFunctionApplicationTypeInt funName t name (Just pos) (tm ! name) args tce
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
+checkFunctionApplicationType _ _ _ Nothing _ _ = undefined
 
 checkTupleFunctionBody :: String -> [FType] -> [FValueStatement] -> TCE -> Err ()
 checkTupleFunctionBody _ [] [] tce = return ()
 checkTupleFunctionBody funName (t:types) (vs:vss) tce = do
     checkFunctionBody funName t vs tce
     checkTupleFunctionBody funName types vss tce
+checkTupleFunctionBody _ _ _ _ = undefined
 
 checkFunctionBody :: String -> FType -> FValueStatement -> TCE -> Err ()
 checkFunctionBody funName (FunFType _ t1 t2) (FFValueStatement posM name vs) tce = do
@@ -278,6 +342,9 @@ checkFunctionBody _ _ FNTValueStatement{} _ = undefined
 checkFunctionBody funName _ (FTValueStatement (Just pos) _) _ =
     fail $ "tuple at " ++ show pos ++ " in function " ++ funName ++ " is not of the tuple type"
 checkFunctionBody _ _ (FTValueStatement Nothing _) _ = undefined
+checkFunctionBody funName _ (FCValueStatement (Just pos) _ _) _ =
+    fail $ "algebraic type constructor at " ++ show pos ++ " in function " ++ funName ++ " is not of the algebraic type type"
+checkFunctionBody _ _ (FCValueStatement Nothing _ _) _ = undefined
 
 checkFunctionDefs :: [FFunctionDef] -> TCE -> Err ()
 checkFunctionDefs [] _ = return ()
