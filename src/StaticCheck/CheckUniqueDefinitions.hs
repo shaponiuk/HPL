@@ -86,6 +86,7 @@ checkUniqueAlgTypeConstructors (algTypeVal@(FAlgTypeVal (Just pos) constructorNa
         else do
             ST.put $ UniqueAlgTypeS typeMap $ insert constructorName algTypeVal constructorMap
             checkUniqueAlgTypeConstructors algTypVals typeArgs
+checkUniqueAlgTypeConstructors (FAlgTypeVal Nothing _ _:_) _ = undefined
 
 checkUniqueAlgTypeDefinitions :: [FAlgType] -> ST.StateT UniqueAlgTypeS Err UniqueAlgTypeS
 checkUniqueAlgTypeDefinitions [] =
@@ -98,6 +99,7 @@ checkUniqueAlgTypeDefinitions (FAlgType (Just pos) typeName typeArgs typeConstru
             UniqueAlgTypeS newTypeMap newConstructorMap <- checkUniqueAlgTypeConstructors typeConstructors typeArgs
             ST.put $ UniqueAlgTypeS (insert typeName (typeArgs, typeConstructors) newTypeMap) newConstructorMap
             checkUniqueAlgTypeDefinitions algTypes
+checkUniqueAlgTypeDefinitions (FAlgType Nothing _ _ _:_) = undefined
 
 
 runCheckUniqueFunctionDefinitions :: [FFunctionDef] -> UniqueDefS -> Err UniqueDefS

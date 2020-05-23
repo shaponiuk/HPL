@@ -39,13 +39,38 @@ extractTypes name (FunFType _ t1 t2) (_:xs) = do
     (argTypes, resultType) <- extractTypes name t2 xs
     return (t1:argTypes, resultType)
 extractTypes name t@(FTypeB (Just pos) _ _) (_:_) = fail $ "type " ++ show t ++ " of function " ++ name ++ " shows insufficient number of arguments " ++ show pos
+extractTypes name t@(FTypeT (Just pos) _) (_:_) = fail $ "type " ++ show t ++ " of function " ++ name ++ " shows insufficient number of arguments " ++ show pos
 extractTypes _ t [] = return ([], t)
+extractTypes _ (FTypeB Nothing _ _) _ = undefined
+extractTypes _ (FTypeT Nothing _) _ = undefined
 
 registerArgs :: [FType] -> [FPatternMatch] -> TCE -> Err TCE
 registerArgs [] [] tce = return tce
 registerArgs (t:types) (pm:pms) tce = do
     tce2 <- registerArg t pm tce
     registerArgs types pms tce2
+registerArgs (FTypeB (Just loc) _ _:_) [] _ =
+    fail $ "more types declared than given at " ++ show loc
+registerArgs (FTypeT (Just loc) _:_) [] _ =
+    fail $ "more types declared than given at " ++ show loc
+registerArgs (FunFType (Just loc) _ _:_) [] _ =
+    fail $ "more types declared than given at " ++ show loc
+registerArgs [] (FPatternMatchI (Just loc) _:_) _ =
+    fail $ "not enough types for pattern match at " ++ show loc
+registerArgs [] (FPatternMatchB (Just loc) _:_) _ =
+    fail $ "not enough types for pattern match at " ++ show loc
+registerArgs [] (FPatternMatchC (Just loc) _ _:_) _ =
+    fail $ "not enough types for pattern match at " ++ show loc
+registerArgs [] (FPatternMatchT (Just loc) _:_) _ =
+    fail $ "not enough types for pattern match at " ++ show loc
+registerArgs (FTypeB Nothing _ _:_) [] _ = undefined
+registerArgs (FTypeT Nothing _:_) [] _ = undefined
+registerArgs (FunFType Nothing _ _:_) [] _ = undefined
+registerArgs [] (FPatternMatchI Nothing _:_) _ = undefined
+registerArgs [] (FPatternMatchT Nothing _:_) _ = undefined
+registerArgs [] (FPatternMatchC Nothing _ _:_) _ = undefined
+registerArgs [] (FPatternMatchB Nothing _:_) _ = undefined
+
 
 checkExistingTypes :: [FType] -> TCE -> Err ()
 checkExistingTypes [] _ = return ()
@@ -80,6 +105,7 @@ checkExistingType (FTypeB (Just pos) name args) tce@(TCE _ atm) =
                     fail $ "received wrong number of arguments for type " ++ name ++ " " ++ show pos
         else 
             fail $ "type " ++ name ++ " doesn't exist " ++ show pos
+checkExistingType (FTypeB Nothing _ _) _ = undefined
 
 checkConstructorExistence :: String -> String -> Int -> [FAlgTypeVal] -> Err FAlgTypeVal
 checkConstructorExistence typeName cName _ [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
