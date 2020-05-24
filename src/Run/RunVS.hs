@@ -401,13 +401,17 @@ unwrapSingleTuples (FTValueStatement _ [vs]) = unwrapSingleTuples vs
 unwrapSingleTuples (FTValueStatement _ vss) = vss
 unwrapSingleTuples a = [a]
 
+isSuspendedValue :: FValueStatement -> Bool
+isSuspendedValue FSuspendedValue{} = True
+isSuspendedValue _ = False
+
 forceGetTupleVSS :: Int -> FValueStatement -> S -> E -> IO ([FValueStatement], S)
 forceGetTupleVSS queueId a@(FTValueStatement _ vss) s e = do
     (ns, tvs) <- runVS queueId a e s
     return (unwrapSingleTuples tvs, ns)
 forceGetTupleVSS queueId a@(FAValueStatement _ funApplication) state env = do
     (vs, s) <- forceRunFunApplication queueId funApplication state env
-    forceGetTupleVSS queueId vs s env
+    if isSuspendedValue vs then return ([vs], s) else forceGetTupleVSS queueId vs s env
 forceGetTupleVSS qId (FSuspendedValue queueId) s e = do
     let queue = getQueue queueId s
     s <- runQueue queue s
@@ -415,13 +419,13 @@ forceGetTupleVSS qId (FSuspendedValue queueId) s e = do
     forceGetTupleVSS qId vs s e
 forceGetTupleVSS queueId a@FValueStatementB{} s e = do
     (s, vs) <- runVS queueId a e s
-    forceGetTupleVSS queueId vs s e
+    if isSuspendedValue vs then return ([vs], s) else forceGetTupleVSS queueId vs s e
 forceGetTupleVSS queueId a@FForceValueStatement{} s e = do
     (s, vs) <- runVS queueId a e s
-    forceGetTupleVSS queueId vs s e
+    if isSuspendedValue vs then return ([vs], s) else forceGetTupleVSS queueId vs s e
 forceGetTupleVSS queueId a@FIfValueStatement{} s e = do
     (s, vs) <- runVS queueId a e s
-    forceGetTupleVSS queueId vs s e
+    if isSuspendedValue vs then return ([vs], s) else forceGetTupleVSS queueId vs s e
 forceGetTupleVSS _ vs@FIValueStatement{} s _ = return ([vs], s)
 forceGetTupleVSS _ vs@FLitStrValueStatement{} s _ = return ([vs], s)
 forceGetTupleVSS _ vs@FFValueStatement{} s _ = return ([vs], s)
@@ -438,7 +442,7 @@ forceGetTupleVSS queueId vs@FSusValueStatement{} s e = do
     return ([vs], s)
 forceGetTupleVSS queueId vs@FNTValueStatement{} s e = do
     (s, vs) <- runVS queueId vs e s
-    forceGetTupleVSS queueId vs s e
+    if isSuspendedValue vs then return ([vs], s) else forceGetTupleVSS queueId vs s e
 
 forceRunFunApplication :: Int -> FFunApplication -> S -> E -> IO (FValueStatement, S)
 forceRunFunApplication queueId (FFunApplicationB _ "print" [str]) state env = do
