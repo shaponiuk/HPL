@@ -7,5 +7,3 @@
             Int () :: list = sum_list (ListC (1, ListC (78, l2 ())));
             () :: () = print (list ());
         in 0;
-
-data List (a) = ListC ((a (), List (a ()))) | EmptyListC (());

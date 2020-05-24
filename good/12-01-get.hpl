@@ -1,0 +1,6 @@
+sus fun (Int ()) main () =
+    let
+        String () :: x = getline();
+    in force let
+        () :: () = print (x ());
+    in 0;
