@@ -18,6 +18,8 @@ checkLowerCaseRefDefs (FRefDef (Just pos) _ name@(c:_) _:xs) =
     if isLower c
         then checkLowerCaseRefDefs xs
         else fail $ "reference " ++ name ++ " doesn't start with a lowercase letter " ++ show pos
+checkLowerCaseRefDefs (FRefDef _ _ "" _:_) = undefined
+checkLowerCaseRefDefs (FRefDef Nothing _ _ _:_) = undefined
 
 checkLowerArgNames :: String -> [String] -> Err ()
 checkLowerArgNames _ [] = return ()
@@ -25,6 +27,7 @@ checkLowerArgNames name (arg@(c:_):args) =
     if isLower c
         then checkLowerArgNames name args
         else fail $ "type argument " ++ arg ++ " in algebraic type " ++ name ++ " doesn't start with a lowercase letter"
+checkLowerArgNames _ ("":_) = undefined
 
 checkUpperAlgTypeVals :: String -> [FAlgTypeVal] -> Err ()
 checkUpperAlgTypeVals _ [] = return ()
@@ -32,6 +35,8 @@ checkUpperAlgTypeVals name (FAlgTypeVal (Just pos) constructorName@(c:_) _:algTy
     if isUpper c
         then checkUpperAlgTypeVals name algTypeVals
         else fail $ "type constructor " ++ constructorName ++ " in algebraic type " ++ name ++ " doesn't start with an uppercase letter " ++ show pos
+checkUpperAlgTypeVals _ (FAlgTypeVal _ "" _:_) = undefined
+checkUpperAlgTypeVals _ (FAlgTypeVal Nothing _ _:_) = undefined
 
 checkUpperCaseAlgTypes :: [FAlgType] -> Err ()
 checkUpperCaseAlgTypes [] = return ()
@@ -42,6 +47,8 @@ checkUpperCaseAlgTypes (FAlgType (Just pos) name@(c:_) argNames algTypeVals:xs) 
             checkUpperAlgTypeVals name algTypeVals
             checkUpperCaseAlgTypes xs
         else fail $ "algebraic type " ++ name ++ " doesn't start with an uppercase letter " ++ show pos
+checkUpperCaseAlgTypes (FAlgType _ "" _ _:_) = undefined
+checkUpperCaseAlgTypes (FAlgType Nothing _ _ _:_) = undefined
 
 checkCase :: ProgramFormat -> Err ProgramFormat
 checkCase pf@(SITList functionDefs refDefs algTypes) = do

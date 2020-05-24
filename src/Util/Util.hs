@@ -52,6 +52,7 @@ cutFirst d (x:xs) =
     if d < 0
         then undefined
         else cutFirst (d - 1) xs
+cutFirst _ [] = undefined
 
 takeLast :: (Show a) => Int -> [a] -> [a]
 takeLast d l = cutFirst (length l - d) l
@@ -59,5 +60,7 @@ takeLast d l = cutFirst (length l - d) l
 second :: (a, b) -> b
 second (_, b) = b
 
+takeNth :: Int -> [a] -> a
 takeNth 0 (x:_) = x
 takeNth d (_:xs) = takeNth (d - 1) xs
+takeNth _ [] = undefined

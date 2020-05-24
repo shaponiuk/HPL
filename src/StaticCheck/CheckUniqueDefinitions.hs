@@ -49,6 +49,8 @@ checkUniqueFunctionDefinitions (SusFFunctionDef (NonSusFFunctionDef (Just pos) t
         else do
             ST.put $ UniqueDefS $ insert name ((True, name, t, pms):registerDefs) m
             checkUniqueFunctionDefinitions fdefs
+checkUniqueFunctionDefinitions (SusFFunctionDef _:_) = undefined
+checkUniqueFunctionDefinitions (NonSusFFunctionDef Nothing _ _ _ _:_) = undefined
 
 checkUniqueReferenceDefinitions :: [FRefDef] -> ST.StateT UniqueDefS Err UniqueDefS
 checkUniqueReferenceDefinitions [] =
@@ -60,6 +62,7 @@ checkUniqueReferenceDefinitions (FRefDef (Just pos) t name vs:refdefs) = do
         else do
             ST.put $ UniqueDefS $ insert name [(False, name, t, [])] m
             checkUniqueReferenceDefinitions refdefs
+checkUniqueReferenceDefinitions (FRefDef Nothing _ _ _:_) = undefined
 
 checkTypeArgsInType :: FType -> [String] -> ST.StateT UniqueAlgTypeS Err UniqueAlgTypeS
 checkTypeArgsInType (FTypeB (Just pos) name@(x:xs) []) typeArgs =
@@ -74,6 +77,13 @@ checkTypeArgsInType (FTypeT _ []) _ =
 checkTypeArgsInType (FTypeT (Just pos) (x:xs)) typeArgs = do
     checkTypeArgsInType x typeArgs
     checkTypeArgsInType (FTypeT (Just pos) xs) typeArgs
+checkTypeArgsInType (FTypeB _ "" _) _ = undefined
+checkTypeArgsInType (FunFType (Just pos) t1 t2) typeArgs = do
+    checkTypeArgsInType t1 typeArgs
+    checkTypeArgsInType t2 typeArgs
+checkTypeArgsInType (FTypeB Nothing _ _) _ = undefined
+checkTypeArgsInType (FTypeT Nothing _) _ = undefined
+checkTypeArgsInType (FunFType Nothing _ _) _ = undefined
 
 checkUniqueAlgTypeConstructors :: [FAlgTypeVal] -> [String] -> ST.StateT UniqueAlgTypeS Err UniqueAlgTypeS
 checkUniqueAlgTypeConstructors [] _ =

@@ -25,6 +25,7 @@ makeEnvForFunction (e, s) (SusFFunctionDef (NonSusFFunctionDef _ _ name _ _)) =
     (ne, ns) where
         (loc, ns) = getNewLoc s
         ne = registerLoc True e name loc
+makeEnvForFunction _ (SusFFunctionDef SusFFunctionDef{}) = undefined
 
 makeEnvForRefs :: [FRefDef] -> E -> S -> (E, S)
 makeEnvForRefs l env s = Prelude.foldl makeEnvForRef (env, s) l
@@ -43,6 +44,7 @@ convertFunction env s (NonSusFFunctionDef _ t name argNames vs) =
     convertFunctionInt vs name env s argNames
 convertFunction env s (SusFFunctionDef (NonSusFFunctionDef _ t name argNames vs)) =
     convertFunctionInt (FSusValueStatement vs) name env s argNames
+convertFunction _ _ (SusFFunctionDef SusFFunctionDef{}) = undefined
 
 convertFunctionInt :: FValueStatement -> String -> E -> S -> [FPatternMatch] -> S
 convertFunctionInt vs name env s argNames =
@@ -54,9 +56,6 @@ convertFunctionInt vs name env s argNames =
 
 convertRefs :: E -> S -> [FRefDef] -> S
 convertRefs env = Prelude.foldl $ convertRef env
-
-unrefType :: FType -> FType
-unrefType (FTypeB _ "Ref" [t]) = t
 
 convertRef :: E -> S -> FRefDef -> S
 convertRef env state (FRefDef _ t name vs) =

@@ -80,8 +80,6 @@ separator Assignment "" ;
 
 -----Application--------------------------
 
-SFunApplication. FunApplication ::= Ident "." FunApplication ;
-
 FunApplicationB. FunApplication ::= Ident "(" [FunctionArgAppl] ")" ;
 
 FunctionArgApplB. FunctionArgAppl ::= ValueStatement ;
@@ -89,8 +87,6 @@ FunctionArgApplB. FunctionArgAppl ::= ValueStatement ;
 separator FunctionArgAppl "," ;
 
 -----ValueStatementExpressions--------------------------
-
-ListValueStatementB. ListValueStatementr ::= "[" [ValueStatement] "]" ;
 
 TupleValueStatementB. TupleValueStatementr ::= "(" [ValueStatement] ")" ;
 

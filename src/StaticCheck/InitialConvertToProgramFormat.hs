@@ -33,12 +33,15 @@ gatherAlgTypes (ProgramB _ l) = map sitToAlgType $ filter checkAlgType l
 
 sitToAlgType :: FunctionOrRefOrType (Maybe (Int, Int)) -> AlgType (Maybe (Int, Int))
 sitToAlgType (FunctionOrRefOrTypeT _ t) = t
+sitToAlgType _ = undefined
 
 sitToRef :: FunctionOrRefOrType (Maybe (Int, Int)) -> RefDef (Maybe (Int, Int))
 sitToRef (FunctionOrRefOrTypeR _ r) = r
+sitToRef _ = undefined
 
 sitToFunDef :: FunctionOrRefOrType (Maybe (Int, Int)) -> FunctionDef (Maybe (Int, Int))
 sitToFunDef (FunctionOrRefOrTypeF _ f) = f
+sitToFunDef _ = undefined
 
 checkFunctionDef :: FunctionOrRefOrType (Maybe (Int, Int)) -> Bool
 checkFunctionDef (FunctionOrRefOrTypeF _ _) = True
@@ -131,13 +134,16 @@ convertValueStatement (LitStrValueStatement pos str) = FLitStrValueStatement pos
 convertValueStatement (FValueStatement pos ident vs) = 
   FFValueStatement pos (unwrapIdent ident) (convertValueStatement vs)
 convertValueStatement (Expr pos vs e) = exprFromLists pos (makeExprLists vs e)
+convertValueStatement LValueStatement{} = undefined
 
 checkFunAppl :: FunApplication (Maybe (Int, Int)) -> Bool
 checkFunAppl (FunApplicationB _ name _) = isLower $ head $ unwrapIdent name
+checkFunAppl SFunApplication{} = undefined
 
 convertFunctionApplToTypeConstructor :: FunApplication (Maybe (Int, Int)) -> (Maybe (Int, Int), String, [FValueStatement])
 convertFunctionApplToTypeConstructor (FunApplicationB pos name functionArgAppls) = 
   (pos, unwrapIdent name, map convertFunctionArgApplToTypeConstructor functionArgAppls)
+convertFunctionApplToTypeConstructor SFunApplication{} = undefined
 
 convertFunctionArgApplToTypeConstructor :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
 convertFunctionArgApplToTypeConstructor (FunctionArgApplB _ vs) = convertValueStatement vs
@@ -190,9 +196,26 @@ mergeCmpVss (">":strs, x:xs) = FExpr pos $ FEG x $ mergeCmpVss (strs, xs) where 
 mergeCmpVss (">=":strs, x:xs) = FExpr pos $ FEGQ x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
 mergeCmpVss ("==":strs, x:xs) = FExpr pos $ FEEQ x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
 mergeCmpVss ("!=":strs, x:xs) = FExpr pos $ FENE x $ mergeCmpVss (strs, xs) where pos = getVSLoc x
+mergeCmpVss ([], []) = undefined
+mergeCmpVss ([], _:_:_) = undefined
+mergeCmpVss (_:_, _) = undefined
 
 getVSLoc :: FValueStatement -> Maybe (Int, Int)
 getVSLoc (FAValueStatement loc _) = loc
+getVSLoc (FValueStatementB loc _ _) = loc
+getVSLoc (FForceValueStatement loc _ _) = loc
+getVSLoc (FIfValueStatement loc _ _ _) = loc
+getVSLoc (FTValueStatement loc _) = loc
+getVSLoc (FIValueStatement loc _) = loc
+getVSLoc (FLitStrValueStatement loc _) = loc
+getVSLoc (FFValueStatement loc _ _) = loc
+getVSLoc (FCValueStatement loc _ _) = loc
+getVSLoc (FExpr loc _) = loc
+getVSLoc FRefAddr{} = Nothing
+getVSLoc FSusValueStatement{} = Nothing
+getVSLoc FSuspendedValue{} = Nothing
+getVSLoc FSemaphore{} = Nothing
+getVSLoc FNTValueStatement{} = Nothing
 
 makeExprLists :: ValueStatement (Maybe (Int, Int)) -> ValueStatementExpr (Maybe (Int, Int)) -> ([String], [ValueStatement (Maybe (Int, Int))])
 makeExprLists vs1 vs2 = (signs, vs1:vss) where
@@ -227,7 +250,7 @@ makeExprListsAux (ENE _ vs) = (["!="], [vs])
 
 convertFunctionAppl :: FunApplication (Maybe (Int, Int)) -> FFunApplication
 convertFunctionAppl (FunApplicationB pos i fArgApplList) = FFunApplicationB pos (unwrapIdent i) (convertFunctionArgApplList fArgApplList)
-convertFucntionAppl (SFunApplication pos i fAppl) = undefined
+convertFunctionAppl (SFunApplication pos i fAppl) = undefined
 
 convertFunctionArgAppl :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
 convertFunctionArgAppl (FunctionArgApplB _ vs) = convertValueStatement vs
