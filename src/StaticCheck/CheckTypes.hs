@@ -87,6 +87,8 @@ checkExistingType (FTypeB _ "Int" []) _ = return ()
 checkExistingType (FTypeB _ "Int" _) _ = undefined
 checkExistingType (FTypeB _ "String" []) _ = return ()
 checkExistingType (FTypeB _ "String" _) _ = undefined
+checkExistingType (FTypeB _ "List" [x]) tce = checkExistingType x tce
+checkExistingType (FTypeB _ "List" _) _ = undefined
 checkExistingType (FunFType _ t1 t2) tce = do
     checkExistingType t1 tce
     checkExistingType t2 tce
@@ -95,7 +97,7 @@ checkExistingType (FTypeT _ (x:xs)) tce = do
     checkExistingType x tce
     checkExistingType (FTypeT Nothing xs) tce
 checkExistingType (FTypeB (Just pos) name args) tce@(TCE _ atm) =
-    if member name atm
+    traceD atm $ if member name atm
         then do
             let (FAlgType _ name_ argTypes _) = atm ! name
             if length argTypes == length args
@@ -401,7 +403,7 @@ checkRefDefs _ _ = return ()
 
 checkTypes :: ProgramFormat -> Err ProgramFormat
 checkTypes pf@(SITList functionDefs refDefs algTypes) = do
-    let tce0 = registerAlgTypes algTypes $ TCE empty empty
+    let tce0 = registerAlgTypes algTypes newTCE
     let tce1 = registerFunctionDefs functionDefs tce0
     let tce2 = registerRefDefs refDefs tce1
     checkFunctionDefs functionDefs tce2

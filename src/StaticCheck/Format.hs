@@ -125,7 +125,7 @@ instance Show FValueStatement where
   show FSusValueStatement{} = "suspended value statement"
   show FSuspendedValue{} = "suspended value"
   show FSemaphore{} = "semaphore"
-  show FNTValueStatement{} = "tuple element value"
+  show (FNTValueStatement n vs) = "tuple element value - " ++ show n ++ " " ++ show vs
 
 instance Show FValueStatementExpr where
   show (FEAdd vs1 vs2) = show vs1 ++ " + " ++ show vs2

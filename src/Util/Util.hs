@@ -3,15 +3,15 @@ module Util.Util where
 import Debug.Trace
 import Control.Monad
 
-debug :: Bool
-debug = True
+debug :: [Int]
+debug = [2]
 
-printD :: Show a => a -> IO ()
-printD a = when debug $ print a
+printD :: Show a => Int -> a -> IO ()
+printD debugFrequency a = when (debugFrequency `elem` debug) $ print a
 
 traceD :: Show a => a -> b -> b
 traceD a b = 
-    if debug
+    if debug /= [0]
         then
             trace (show a) b
         else

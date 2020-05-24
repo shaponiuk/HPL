@@ -6,7 +6,9 @@ import Util.Util
 import Util.Env
 
 getNewLoc :: S -> (Int, S)
-getNewLoc (S varsMap loc funArgs semaphores queues) = (loc + 1, S varsMap (loc + 1) funArgs semaphores queues)
+getNewLoc (S varsMap loc funArgs semaphores queues) = 
+  -- if loc >= 10 then undefined else 
+    (loc + 1, S varsMap (loc + 1) funArgs semaphores queues)
 
 getNNewLocs :: S -> Int -> ([Int], S)
 getNNewLocs s n = Prelude.foldl (\(l, s_) _ ->
