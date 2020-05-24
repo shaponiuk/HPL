@@ -8,39 +8,35 @@ import ErrM
 
 }
 
-%name pProgram Program
-%name pStructOrInterfaceOrType StructOrInterfaceOrType
-%name pListStructOrInterfaceOrType ListStructOrInterfaceOrType
-%name pStruct Struct
-%name pStructBody StructBody
-%name pStructField StructField
-%name pListStructField ListStructField
-%name pFunctionDef FunctionDef
-%name pFunctionArg FunctionArg
-%name pListFunctionArg ListFunctionArg
-%name pValueStatement ValueStatement
-%name pListValueStatement ListValueStatement
-%name pRefDef RefDef
-%name pType Type
-%name pListType ListType
-%name pAlgType AlgType
-%name pTypeArg TypeArg
-%name pListTypeArg ListTypeArg
-%name pAlgTypeVal AlgTypeVal
-%name pListAlgTypeVal ListAlgTypeVal
-%name pPatternMatch PatternMatch
-%name pListPatternMatch ListPatternMatch
-%name pAssignment Assignment
-%name pListAssignment ListAssignment
-%name pFunApplication FunApplication
-%name pFunctionArgAppl FunctionArgAppl
-%name pListFunctionArgAppl ListFunctionArgAppl
-%name pListValueStatementr ListValueStatementr
-%name pTupleValueStatementr TupleValueStatementr
-%name pValueStatementExpr ValueStatementExpr
 -- no lexer declaration
 %monad { Err } { thenM } { returnM }
 %tokentype {Token}
+%name pProgram_internal Program
+%name pFunctionOrRefOrType_internal FunctionOrRefOrType
+%name pListFunctionOrRefOrType_internal ListFunctionOrRefOrType
+%name pFunctionDef_internal FunctionDef
+%name pFunctionArg_internal FunctionArg
+%name pListFunctionArg_internal ListFunctionArg
+%name pListFunctionDef_internal ListFunctionDef
+%name pValueStatement_internal ValueStatement
+%name pListValueStatement_internal ListValueStatement
+%name pRefDef_internal RefDef
+%name pType_internal Type
+%name pListType_internal ListType
+%name pAlgType_internal AlgType
+%name pTypeArg_internal TypeArg
+%name pListTypeArg_internal ListTypeArg
+%name pAlgTypeVal_internal AlgTypeVal
+%name pListAlgTypeVal_internal ListAlgTypeVal
+%name pPatternMatch_internal PatternMatch
+%name pListPatternMatch_internal ListPatternMatch
+%name pAssignment_internal Assignment
+%name pListAssignment_internal ListAssignment
+%name pFunApplication_internal FunApplication
+%name pFunctionArgAppl_internal FunctionArgAppl
+%name pListFunctionArgAppl_internal ListFunctionArgAppl
+%name pTupleValueStatementr_internal TupleValueStatementr
+%name pValueStatementExpr_internal ValueStatementExpr
 %token
   '!=' { PT _ (TS _ 1) }
   '%' { PT _ (TS _ 2) }
@@ -51,153 +47,370 @@ import ErrM
   ',' { PT _ (TS _ 7) }
   '-' { PT _ (TS _ 8) }
   '->' { PT _ (TS _ 9) }
-  '.' { PT _ (TS _ 10) }
-  '/' { PT _ (TS _ 11) }
-  '::' { PT _ (TS _ 12) }
-  ';' { PT _ (TS _ 13) }
-  '<' { PT _ (TS _ 14) }
-  '<=' { PT _ (TS _ 15) }
-  '=' { PT _ (TS _ 16) }
-  '==' { PT _ (TS _ 17) }
-  '>' { PT _ (TS _ 18) }
-  '>=' { PT _ (TS _ 19) }
-  '[' { PT _ (TS _ 20) }
-  ']' { PT _ (TS _ 21) }
-  'data' { PT _ (TS _ 22) }
-  'else' { PT _ (TS _ 23) }
-  'force' { PT _ (TS _ 24) }
-  'fun' { PT _ (TS _ 25) }
-  'if' { PT _ (TS _ 26) }
-  'in' { PT _ (TS _ 27) }
-  'let' { PT _ (TS _ 28) }
-  'private' { PT _ (TS _ 29) }
-  'ref' { PT _ (TS _ 30) }
-  'struct' { PT _ (TS _ 31) }
-  'sus' { PT _ (TS _ 32) }
-  'then' { PT _ (TS _ 33) }
-  '{' { PT _ (TS _ 34) }
-  '|' { PT _ (TS _ 35) }
-  '}' { PT _ (TS _ 36) }
+  '/' { PT _ (TS _ 10) }
+  '::' { PT _ (TS _ 11) }
+  ';' { PT _ (TS _ 12) }
+  '<' { PT _ (TS _ 13) }
+  '<=' { PT _ (TS _ 14) }
+  '=' { PT _ (TS _ 15) }
+  '==' { PT _ (TS _ 16) }
+  '>' { PT _ (TS _ 17) }
+  '>=' { PT _ (TS _ 18) }
+  'data' { PT _ (TS _ 19) }
+  'else' { PT _ (TS _ 20) }
+  'force' { PT _ (TS _ 21) }
+  'fun' { PT _ (TS _ 22) }
+  'if' { PT _ (TS _ 23) }
+  'in' { PT _ (TS _ 24) }
+  'let' { PT _ (TS _ 25) }
+  'ref' { PT _ (TS _ 26) }
+  'sus' { PT _ (TS _ 27) }
+  'then' { PT _ (TS _ 28) }
+  '{' { PT _ (TS _ 29) }
+  '|' { PT _ (TS _ 30) }
+  '}' { PT _ (TS _ 31) }
 
-L_ident  { PT _ (TV $$) }
-L_integ  { PT _ (TI $$) }
-L_quoted { PT _ (TL $$) }
-
+  L_ident {PT _ (TV _)}
+  L_integ {PT _ (TI _)}
+  L_quoted {PT _ (TL _)}
 
 %%
 
-Ident   :: { Ident }   : L_ident  { Ident $1 }
-Integer :: { Integer } : L_integ  { (read ( $1)) :: Integer }
-String  :: { String }  : L_quoted {  $1 }
+Ident :: {
+  (Maybe (Int, Int), Ident)
+}
+: L_ident {
+  (Just (tokenLineCol $1), Ident (prToken $1)) 
+}
 
-Program :: { Program }
-Program : ListStructOrInterfaceOrType { AbsHpl.ProgramB (reverse $1) }
-StructOrInterfaceOrType :: { StructOrInterfaceOrType }
-StructOrInterfaceOrType : Struct { AbsHpl.StructOrInterfaceOrTypeS $1 }
-                        | AlgType { AbsHpl.StructOrInterfaceOrTypeT $1 }
-ListStructOrInterfaceOrType :: { [StructOrInterfaceOrType] }
-ListStructOrInterfaceOrType : {- empty -} { [] }
-                            | ListStructOrInterfaceOrType StructOrInterfaceOrType { flip (:) $1 $2 }
-Struct :: { Struct }
-Struct : 'struct' Ident '{' StructBody '}' ';' { AbsHpl.StructB $2 $4 }
-StructBody :: { StructBody }
-StructBody : ListStructField { AbsHpl.StructBodyB (reverse $1) }
-StructField :: { StructField }
-StructField : 'private' FunctionDef { AbsHpl.StructFieldFunPr $2 }
-            | FunctionDef { AbsHpl.StructFieldFunPu $1 }
-            | 'private' RefDef { AbsHpl.StructFieldRefPr $2 }
-            | RefDef { AbsHpl.StructFieldRefPu $1 }
-ListStructField :: { [StructField] }
-ListStructField : {- empty -} { [] }
-                | ListStructField StructField { flip (:) $1 $2 }
-FunctionDef :: { FunctionDef }
-FunctionDef : 'fun' Type Ident '(' ListFunctionArg ')' '=' ValueStatement ';' { AbsHpl.FunctionDefB $2 $3 $5 $8 }
-            | 'sus' FunctionDef { AbsHpl.SusFunctionDef $2 }
-FunctionArg :: { FunctionArg }
-FunctionArg : PatternMatch { AbsHpl.FunctionArgB $1 }
-ListFunctionArg :: { [FunctionArg] }
-ListFunctionArg : {- empty -} { [] }
-                | FunctionArg { (:[]) $1 }
-                | FunctionArg ',' ListFunctionArg { (:) $1 $3 }
-ValueStatement :: { ValueStatement }
-ValueStatement : 'let' ListAssignment 'in' ValueStatement { AbsHpl.ValueStatementB (reverse $2) $4 }
-               | 'force' 'let' ListAssignment 'in' ValueStatement { AbsHpl.ForceValueStatement (reverse $3) $5 }
-               | 'if' ValueStatement 'then' ValueStatement 'else' ValueStatement { AbsHpl.IfValueStatement $2 $4 $6 }
-               | ListValueStatementr { AbsHpl.LValueStatement $1 }
-               | TupleValueStatementr { AbsHpl.TValueStatement $1 }
-               | FunApplication { AbsHpl.AValueStatement $1 }
-               | Integer { AbsHpl.IValueStatement $1 }
-               | String { AbsHpl.LitStrValueStatement $1 }
-               | '{' Ident '->' ValueStatement '}' { AbsHpl.FValueStatement $2 $4 }
-               | ValueStatement ValueStatementExpr { AbsHpl.Expr $1 $2 }
-ListValueStatement :: { [ValueStatement] }
-ListValueStatement : {- empty -} { [] }
-                   | ValueStatement { (:[]) $1 }
-                   | ValueStatement ',' ListValueStatement { (:) $1 $3 }
-RefDef :: { RefDef }
-RefDef : 'ref' Type Ident '=' ValueStatement ';' { AbsHpl.RefDefB $2 $3 $5 }
-Type :: { Type }
-Type : Ident '(' ListType ')' { AbsHpl.TypeB $1 $3 }
-     | '(' Type '->' Type ')' { AbsHpl.FunType $2 $4 }
-     | '(' ListType ')' { AbsHpl.TType $2 }
-ListType :: { [Type] }
-ListType : {- empty -} { [] }
-         | Type { (:[]) $1 }
-         | Type ',' ListType { (:) $1 $3 }
-AlgType :: { AlgType }
-AlgType : 'data' Ident '(' ListTypeArg ')' '=' ListAlgTypeVal ';' { AbsHpl.AlgTypeB $2 $4 $7 }
-TypeArg :: { TypeArg }
-TypeArg : Ident { AbsHpl.TypeArgB $1 }
-ListTypeArg :: { [TypeArg] }
-ListTypeArg : {- empty -} { [] }
-            | TypeArg { (:[]) $1 }
-            | TypeArg ',' ListTypeArg { (:) $1 $3 }
-AlgTypeVal :: { AlgTypeVal }
-AlgTypeVal : Ident '(' Type ')' { AbsHpl.AlgTypeValB $1 $3 }
-ListAlgTypeVal :: { [AlgTypeVal] }
-ListAlgTypeVal : {- empty -} { [] }
-               | AlgTypeVal { (:[]) $1 }
-               | AlgTypeVal '|' ListAlgTypeVal { (:) $1 $3 }
-PatternMatch :: { PatternMatch }
-PatternMatch : Integer { AbsHpl.PatternMatchI $1 }
-             | Ident { AbsHpl.PatternMatchB $1 }
-             | '(' ListPatternMatch ')' { AbsHpl.TPatternMatch $2 }
-             | PatternMatch '(' ListPatternMatch ')' { AbsHpl.CPatternMatch $1 $3 }
-ListPatternMatch :: { [PatternMatch] }
-ListPatternMatch : {- empty -} { [] }
-                 | PatternMatch { (:[]) $1 }
-                 | PatternMatch ',' ListPatternMatch { (:) $1 $3 }
-Assignment :: { Assignment }
-Assignment : Type '::' PatternMatch '=' ValueStatement ';' { AbsHpl.AssignmentB $1 $3 $5 }
-           | RefDef { AbsHpl.RefAssignment $1 }
-ListAssignment :: { [Assignment] }
-ListAssignment : {- empty -} { [] }
-               | ListAssignment Assignment { flip (:) $1 $2 }
-FunApplication :: { FunApplication }
-FunApplication : Ident '.' FunApplication { AbsHpl.SFunApplication $1 $3 }
-               | Ident '(' ListFunctionArgAppl ')' { AbsHpl.FunApplicationB $1 $3 }
-FunctionArgAppl :: { FunctionArgAppl }
-FunctionArgAppl : ValueStatement { AbsHpl.FunctionArgApplB $1 }
-ListFunctionArgAppl :: { [FunctionArgAppl] }
-ListFunctionArgAppl : {- empty -} { [] }
-                    | FunctionArgAppl { (:[]) $1 }
-                    | FunctionArgAppl ',' ListFunctionArgAppl { (:) $1 $3 }
-ListValueStatementr :: { ListValueStatementr }
-ListValueStatementr : '[' ListValueStatement ']' { AbsHpl.ListValueStatementB $2 }
-TupleValueStatementr :: { TupleValueStatementr }
-TupleValueStatementr : '(' ListValueStatement ')' { AbsHpl.TupleValueStatementB $2 }
-ValueStatementExpr :: { ValueStatementExpr }
-ValueStatementExpr : '+' ValueStatement { AbsHpl.EAdd $2 }
-                   | '-' ValueStatement { AbsHpl.ESub $2 }
-                   | '%' ValueStatement { AbsHpl.EMod $2 }
-                   | '*' ValueStatement { AbsHpl.EMul $2 }
-                   | '/' ValueStatement { AbsHpl.EDiv $2 }
-                   | '<' ValueStatement { AbsHpl.EL $2 }
-                   | '<=' ValueStatement { AbsHpl.ELQ $2 }
-                   | '>' ValueStatement { AbsHpl.EG $2 }
-                   | '>=' ValueStatement { AbsHpl.EGQ $2 }
-                   | '==' ValueStatement { AbsHpl.EEQ $2 }
-                   | '!=' ValueStatement { AbsHpl.ENE $2 }
+Integer :: {
+  (Maybe (Int, Int), Integer)
+}
+: L_integ {
+  (Just (tokenLineCol $1), read (prToken $1)) 
+}
+
+String :: {
+  (Maybe (Int, Int), String)
+}
+: L_quoted {
+  (Just (tokenLineCol $1), prToken $1)
+}
+
+Program :: {
+  (Maybe (Int, Int), Program (Maybe (Int, Int)))
+}
+: ListFunctionOrRefOrType {
+  (fst $1, AbsHpl.ProgramB (fst $1)(reverse (snd $1)))
+}
+
+FunctionOrRefOrType :: {
+  (Maybe (Int, Int), FunctionOrRefOrType (Maybe (Int, Int)))
+}
+: FunctionDef {
+  (fst $1, AbsHpl.FunctionOrRefOrTypeF (fst $1)(snd $1)) 
+}
+| AlgType {
+  (fst $1, AbsHpl.FunctionOrRefOrTypeT (fst $1)(snd $1)) 
+}
+| RefDef {
+  (fst $1, AbsHpl.FunctionOrRefOrTypeR (fst $1)(snd $1)) 
+}
+
+ListFunctionOrRefOrType :: {
+  (Maybe (Int, Int), [FunctionOrRefOrType (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| ListFunctionOrRefOrType FunctionOrRefOrType {
+  (fst $1, flip (:) (snd $1)(snd $2)) 
+}
+
+FunctionDef :: {
+  (Maybe (Int, Int), FunctionDef (Maybe (Int, Int)))
+}
+: 'fun' Type Ident '(' ListFunctionArg ')' '=' ValueStatement ';' {
+  (Just (tokenLineCol $1), AbsHpl.FunctionDefB (Just (tokenLineCol $1)) (snd $2)(snd $3)(snd $5)(snd $8)) 
+}
+| 'sus' 'fun' Type Ident '(' ListFunctionArg ')' '=' ValueStatement ';' {
+  (Just (tokenLineCol $1), AbsHpl.SusFunctionDef (Just (tokenLineCol $1)) (snd $3)(snd $4)(snd $6)(snd $9)) 
+}
+
+FunctionArg :: {
+  (Maybe (Int, Int), FunctionArg (Maybe (Int, Int)))
+}
+: PatternMatch {
+  (fst $1, AbsHpl.FunctionArgB (fst $1)(snd $1)) 
+}
+
+ListFunctionArg :: {
+  (Maybe (Int, Int), [FunctionArg (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| FunctionArg {
+  (fst $1, (:[]) (snd $1)) 
+}
+| FunctionArg ',' ListFunctionArg {
+  (fst $1, (:) (snd $1)(snd $3)) 
+}
+
+ListFunctionDef :: {
+  (Maybe (Int, Int), [FunctionDef (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| ListFunctionDef FunctionDef {
+  (fst $1, flip (:) (snd $1)(snd $2)) 
+}
+
+ValueStatement :: {
+  (Maybe (Int, Int), ValueStatement (Maybe (Int, Int)))
+}
+: 'let' ListAssignment 'in' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.ValueStatementB (Just (tokenLineCol $1)) (reverse (snd $2)) (snd $4)) 
+}
+| 'force' 'let' ListAssignment 'in' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.ForceValueStatement (Just (tokenLineCol $1)) (reverse (snd $3)) (snd $5)) 
+}
+| 'if' ValueStatement 'then' ValueStatement 'else' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.IfValueStatement (Just (tokenLineCol $1)) (snd $2)(snd $4)(snd $6)) 
+}
+| TupleValueStatementr {
+  (fst $1, AbsHpl.TValueStatement (fst $1)(snd $1)) 
+}
+| FunApplication {
+  (fst $1, AbsHpl.AValueStatement (fst $1)(snd $1)) 
+}
+| Integer {
+  (fst $1, AbsHpl.IValueStatement (fst $1)(snd $1)) 
+}
+| String {
+  (fst $1, AbsHpl.LitStrValueStatement (fst $1)(snd $1)) 
+}
+| '{' Ident '->' ValueStatement '}' {
+  (Just (tokenLineCol $1), AbsHpl.FValueStatement (Just (tokenLineCol $1)) (snd $2)(snd $4)) 
+}
+| ValueStatement ValueStatementExpr {
+  (fst $1, AbsHpl.Expr (fst $1)(snd $1)(snd $2)) 
+}
+
+ListValueStatement :: {
+  (Maybe (Int, Int), [ValueStatement (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| ValueStatement {
+  (fst $1, (:[]) (snd $1)) 
+}
+| ValueStatement ',' ListValueStatement {
+  (fst $1, (:) (snd $1)(snd $3)) 
+}
+
+RefDef :: {
+  (Maybe (Int, Int), RefDef (Maybe (Int, Int)))
+}
+: 'ref' Type Ident '=' ValueStatement ';' {
+  (Just (tokenLineCol $1), AbsHpl.RefDefB (Just (tokenLineCol $1)) (snd $2)(snd $3)(snd $5)) 
+}
+
+Type :: {
+  (Maybe (Int, Int), Type (Maybe (Int, Int)))
+}
+: Ident '(' ListType ')' {
+  (fst $1, AbsHpl.TypeB (fst $1)(snd $1)(snd $3)) 
+}
+| '(' Type '->' Type ')' {
+  (Just (tokenLineCol $1), AbsHpl.FunType (Just (tokenLineCol $1)) (snd $2)(snd $4)) 
+}
+| '(' ListType ')' {
+  (Just (tokenLineCol $1), AbsHpl.TType (Just (tokenLineCol $1)) (snd $2)) 
+}
+
+ListType :: {
+  (Maybe (Int, Int), [Type (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| Type {
+  (fst $1, (:[]) (snd $1)) 
+}
+| Type ',' ListType {
+  (fst $1, (:) (snd $1)(snd $3)) 
+}
+
+AlgType :: {
+  (Maybe (Int, Int), AlgType (Maybe (Int, Int)))
+}
+: 'data' Ident '(' ListTypeArg ')' '=' ListAlgTypeVal ';' {
+  (Just (tokenLineCol $1), AbsHpl.AlgTypeB (Just (tokenLineCol $1)) (snd $2)(snd $4)(snd $7)) 
+}
+
+TypeArg :: {
+  (Maybe (Int, Int), TypeArg (Maybe (Int, Int)))
+}
+: Ident {
+  (fst $1, AbsHpl.TypeArgB (fst $1)(snd $1)) 
+}
+
+ListTypeArg :: {
+  (Maybe (Int, Int), [TypeArg (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| TypeArg {
+  (fst $1, (:[]) (snd $1)) 
+}
+| TypeArg ',' ListTypeArg {
+  (fst $1, (:) (snd $1)(snd $3)) 
+}
+
+AlgTypeVal :: {
+  (Maybe (Int, Int), AlgTypeVal (Maybe (Int, Int)))
+}
+: Ident '(' Type ')' {
+  (fst $1, AbsHpl.AlgTypeValB (fst $1)(snd $1)(snd $3)) 
+}
+
+ListAlgTypeVal :: {
+  (Maybe (Int, Int), [AlgTypeVal (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| AlgTypeVal {
+  (fst $1, (:[]) (snd $1)) 
+}
+| AlgTypeVal '|' ListAlgTypeVal {
+  (fst $1, (:) (snd $1)(snd $3)) 
+}
+
+PatternMatch :: {
+  (Maybe (Int, Int), PatternMatch (Maybe (Int, Int)))
+}
+: Integer {
+  (fst $1, AbsHpl.PatternMatchI (fst $1)(snd $1)) 
+}
+| Ident {
+  (fst $1, AbsHpl.PatternMatchB (fst $1)(snd $1)) 
+}
+| '(' ListPatternMatch ')' {
+  (Just (tokenLineCol $1), AbsHpl.TPatternMatch (Just (tokenLineCol $1)) (snd $2)) 
+}
+| PatternMatch '(' ListPatternMatch ')' {
+  (fst $1, AbsHpl.CPatternMatch (fst $1)(snd $1)(snd $3)) 
+}
+
+ListPatternMatch :: {
+  (Maybe (Int, Int), [PatternMatch (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| PatternMatch {
+  (fst $1, (:[]) (snd $1)) 
+}
+| PatternMatch ',' ListPatternMatch {
+  (fst $1, (:) (snd $1)(snd $3)) 
+}
+
+Assignment :: {
+  (Maybe (Int, Int), Assignment (Maybe (Int, Int)))
+}
+: Type '::' PatternMatch '=' ValueStatement ';' {
+  (fst $1, AbsHpl.AssignmentB (fst $1)(snd $1)(snd $3)(snd $5)) 
+}
+| RefDef {
+  (fst $1, AbsHpl.RefAssignment (fst $1)(snd $1)) 
+}
+
+ListAssignment :: {
+  (Maybe (Int, Int), [Assignment (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| ListAssignment Assignment {
+  (fst $1, flip (:) (snd $1)(snd $2)) 
+}
+
+FunApplication :: {
+  (Maybe (Int, Int), FunApplication (Maybe (Int, Int)))
+}
+: Ident '(' ListFunctionArgAppl ')' {
+  (fst $1, AbsHpl.FunApplicationB (fst $1)(snd $1)(snd $3)) 
+}
+
+FunctionArgAppl :: {
+  (Maybe (Int, Int), FunctionArgAppl (Maybe (Int, Int)))
+}
+: ValueStatement {
+  (fst $1, AbsHpl.FunctionArgApplB (fst $1)(snd $1)) 
+}
+
+ListFunctionArgAppl :: {
+  (Maybe (Int, Int), [FunctionArgAppl (Maybe (Int, Int))]) 
+}
+: {
+  (Nothing, [])
+}
+| FunctionArgAppl {
+  (fst $1, (:[]) (snd $1)) 
+}
+| FunctionArgAppl ',' ListFunctionArgAppl {
+  (fst $1, (:) (snd $1)(snd $3)) 
+}
+
+TupleValueStatementr :: {
+  (Maybe (Int, Int), TupleValueStatementr (Maybe (Int, Int)))
+}
+: '(' ListValueStatement ')' {
+  (Just (tokenLineCol $1), AbsHpl.TupleValueStatementB (Just (tokenLineCol $1)) (snd $2)) 
+}
+
+ValueStatementExpr :: {
+  (Maybe (Int, Int), ValueStatementExpr (Maybe (Int, Int)))
+}
+: '+' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.EAdd (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '-' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.ESub (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '%' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.EMod (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '*' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.EMul (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '/' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.EDiv (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '<' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.EL (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '<=' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.ELQ (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '>' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.EG (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '>=' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.EGQ (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '==' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.EEQ (Just (tokenLineCol $1)) (snd $2)) 
+}
+| '!=' ValueStatement {
+  (Just (tokenLineCol $1), AbsHpl.ENE (Just (tokenLineCol $1)) (snd $2)) 
+}
+
 {
 
 returnM :: a -> Err a
@@ -212,8 +425,35 @@ happyError ts =
   case ts of
     [] -> []
     [Err _] -> " due to lexer error"
-    _ -> " before " ++ unwords (map (id . prToken) (take 4 ts))
+    t:_ -> " before `" ++ id(prToken t) ++ "'"
 
 myLexer = tokens
+
+pProgram = (>>= return . snd) . pProgram_internal
+pFunctionOrRefOrType = (>>= return . snd) . pFunctionOrRefOrType_internal
+pListFunctionOrRefOrType = (>>= return . snd) . pListFunctionOrRefOrType_internal
+pFunctionDef = (>>= return . snd) . pFunctionDef_internal
+pFunctionArg = (>>= return . snd) . pFunctionArg_internal
+pListFunctionArg = (>>= return . snd) . pListFunctionArg_internal
+pListFunctionDef = (>>= return . snd) . pListFunctionDef_internal
+pValueStatement = (>>= return . snd) . pValueStatement_internal
+pListValueStatement = (>>= return . snd) . pListValueStatement_internal
+pRefDef = (>>= return . snd) . pRefDef_internal
+pType = (>>= return . snd) . pType_internal
+pListType = (>>= return . snd) . pListType_internal
+pAlgType = (>>= return . snd) . pAlgType_internal
+pTypeArg = (>>= return . snd) . pTypeArg_internal
+pListTypeArg = (>>= return . snd) . pListTypeArg_internal
+pAlgTypeVal = (>>= return . snd) . pAlgTypeVal_internal
+pListAlgTypeVal = (>>= return . snd) . pListAlgTypeVal_internal
+pPatternMatch = (>>= return . snd) . pPatternMatch_internal
+pListPatternMatch = (>>= return . snd) . pListPatternMatch_internal
+pAssignment = (>>= return . snd) . pAssignment_internal
+pListAssignment = (>>= return . snd) . pListAssignment_internal
+pFunApplication = (>>= return . snd) . pFunApplication_internal
+pFunctionArgAppl = (>>= return . snd) . pFunctionArgAppl_internal
+pListFunctionArgAppl = (>>= return . snd) . pListFunctionArgAppl_internal
+pTupleValueStatementr = (>>= return . snd) . pTupleValueStatementr_internal
+pValueStatementExpr = (>>= return . snd) . pValueStatementExpr_internal
 }
 

@@ -33,16 +33,16 @@ The set of reserved words is the set of terminals appearing in the grammar. Thos
 
 The reserved words used in Hpl are the following:
   | ``data`` | ``else`` | ``force`` | ``fun``
-  | ``if`` | ``in`` | ``let`` | ``private``
-  | ``ref`` | ``struct`` | ``sus`` | ``then``
+  | ``if`` | ``in`` | ``let`` | ``ref``
+  | ``sus`` | ``then`` |  | 
 
 The symbols used in Hpl are the following:
-  | { | } | ; | (
-  | ) | = | , | ->
-  | | | :: | . | [
-  | ] | + | - | %
-  | * | / | < | <=
-  | > | >= | == | !=
+  | ( | ) | = | ;
+  | , | { | -> | }
+  | | | :: | + | -
+  | % | * | / | <
+  | <= | > | >= | ==
+  | != |  |  | 
 
 ===Comments===
 Single-line comments begin with //.Multiple-line comments are  enclosed with /* and */.
@@ -53,29 +53,23 @@ The symbols -> (production),  **|**  (union)
 and **eps** (empty rule) belong to the BNF notation. 
 All other symbols are terminals.
 
-  | //Program// | -> | //[StructOrInterfaceOrType]// 
-  | //StructOrInterfaceOrType// | -> | //Struct// 
+  | //Program// | -> | //[FunctionOrRefOrType]// 
+  | //FunctionOrRefOrType// | -> | //FunctionDef// 
   |  |  **|**  | //AlgType// 
-  | //[StructOrInterfaceOrType]// | -> | **eps**
-  |  |  **|**  | //StructOrInterfaceOrType// //[StructOrInterfaceOrType]// 
-  | //Struct// | -> | ``struct`` //Ident// ``{`` //StructBody// ``}`` ``;`` 
-  | //StructBody// | -> | //[StructField]// 
-  | //StructField// | -> | ``private`` //FunctionDef// 
-  |  |  **|**  | //FunctionDef// 
-  |  |  **|**  | ``private`` //RefDef// 
   |  |  **|**  | //RefDef// 
-  | //[StructField]// | -> | **eps**
-  |  |  **|**  | //StructField// //[StructField]// 
+  | //[FunctionOrRefOrType]// | -> | **eps**
+  |  |  **|**  | //FunctionOrRefOrType// //[FunctionOrRefOrType]// 
   | //FunctionDef// | -> | ``fun`` //Type// //Ident// ``(`` //[FunctionArg]// ``)`` ``=`` //ValueStatement// ``;`` 
-  |  |  **|**  | ``sus`` //FunctionDef// 
+  |  |  **|**  | ``sus`` ``fun`` //Type// //Ident// ``(`` //[FunctionArg]// ``)`` ``=`` //ValueStatement// ``;`` 
   | //FunctionArg// | -> | //PatternMatch// 
   | //[FunctionArg]// | -> | **eps**
   |  |  **|**  | //FunctionArg// 
   |  |  **|**  | //FunctionArg// ``,`` //[FunctionArg]// 
+  | //[FunctionDef]// | -> | **eps**
+  |  |  **|**  | //FunctionDef// //[FunctionDef]// 
   | //ValueStatement// | -> | ``let`` //[Assignment]// ``in`` //ValueStatement// 
   |  |  **|**  | ``force`` ``let`` //[Assignment]// ``in`` //ValueStatement// 
   |  |  **|**  | ``if`` //ValueStatement// ``then`` //ValueStatement// ``else`` //ValueStatement// 
-  |  |  **|**  | //ListValueStatementr// 
   |  |  **|**  | //TupleValueStatementr// 
   |  |  **|**  | //FunApplication// 
   |  |  **|**  | //Integer// 
@@ -112,13 +106,11 @@ All other symbols are terminals.
   |  |  **|**  | //RefDef// 
   | //[Assignment]// | -> | **eps**
   |  |  **|**  | //Assignment// //[Assignment]// 
-  | //FunApplication// | -> | //Ident// ``.`` //FunApplication// 
-  |  |  **|**  | //Ident// ``(`` //[FunctionArgAppl]// ``)`` 
+  | //FunApplication// | -> | //Ident// ``(`` //[FunctionArgAppl]// ``)`` 
   | //FunctionArgAppl// | -> | //ValueStatement// 
   | //[FunctionArgAppl]// | -> | **eps**
   |  |  **|**  | //FunctionArgAppl// 
   |  |  **|**  | //FunctionArgAppl// ``,`` //[FunctionArgAppl]// 
-  | //ListValueStatementr// | -> | ``[`` //[ValueStatement]// ``]`` 
   | //TupleValueStatementr// | -> | ``(`` //[ValueStatement]// ``)`` 
   | //ValueStatementExpr// | -> | ``+`` //ValueStatement// 
   |  |  **|**  | ``-`` //ValueStatement// 

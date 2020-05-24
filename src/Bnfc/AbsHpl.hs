@@ -44,7 +44,6 @@ data ValueStatement a
     = ValueStatementB a [Assignment a] (ValueStatement a)
     | ForceValueStatement a [Assignment a] (ValueStatement a)
     | IfValueStatement a (ValueStatement a) (ValueStatement a) (ValueStatement a)
-    | LValueStatement a (ListValueStatementr a)
     | TValueStatement a (TupleValueStatementr a)
     | AValueStatement a (FunApplication a)
     | IValueStatement a Integer
@@ -58,7 +57,6 @@ instance Functor ValueStatement where
         ValueStatementB a assignments valuestatement -> ValueStatementB (f a) (map (fmap f) assignments) (fmap f valuestatement)
         ForceValueStatement a assignments valuestatement -> ForceValueStatement (f a) (map (fmap f) assignments) (fmap f valuestatement)
         IfValueStatement a valuestatement1 valuestatement2 valuestatement3 -> IfValueStatement (f a) (fmap f valuestatement1) (fmap f valuestatement2) (fmap f valuestatement3)
-        LValueStatement a listvaluestatementr -> LValueStatement (f a) (fmap f listvaluestatementr)
         TValueStatement a tuplevaluestatementr -> TValueStatement (f a) (fmap f tuplevaluestatementr)
         AValueStatement a funapplication -> AValueStatement (f a) (fmap f funapplication)
         IValueStatement a integer -> IValueStatement (f a) integer
@@ -122,14 +120,11 @@ instance Functor Assignment where
     fmap f x = case x of
         AssignmentB a type_ patternmatch valuestatement -> AssignmentB (f a) (fmap f type_) (fmap f patternmatch) (fmap f valuestatement)
         RefAssignment a refdef -> RefAssignment (f a) (fmap f refdef)
-data FunApplication a
-    = SFunApplication a Ident (FunApplication a)
-    | FunApplicationB a Ident [FunctionArgAppl a]
+data FunApplication a = FunApplicationB a Ident [FunctionArgAppl a]
   deriving (Eq, Ord, Show, Read)
 
 instance Functor FunApplication where
     fmap f x = case x of
-        SFunApplication a ident funapplication -> SFunApplication (f a) ident (fmap f funapplication)
         FunApplicationB a ident functionargappls -> FunApplicationB (f a) ident (map (fmap f) functionargappls)
 data FunctionArgAppl a = FunctionArgApplB a (ValueStatement a)
   deriving (Eq, Ord, Show, Read)
@@ -137,13 +132,6 @@ data FunctionArgAppl a = FunctionArgApplB a (ValueStatement a)
 instance Functor FunctionArgAppl where
     fmap f x = case x of
         FunctionArgApplB a valuestatement -> FunctionArgApplB (f a) (fmap f valuestatement)
-data ListValueStatementr a
-    = ListValueStatementB a [ValueStatement a]
-  deriving (Eq, Ord, Show, Read)
-
-instance Functor ListValueStatementr where
-    fmap f x = case x of
-        ListValueStatementB a valuestatements -> ListValueStatementB (f a) (map (fmap f) valuestatements)
 data TupleValueStatementr a
     = TupleValueStatementB a [ValueStatement a]
   deriving (Eq, Ord, Show, Read)

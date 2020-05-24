@@ -111,7 +111,6 @@ instance Print (ValueStatement a) where
     ValueStatementB _ assignments valuestatement -> prPrec i 0 (concatD [doc (showString "let"), prt 0 assignments, doc (showString "in"), prt 0 valuestatement])
     ForceValueStatement _ assignments valuestatement -> prPrec i 0 (concatD [doc (showString "force"), doc (showString "let"), prt 0 assignments, doc (showString "in"), prt 0 valuestatement])
     IfValueStatement _ valuestatement1 valuestatement2 valuestatement3 -> prPrec i 0 (concatD [doc (showString "if"), prt 0 valuestatement1, doc (showString "then"), prt 0 valuestatement2, doc (showString "else"), prt 0 valuestatement3])
-    LValueStatement _ listvaluestatementr -> prPrec i 0 (concatD [prt 0 listvaluestatementr])
     TValueStatement _ tuplevaluestatementr -> prPrec i 0 (concatD [prt 0 tuplevaluestatementr])
     AValueStatement _ funapplication -> prPrec i 0 (concatD [prt 0 funapplication])
     IValueStatement _ n -> prPrec i 0 (concatD [prt 0 n])
@@ -166,7 +165,6 @@ instance Print (Assignment a) where
   prtList _ (x:xs) = (concatD [prt 0 x, prt 0 xs])
 instance Print (FunApplication a) where
   prt i e = case e of
-    SFunApplication _ id funapplication -> prPrec i 0 (concatD [prt 0 id, doc (showString "."), prt 0 funapplication])
     FunApplicationB _ id functionargappls -> prPrec i 0 (concatD [prt 0 id, doc (showString "("), prt 0 functionargappls, doc (showString ")")])
 
 instance Print (FunctionArgAppl a) where
@@ -175,10 +173,6 @@ instance Print (FunctionArgAppl a) where
   prtList _ [] = (concatD [])
   prtList _ [x] = (concatD [prt 0 x])
   prtList _ (x:xs) = (concatD [prt 0 x, doc (showString ","), prt 0 xs])
-instance Print (ListValueStatementr a) where
-  prt i e = case e of
-    ListValueStatementB _ valuestatements -> prPrec i 0 (concatD [doc (showString "["), prt 0 valuestatements, doc (showString "]")])
-
 instance Print (TupleValueStatementr a) where
   prt i e = case e of
     TupleValueStatementB _ valuestatements -> prPrec i 0 (concatD [doc (showString "("), prt 0 valuestatements, doc (showString ")")])

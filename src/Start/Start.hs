@@ -28,7 +28,6 @@ runAux p s = let ts = myLLexer s in case p ts of
             putStrLn str
         Ok tree ->
             checkAndRunTree tree 
-        _ -> undefined
         
 
 checkAndRunTree :: Program (Maybe (Int, Int)) -> IO ()
@@ -37,5 +36,4 @@ checkAndRunTree x = tryRun $ staticCheck x
 tryRun :: Err NProgramFormat -> IO ()
 tryRun (Bad err) = putStrLn $ "ERROR: " ++ err
 tryRun (Ok tree) = run tree
-tryRun _ = undefined
                            

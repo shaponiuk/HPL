@@ -9,4 +9,3 @@ clean:
 distclean: clean
 	-rm -f DocHpl.* LexHpl.* ParHpl.* LayoutHpl.* SkelHpl.* PrintHpl.* TestHpl.* AbsHpl.* TestHpl ErrM.* SharedString.* ComposOp.* Hpl.dtd XMLHpl.* Makefile*
 	
-

@@ -134,16 +134,13 @@ convertValueStatement (LitStrValueStatement pos str) = FLitStrValueStatement pos
 convertValueStatement (FValueStatement pos ident vs) = 
   FFValueStatement pos (unwrapIdent ident) (convertValueStatement vs)
 convertValueStatement (Expr pos vs e) = exprFromLists pos (makeExprLists vs e)
-convertValueStatement LValueStatement{} = undefined
 
 checkFunAppl :: FunApplication (Maybe (Int, Int)) -> Bool
 checkFunAppl (FunApplicationB _ name _) = isLower $ head $ unwrapIdent name
-checkFunAppl SFunApplication{} = undefined
 
 convertFunctionApplToTypeConstructor :: FunApplication (Maybe (Int, Int)) -> (Maybe (Int, Int), String, [FValueStatement])
 convertFunctionApplToTypeConstructor (FunApplicationB pos name functionArgAppls) = 
   (pos, unwrapIdent name, map convertFunctionArgApplToTypeConstructor functionArgAppls)
-convertFunctionApplToTypeConstructor SFunApplication{} = undefined
 
 convertFunctionArgApplToTypeConstructor :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
 convertFunctionArgApplToTypeConstructor (FunctionArgApplB _ vs) = convertValueStatement vs
@@ -250,7 +247,6 @@ makeExprListsAux (ENE _ vs) = (["!="], [vs])
 
 convertFunctionAppl :: FunApplication (Maybe (Int, Int)) -> FFunApplication
 convertFunctionAppl (FunApplicationB pos i fArgApplList) = FFunApplicationB pos (unwrapIdent i) (convertFunctionArgApplList fArgApplList)
-convertFunctionAppl (SFunApplication pos i fAppl) = undefined
 
 convertFunctionArgAppl :: FunctionArgAppl (Maybe (Int, Int)) -> FValueStatement
 convertFunctionArgAppl (FunctionArgApplB _ vs) = convertValueStatement vs

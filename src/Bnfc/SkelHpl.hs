@@ -32,7 +32,6 @@ transValueStatement x = case x of
   ValueStatementB _ assignments valuestatement -> failure x
   ForceValueStatement _ assignments valuestatement -> failure x
   IfValueStatement _ valuestatement1 valuestatement2 valuestatement3 -> failure x
-  LValueStatement _ listvaluestatementr -> failure x
   TValueStatement _ tuplevaluestatementr -> failure x
   AValueStatement _ funapplication -> failure x
   IValueStatement _ integer -> failure x
@@ -68,14 +67,10 @@ transAssignment x = case x of
   RefAssignment _ refdef -> failure x
 transFunApplication :: Show a => FunApplication a -> Result
 transFunApplication x = case x of
-  SFunApplication _ ident funapplication -> failure x
   FunApplicationB _ ident functionargappls -> failure x
 transFunctionArgAppl :: Show a => FunctionArgAppl a -> Result
 transFunctionArgAppl x = case x of
   FunctionArgApplB _ valuestatement -> failure x
-transListValueStatementr :: Show a => ListValueStatementr a -> Result
-transListValueStatementr x = case x of
-  ListValueStatementB _ valuestatements -> failure x
 transTupleValueStatementr :: Show a => TupleValueStatementr a -> Result
 transTupleValueStatementr x = case x of
   TupleValueStatementB _ valuestatements -> failure x
