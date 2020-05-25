@@ -20,7 +20,7 @@ runSpecialFunction _ _ _ _ = undefined
 
 checkSpecialFunctionName :: String -> Bool
 checkSpecialFunctionName funName =
-    funName `elem` ["print", "get", "set", "v", "p", "make_semaphore", "yield"]
+    funName `elem` ["print", "get", "set", "v", "p", "make_semaphore", "yield", "getline", "gets"]
 
 isLambda FFValueStatement{} = True
 isLambda _ = False
@@ -41,7 +41,6 @@ runLambda queueId vs args innerEnv outerEnv state = do
 
 runLambdaWrapper :: Int -> FValueStatement -> E -> [FPatternMatch] -> [FValueStatement] -> E -> S -> IO (S, FValueStatement)
 runLambdaWrapper queueId vs innerEnv argPMs vss outerEnv state = do
-    printD 2 vs >> printD 2 innerEnv >> printD 2 outerEnv >> printD 2 argPMs >> printD 2 vss
     let argVSs = take (length argPMs) vss
     let restVSs = takeLast (length vss - length argPMs) vss
     (innerEnv, newState) <- registerArgs queueId innerEnv outerEnv state argPMs argVSs
@@ -51,10 +50,7 @@ getMatchingVSForName :: Int -> [Int] -> [FValueStatement] -> E -> S -> IO (FValu
 getMatchingVSForName _ [] _ _ _ = fail "not exhaustive pattern matching"
 getMatchingVSForName queueId (loc:locs) argVss outerEnv state = do
     let funArgNames = funArgNamesLookup state loc
-    printD 2 funArgNames >> printD 2 argVss
     (fits, state, argVss) <- fitPatternMatchs queueId state outerEnv funArgNames argVss
-    printD 2 argVss
-    printD 2 state
     if fits
         then do
             let (innerEnv, vs) = stateLookup loc state
@@ -64,13 +60,7 @@ getMatchingVSForName queueId (loc:locs) argVss outerEnv state = do
 runNotSpecialFunction :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runNotSpecialFunction queueId a@(FAValueStatement _ (FFunApplicationB _ funName funArgVss)) outerEnv state = do
     let locs = lookupLoc funName outerEnv
-    printD 2 funName
-    printD 2 funArgVss
     (vs, innerEnv, loc, state, funArgNames, funArgVss) <- getMatchingVSForName queueId locs funArgVss outerEnv state
-    printD 2 funArgVss
-    printD 2 funArgNames
-    printD 2 vs
-    printD 2 state
     if isLambda vs 
         then
             runLambdaWrapper queueId vs innerEnv funArgNames funArgVss outerEnv state
@@ -455,6 +445,13 @@ forceGetTupleVSS queueId vs@FNTValueStatement{} s e = do
     (s, vs) <- runVS queueId vs e s
     if isSuspendedValue vs then return ([vs], s) else forceGetTupleVSS queueId vs s e
 
+getNChars :: Int -> IO String
+getNChars 0 = return ""
+getNChars d = do
+    c <- getChar
+    s <- getNChars $ d - 1
+    return (c:s)
+
 forceRunFunApplication :: Int -> FFunApplication -> S -> E -> IO (FValueStatement, S)
 forceRunFunApplication queueId (FFunApplicationB _ "print" [str]) state env = do
     (s, r) <- runVS queueId str env state
@@ -466,6 +463,13 @@ forceRunFunApplication queueId (FFunApplicationB _ "print" [str]) state env = do
         _ -> do
             print r
             return (FTValueStatement Nothing [], s)
+forceRunFunApplication queueId (FFunApplicationB _ "getline" []) state env = do
+    s <- getLine
+    return (FLitStrValueStatement Nothing s, state)
+forceRunFunApplication queueId (FFunApplicationB _ "gets" [x]) state env = do
+    (state, FIValueStatement _ d) <- runVS queueId x env state
+    s <- getNChars d
+    return (FLitStrValueStatement Nothing s, state)
 forceRunFunApplication queueId (FFunApplicationB _ "set" [ref, value]) state env = do
     (newState, FRefAddr refAddr) <- runVS queueId ref env state
     let newerState = putInLoc refAddr (env, value) newState
@@ -535,7 +539,6 @@ tryYield queueId state env = do
 oneStepEvaluation :: Int -> S -> E -> FValueStatement -> IO (S, E, FValueStatement)
 oneStepEvaluation queueId s e (FAValueStatement _ (FFunApplicationR loc)) = oneStepRunLoc queueId loc s
 oneStepEvaluation queueId s e (FAValueStatement _ (FFunApplicationB _ name vss)) = do
-    printD 2 "onestepeval funapplb " >> printD 2 name
     let locs = lookupLoc name e
     oneStepRunLocs queueId locs vss e s
 oneStepEvaluation queueId s e (FForceValueStatement _ assignments vs) = do
@@ -680,7 +683,6 @@ oneStepRunLocs _ [] _ _ _ = fail "pattern matches not exhaustive"
 oneStepRunLocs queueId (x:xs) args env state = do
     let funArgNames = funArgNamesLookup state x
     let (e, vs) = stateLookup x state
-    printD 2 "oneStepRunLocs" >> printD 2 e >> printD 2 vs
     (fits, state, args) <- fitPatternMatchs queueId state env funArgNames args
     if fits
         then 
@@ -812,11 +814,7 @@ fitPatternMatch queueId s e (pm@FPatternMatchC{}, vs@FAValueStatement{}) = do
     (s, e, vs) <- oneStepEvaluation queueId s e vs
     fitPatternMatch queueId s e (pm, vs)
 fitPatternMatch queueId s e (t@FPatternMatchT{}, vs@FAValueStatement{}) = do
-    printD 2 "jfdioasjfokdas;j"
-    printD 2 vs
     (s, e, vs) <- oneStepEvaluation queueId s e vs
-    printD 2 vs
-    printD 2 e
     fitPatternMatch queueId s e (t, vs)
 fitPatternMatch queueId s e a@(t@FPatternMatchT{}, vs@FForceValueStatement{}) = do
     (s, e, vs) <- oneStepEvaluation queueId s e vs

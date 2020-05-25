@@ -283,6 +283,9 @@ checkFunctionApplicationType funName (FTypeT _ []) "set" (Just pos) [FAValueStat
                 _ -> fail $ "the first argument of set at " ++ show pos ++ " is not a ref"
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
 checkFunctionApplicationType funName (FTypeB _ "Ref" [FTypeB _ "Semaphore" []]) "make_semaphore" _ [] _ = return ()
+checkFunctionApplicationType funName (FTypeB _ "String" []) "getline" _ [] _ = return ()
+checkFunctionApplicationType funName (FTypeB _ "String" []) "gets" _ [x] tce =
+    checkFunctionBody funName (FTypeB Nothing "Int" []) x tce
 checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if member name tm
         then checkFunctionApplicationTypeInt funName t name (Just pos) (tm ! name) args tce
