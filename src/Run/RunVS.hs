@@ -94,7 +94,6 @@ runVS queueId vs@(FExpr _ FEEQ{}) e s = runVSEQ queueId vs e s
 runVS queueId vs@(FExpr _ FESub{}) e s = runVSSub queueId vs e s
 runVS queueId vs@(FExpr _ FEAdd{}) e s = runVSAdd queueId vs e s
 runVS queueId vs@(FAValueStatement _ (FFunApplicationR loc)) e s = runVSFunApplR queueId vs e s
-runVS queueId vs@FLitStrValueStatement{} e s = runVSStr queueId vs e s
 runVS queueId vs@FCValueStatement{} e s = runVSC queueId vs e s
 runVS queueId vs@FTValueStatement{} e s = runVST queueId vs e s
 runVS queueId vs@FRefAddr{} e s = return (s, vs)
@@ -241,10 +240,6 @@ runLoc :: Int -> Int -> S -> IO (S, FValueStatement)
 runLoc queueId x state = do
     let (innerEnv, vs) = stateLookup x state
     runVS queueId vs innerEnv state
-
-runVSStr :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
-runVSStr _ vs@FLitStrValueStatement{} _ s = return (s, vs)
-runVSStr _ _ _ _ = undefined
 
 runVSC :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSC queueId (FCValueStatement _ name vss) e s = do
@@ -428,7 +423,6 @@ forceGetTupleVSS queueId a@FIfValueStatement{} s e = do
     (s, vs) <- runVS queueId a e s
     if isSuspendedValue vs then return ([vs], s) else forceGetTupleVSS queueId vs s e
 forceGetTupleVSS _ vs@FIValueStatement{} s _ = return ([vs], s)
-forceGetTupleVSS _ vs@FLitStrValueStatement{} s _ = return ([vs], s)
 forceGetTupleVSS _ vs@FFValueStatement{} s _ = return ([vs], s)
 forceGetTupleVSS queueId vs@FCValueStatement{} s e = do
     (s, vs) <- runVS queueId vs e s
@@ -465,11 +459,11 @@ forceRunFunApplication queueId (FFunApplicationB _ "print" [str]) state env = do
             return (FTValueStatement Nothing [], s)
 forceRunFunApplication queueId (FFunApplicationB _ "getline" []) state env = do
     s <- getLine
-    return (FLitStrValueStatement Nothing s, state)
+    return (convertString Nothing s, state)
 forceRunFunApplication queueId (FFunApplicationB _ "gets" [x]) state env = do
     (state, FIValueStatement _ d) <- runVS queueId x env state
     s <- getNChars d
-    return (FLitStrValueStatement Nothing s, state)
+    return (convertString Nothing s, state)
 forceRunFunApplication queueId (FFunApplicationB _ "set" [ref, value]) state env = do
     (newState, FRefAddr refAddr) <- runVS queueId ref env state
     let newerState = putInLoc refAddr (env, value) newState
@@ -556,7 +550,6 @@ oneStepEvaluation queueId s e (FTValueStatement _ ts) = do
     (s, e, ts) <- oneStepTupleEvaluation queueId s e ts
     return (s, e, FTValueStatement Nothing ts)
 oneStepEvaluation queueId s e vs@FIValueStatement{} = return (s, e, vs)
-oneStepEvaluation queueId s e vs@FLitStrValueStatement{} = return (s, e, vs)
 oneStepEvaluation queueId s e vs@FFValueStatement{} = return (s, e, vs)
 oneStepEvaluation queueId s e vs@FRefAddr{} = return (s, e, vs)
 oneStepEvaluation queueId s e (FExpr _ (FEAdd (FIValueStatement _ i1) (FIValueStatement _ i2))) =

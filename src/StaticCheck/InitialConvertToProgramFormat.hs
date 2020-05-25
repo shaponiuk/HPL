@@ -130,7 +130,7 @@ convertValueStatement (AValueStatement pos funAppl) =
         (pos, name, vss) = convertFunctionApplToTypeConstructor funAppl
       in FCValueStatement pos name vss
 convertValueStatement (IValueStatement pos i) = FIValueStatement pos $ fromIntegral i
-convertValueStatement (LitStrValueStatement pos str) = FLitStrValueStatement pos str
+convertValueStatement (LitStrValueStatement pos str) = convertString pos str
 convertValueStatement (FValueStatement pos ident vs) = 
   FFValueStatement pos (unwrapIdent ident) (convertValueStatement vs)
 convertValueStatement (Expr pos vs e) = exprFromLists pos (makeExprLists vs e)
@@ -204,7 +204,6 @@ getVSLoc (FForceValueStatement loc _ _) = loc
 getVSLoc (FIfValueStatement loc _ _ _) = loc
 getVSLoc (FTValueStatement loc _) = loc
 getVSLoc (FIValueStatement loc _) = loc
-getVSLoc (FLitStrValueStatement loc _) = loc
 getVSLoc (FFValueStatement loc _ _) = loc
 getVSLoc (FCValueStatement loc _ _) = loc
 getVSLoc (FExpr loc _) = loc

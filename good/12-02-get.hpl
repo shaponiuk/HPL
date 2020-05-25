@@ -1,6 +1,6 @@
 sus fun (Int ()) main () =
     let
-        String () :: x = gets(4);
+        SList () :: x = gets(4);
     in force let
         () :: () = print (x ());
     in 0;

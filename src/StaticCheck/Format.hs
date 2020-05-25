@@ -2,6 +2,7 @@ module StaticCheck.Format where
 
 import Data.Map
 import Util.Util
+import Data.Char (ord, chr)
 
 data QueueT = QueueT {
   env :: E,
@@ -73,7 +74,6 @@ data FValueStatement =
   | FTValueStatement (Maybe (Int, Int)) [FValueStatement]
   | FAValueStatement (Maybe (Int, Int)) FFunApplication
   | FIValueStatement (Maybe (Int, Int)) Int
-  | FLitStrValueStatement (Maybe (Int, Int)) String
   | FFValueStatement (Maybe (Int, Int)) String FValueStatement
   | FCValueStatement (Maybe (Int, Int)) String [FValueStatement]
   | FExpr (Maybe (Int, Int)) FValueStatementExpr
@@ -110,9 +110,10 @@ data FValueStatementExpr =
   | FENE FValueStatement FValueStatement
 
 instance Show FValueStatement where
-  show (FLitStrValueStatement _ str) = str
   show (FIValueStatement _ i) = show i
   show (FTValueStatement _ l) = showTupleList l
+  show (FCValueStatement _ "SEmptyListC" []) = ""
+  show (FCValueStatement _ "SListC" [FIValueStatement _ i, l]) = chr i : show l
   show (FCValueStatement _ constructorName args) = constructorName ++ " " ++ showTupleList args
   show (FExpr _ expr) = show expr
   show FValueStatementB{} = "let statement"
@@ -191,8 +192,6 @@ instance Eq FValueStatement where
   FIfValueStatement{} == _ = False
   (FTValueStatement _ ts1) == (FTValueStatement _ ts2) = ts1 == ts2
   FTValueStatement{} == _ = False
-  (FLitStrValueStatement _ str1) == (FLitStrValueStatement _ str2) = str1 == str2
-  FLitStrValueStatement{} == _ = False
   (FFValueStatement _ arg1 vs1) == (FFValueStatement _ arg2 vs2) = arg1 == arg2 && vs1 == vs2
   FFValueStatement{} == _ = False
   (FCValueStatement _ pm1 args1) == (FCValueStatement _ pm2 args2) = pm1 == pm2 && args1 == args2
@@ -242,3 +241,12 @@ instance Eq FType where
   FunFType{} == FTypeT{} = False
   FTypeT{} == FTypeB{} = False
   FTypeT{} == FunFType{} = False
+
+
+convertString :: Maybe (Int, Int) -> String -> FValueStatement
+convertString pos [] = FCValueStatement pos "SEmptyListC" []
+convertString pos (x:xs) =
+  let
+    l = convertString pos xs
+    i = ord x
+  in FCValueStatement pos "SListC" [FIValueStatement pos i, l]

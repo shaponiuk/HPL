@@ -15,6 +15,12 @@ newTCE = TCE empty $ insert "List"
             FAlgTypeVal Nothing "ListC" $ FTypeT Nothing [FTypeB Nothing "a" [], FTypeB Nothing "List" [FTypeB Nothing "a" []]],
             FAlgTypeVal Nothing "EmptyListC" $ FTypeT Nothing []
         ]
+    ) $ insert "SList"
+    (FAlgType Nothing "SList" []
+        [
+            FAlgTypeVal Nothing "SListC" $ FTypeT Nothing [FTypeB Nothing "Int" [], FTypeB Nothing "SList" []],
+            FAlgTypeVal Nothing "SEmptyListC" $ FTypeT Nothing []
+        ]
     ) empty
 
 registerAlgTypes :: [FAlgType] -> TCE -> TCE
@@ -85,8 +91,8 @@ checkExistingType (FTypeB _ "Semaphore" []) _ = return ()
 checkExistingType (FTypeB _ "Semaphore" _) _ = undefined
 checkExistingType (FTypeB _ "Int" []) _ = return ()
 checkExistingType (FTypeB _ "Int" _) _ = undefined
-checkExistingType (FTypeB _ "String" []) _ = return ()
-checkExistingType (FTypeB _ "String" _) _ = undefined
+checkExistingType (FTypeB _ "SList" []) _ = return ()
+checkExistingType (FTypeB _ "SList" _) _ = undefined
 checkExistingType (FTypeB _ "List" [x]) tce = checkExistingType x tce
 checkExistingType (FTypeB _ "List" _) _ = undefined
 checkExistingType (FunFType _ t1 t2) tce = do
@@ -140,7 +146,6 @@ getCorrectedConstructor atv@(FAlgTypeVal pos cName ct) at@(FAlgType _ tName tArg
 checkMatchingType :: FType -> FPatternMatch -> TCE -> Err ()
 checkMatchingType (FTypeB _ "Int" []) FPatternMatchB{} _ = return ()
 checkMatchingType (FTypeB _ "Int" []) FPatternMatchI{} _ = return ()
-checkMatchingType (FTypeB _ "String" []) (FPatternMatchB _ _) _ = return ()
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchB _ _) _ = return ()
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce =
     if atName /= cName
@@ -283,8 +288,8 @@ checkFunctionApplicationType funName (FTypeT _ []) "set" (Just pos) [FAValueStat
                 _ -> fail $ "the first argument of set at " ++ show pos ++ " is not a ref"
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
 checkFunctionApplicationType funName (FTypeB _ "Ref" [FTypeB _ "Semaphore" []]) "make_semaphore" _ [] _ = return ()
-checkFunctionApplicationType funName (FTypeB _ "String" []) "getline" _ [] _ = return ()
-checkFunctionApplicationType funName (FTypeB _ "String" []) "gets" _ [x] tce =
+checkFunctionApplicationType funName (FTypeB _ "SList" []) "getline" _ [] _ = return ()
+checkFunctionApplicationType funName (FTypeB _ "SList" []) "gets" _ [x] tce =
     checkFunctionBody funName (FTypeB Nothing "Int" []) x tce
 checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if member name tm
@@ -314,11 +319,6 @@ checkFunctionBody funName t (FIfValueStatement posM ifvs vs1 vs2) tce = do
     checkFunctionBody funName t vs1 tce
     checkFunctionBody funName t vs2 tce
 checkFunctionBody _ (FTypeB _ "Int" []) (FIValueStatement _ _) _ = return ()
-checkFunctionBody funName (FTypeB _ "String" []) (FIValueStatement (Just posVS) _) _ = 
-    fail $ "function " ++ funName ++ " " ++ show posVS ++ " has an Int () value while expecting String ()"
-checkFunctionBody funName (FTypeB _ "Int" []) (FLitStrValueStatement (Just posVS) _) _ = 
-    fail $ "function " ++ funName ++ " " ++ show posVS ++ " has a String () value while expecting Int ()"
-checkFunctionBody _ (FTypeB _ "String" []) (FLitStrValueStatement _ _) _ = return ()
 checkFunctionBody funName (FTypeT _ [t]) vs tce = checkFunctionBody funName t vs tce
 checkFunctionBody funName (FTypeT _ types) (FTValueStatement _ vss) tce = checkTupleFunctionBody funName types vss tce
 checkFunctionBody funName t (FValueStatementB _ assignments vs) tce = do
@@ -341,9 +341,6 @@ checkFunctionBody _ _ (FAValueStatement _ FFunApplicationR{}) _ = undefined
 checkFunctionBody funName t (FIValueStatement (Just loc) i) _ =
     fail $ "int value " ++ show i ++ " at " ++ show loc ++ " is not of the type Int ()"
 checkFunctionBody _ _ (FIValueStatement Nothing _) _ = undefined
-checkFunctionBody funName t (FLitStrValueStatement (Just loc) i) _ =
-    fail $ "string value " ++ show i ++ " at " ++ show loc ++ " is not of the type String ()"
-checkFunctionBody _ _ (FLitStrValueStatement Nothing _) _ = undefined
 checkFunctionBody funName t@(FTypeB _ "Int" []) (FExpr (Just loc) (FEAdd vs1 vs2)) tce = do
     checkFunctionBody funName t vs1 tce
     checkFunctionBody funName t vs2 tce
