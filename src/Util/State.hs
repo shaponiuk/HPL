@@ -49,17 +49,22 @@ putQueue (S varsMap newIntLoc functionArgsMap semaphores queues) thing =
   S varsMap newIntLoc functionArgsMap semaphores (queues ++ [thing])
 
 anyAvailibleQueue :: S -> Bool
-anyAvailibleQueue (S _ _ _ semaphores queues) = any (`notBlockedByAnyOfTheSemaphores` semaphores) queues
+anyAvailibleQueue (S _ _ _ semaphores queues) = 
+  -- traceD (show semaphores ++ " " ++ show queues) $ 
+  any (`notBlockedByAnyOfTheSemaphores` semaphores) queues
 
 notBlockedByAnyOfTheSemaphores :: QueueT -> [SemaphoreT] -> Bool
 notBlockedByAnyOfTheSemaphores (QueueT _ _ _ f y) [] = not $ f || y
-notBlockedByAnyOfTheSemaphores q semaphores = any (q `notBlockedBySemaphoreOrNotFinishedOrNotYielding`) semaphores
+notBlockedByAnyOfTheSemaphores q semaphores = all (q `notBlockedBySemaphoreOrNotFinishedOrNotYielding`) semaphores
 
 checkNotBlocked :: QueueT -> S -> Bool
 checkNotBlocked queue (S _ _ _ semaphores _) = notBlockedByAnyOfTheSemaphores queue semaphores
 
 notBlockedBySemaphoreOrNotFinishedOrNotYielding :: QueueT -> SemaphoreT -> Bool
-notBlockedBySemaphoreOrNotFinishedOrNotYielding (QueueT _ _ queueId b y) (SemaphoreT blockedQueues _ _) = queueId `notElem` blockedQueues && not b && not y
+notBlockedBySemaphoreOrNotFinishedOrNotYielding (QueueT _ _ queueId b y) (SemaphoreT blockedQueues _ _) = 
+  -- traceD ("here " ++ show queueId ++ show blockedQueues) $ 
+  res where
+    res = queueId `notElem` blockedQueues && not b && not y
 
 getAvailibleQueue :: S -> QueueT
 getAvailibleQueue (S _ _ _ semaphores queues) = first (`notBlockedByAnyOfTheSemaphores` semaphores) queues
