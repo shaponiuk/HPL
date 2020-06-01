@@ -1,0 +1,10 @@
+    fun ((Either (Int(), Int ())) -> Int()) fromEither (Left (a)) = a();
+    fun ((Either (Int(), Int ())) -> Int()) fromEither (Right (a)) = a();
+
+    //sus fun (Int()) main () = 0;
+    
+    sus fun (Int()) main () = force let
+        () :: () = print(fromEither(Left (5)));
+        () :: () = print(fromEither(Right (7)));
+    in 0;
+    

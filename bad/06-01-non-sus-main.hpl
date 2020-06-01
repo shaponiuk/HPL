@@ -1,0 +1,9 @@
+    fun ((Maybe (Int())) -> Int()) fromJust (Just (a)) = a();
+    fun ((Maybe (Int())) -> Int()) fromJust (Nothing ()) = 7;
+
+    fun (Int()) main () = 0;
+    /*
+    fun (Int()) main () = force let
+        () :: () = print(fromJust(Just (5)));
+    in 0;
+    */

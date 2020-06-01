@@ -21,6 +21,18 @@ newTCE = TCE empty $ insert "List"
             FAlgTypeVal Nothing "SListC" $ FTypeT Nothing [FTypeB Nothing "Int" [], FTypeB Nothing "SList" []],
             FAlgTypeVal Nothing "SEmptyListC" $ FTypeT Nothing []
         ]
+    ) $ insert "Maybe"
+    (FAlgType Nothing "Maybe" ["a"]
+        [
+            FAlgTypeVal Nothing "Just" $ FTypeT Nothing [FTypeB Nothing "a" []],
+            FAlgTypeVal Nothing "Nothing" $ FTypeT Nothing []
+        ]
+    ) $ insert "Either" 
+    (FAlgType Nothing "Either" ["a", "b"]
+        [
+            FAlgTypeVal Nothing "Left" $ FTypeT Nothing [FTypeB Nothing "a" []],
+            FAlgTypeVal Nothing "Right" $ FTypeT Nothing [FTypeB Nothing "b" []]
+        ]
     ) empty
 
 registerAlgTypes :: [FAlgType] -> TCE -> TCE
@@ -103,7 +115,7 @@ checkExistingType (FTypeT _ (x:xs)) tce = do
     checkExistingType x tce
     checkExistingType (FTypeT Nothing xs) tce
 checkExistingType (FTypeB (Just pos) name args) tce@(TCE _ atm) =
-    traceD atm $ if member name atm
+    if member name atm
         then do
             let (FAlgType _ name_ argTypes _) = atm ! name
             if length argTypes == length args
@@ -209,11 +221,17 @@ checkMatchingConstructors (FAlgTypeVal _ cName (FTypeT _ tArgs)) (FPatternMatchC
     if length tArgs /= length cArgs 
         then fail $ "number of type arguments at " ++ show pos ++ " doesn't match the correct number of arguments for constructor " ++ cName
         else checkMatchingTypes tArgs cArgs tce
-checkMatchingConstructors _ _ _ = undefined
+checkMatchingConstructors (FAlgTypeVal _ cName tArg) (FPatternMatchC (Just pos) _ cArgs) tce =
+    if 1 /= length cArgs 
+        then fail $ "number of type arguments at " ++ show pos ++ " doesn't match the correct number of arguments for constructor " ++ cName
+        else checkMatchingTypes [tArg] cArgs tce
+checkMatchingConstructors a b c = traceD (show a ++ show b) undefined
 
 registerConstructor :: FAlgTypeVal -> FPatternMatch -> TCE -> Err TCE
 registerConstructor (FAlgTypeVal _ _ (FTypeT _ tArgs)) (FPatternMatchC _ _ cArgs) tce =
     registerArgs tArgs cArgs tce
+registerConstructor (FAlgTypeVal _ _ tArg) (FPatternMatchC _ _ cArgs) tce =
+    registerArgs [tArg] cArgs tce
 registerConstructor _ _ _ = undefined
 
 registerArg :: FType -> FPatternMatch -> TCE -> Err TCE
@@ -336,7 +354,8 @@ checkFunctionBody funName t@(FTypeB _ atName atArgs) (FCValueStatement pos cName
     checkFunctionBody funName atmArgs (FTValueStatement pos cArgs) tce
 checkFunctionBody funName t@(FunFType _ t1 t2) vs@(FIValueStatement (Just posVS) _) _ =
     fail $ show vs ++ " " ++ show posVS ++ " is not of the type " ++ show t
-checkFunctionBody funName FTypeB{} (FTValueStatement (Just pos) _) _ =
+checkFunctionBody funName t@FTypeB{} (FTValueStatement _ [vs]) tce = checkFunctionBody funName t vs tce
+checkFunctionBody funName FTypeB{} (FTValueStatement (Just pos) _) tce =
     fail $ "tuple at " ++ show pos ++ " in function " ++ funName ++ " has a non tuple type"
 checkFunctionBody _ _ (FAValueStatement _ FFunApplicationR{}) _ = undefined
 checkFunctionBody funName t (FIValueStatement (Just loc) i) _ =

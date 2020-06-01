@@ -5,6 +5,7 @@ import StaticCheck.CheckUniqueDefinitions
 import StaticCheck.CheckDoubleSus
 import StaticCheck.CheckCase
 import StaticCheck.CheckTypes
+import StaticCheck.CheckMainFunction
 import Bnfc.ErrM
 import Util.Util
 
@@ -14,5 +15,5 @@ checkProgramFormat pf = do
     checkCase pf
     checkUniqueDefinitions pf
     checkTypes pf
-    -- check main function
+    checkMainFunction pf
     return pf

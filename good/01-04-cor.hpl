@@ -14,7 +14,7 @@ sus fun (Int () -> Int ()) fib (x) =
                 in x12() + x22();
         in ans();
 
-    fun (Int()) main() = 
+    sus fun (Int()) main() = 
     force let
         Int () :: ans = fib(9);
         () :: () = print (ans());

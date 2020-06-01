@@ -280,11 +280,11 @@ runVSSusSt _ _ _ _ = undefined
 
 runVSSusVal :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSSusVal queueId (FSuspendedValue qId) e s_ = do
-    let s = yieldQueue qId s_
+    let s = yieldQueue queueId s_
     let (QueueT env qvs _ b y) = getQueue qId s
     (ns, nvs) <- runVS qId qvs env s
     let nns = putInQueue qId (QueueT env qvs qId True False) ns
-    return (unyieldQueue qId nns, nvs)
+    return (unyieldQueue queueId nns, nvs)
 runVSSusVal _ _ _ _ = undefined
 
 runVSLazyLet :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
@@ -452,7 +452,7 @@ forceRunFunApplication queueId (FFunApplicationB _ "print" [str]) state env = do
     (s, r) <- runVS queueId str env state
     case r of
         FSuspendedValue qId -> do
-            (ns, nr) <- runVS qId r env s
+            (ns, nr) <- runVS queueId r env s
             print nr
             return (FTValueStatement Nothing [], ns)
         _ -> do
