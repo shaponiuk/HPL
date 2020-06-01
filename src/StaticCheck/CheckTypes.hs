@@ -268,7 +268,8 @@ checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 [] _ =
     if t1 == t2
         then return ()
         else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName ++ " " ++ show pos
-checkFunctionApplicationTypeInt _ _ _ _ _ _ _ = undefined
+checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 _ _ = fail $ "too many arguments applied for function " ++ show funName ++ " at " ++ show pos
+checkFunctionApplicationTypeInt funName t1 name posM t2 vss tce = traceD (funName ++ show t1 ++ name ++ show posM ++ show t2 ++ show vss) undefined
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [_] tce = return ()

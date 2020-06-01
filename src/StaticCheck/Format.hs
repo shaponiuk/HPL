@@ -59,7 +59,6 @@ data FPatternMatch =
   | FPatternMatchB (Maybe (Int, Int)) String
   | FPatternMatchT (Maybe (Int, Int)) [FPatternMatch]
   | FPatternMatchC (Maybe (Int, Int)) FPatternMatch [FPatternMatch]
-  deriving (Show)
 
 data FType =
     FTypeB (Maybe (Int, Int)) String [FType]
@@ -151,6 +150,12 @@ showTupleList (x:x2:xs) =
 getFunctionName :: FFunctionDef -> String
 getFunctionName (NonSusFFunctionDef _ _ name _ _) = name
 getFunctionName (SusFFunctionDef fd) = getFunctionName fd
+
+instance Show FPatternMatch where
+  show (FPatternMatchB _ x) = x
+  show (FPatternMatchI _ i) = show i
+  show (FPatternMatchT _ pms) = showTupleList pms
+  show (FPatternMatchC _ name args) = show name ++ " " ++ showTupleList args
 
 instance Eq FPatternMatch where
   (FPatternMatchI _ i1) == (FPatternMatchI _ i2) = i1 == i2
