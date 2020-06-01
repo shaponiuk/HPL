@@ -23,8 +23,7 @@ runFileAux p f = readFile f >>= runAux p
 runAux :: ParseFun (Program (Maybe (Int, Int))) -> String -> IO ()
 runAux p s = let ts = myLLexer s in case p ts of
         Bad str -> do 
-            putStrLn "\nParse Failed... TODO\n"
-            print ts
+            putStrLn "\nParse Failed\n"
             putStrLn str
         Ok tree ->
             checkAndRunTree tree 
