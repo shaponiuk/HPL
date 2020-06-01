@@ -1,0 +1,14 @@
+fun (Int () -> List (Int ())) make_list (x) =
+    if x () == 0 
+        then EmptyListC ()
+        else ListC (x (), make_list (x () - 1));
+
+fun (Int () -> List (List (Int ()))) make_list_2 (x) =
+    if x () == 0
+        then EmptyListC ()
+        else ListC (make_list (x ()), make_list_2 (x () - 1));
+
+sus fun (Int ()) main () =
+    force let
+        () :: () = print (make_list_2 (3));
+    in 0;

@@ -285,12 +285,27 @@ checkFunctionApplicationTypeInt funName t1 name posM (FunFType _ t21 t22) (vs:vs
 checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 [] _ =
     if t1 == t2
         then return ()
-        else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName ++ " " ++ show pos
+        else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName ++ " " ++ show pos ++ show t1 ++ show t2
 checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 _ _ = fail $ "too many arguments applied for function " ++ show funName ++ " at " ++ show pos
 checkFunctionApplicationTypeInt funName t1 name posM t2 vss tce = traceD (funName ++ show t1 ++ name ++ show posM ++ show t2 ++ show vss) undefined
 
+checkAnyTypeFunAppl :: String -> FType -> (Int, Int) -> [FValueStatement] -> TCE -> Err ()
+checkAnyTypeFunAppl funName (FunFType _ t1 t2) pos (vs:vss) tce = do
+    checkExistingType t1 tce
+    checkFunctionBody funName t1 vs tce
+    checkAnyTypeFunAppl funName t2 pos vss tce
+checkAnyTypeFunAppl funName t _ [] tce = checkExistingType t tce
+
+checkAnyType :: FValueStatement -> TCE -> Err ()
+checkAnyType (FAValueStatement _ (FFunApplicationB (Just pos) name args)) tce@(TCE tm atm) =
+    if member name tm
+        then checkAnyTypeFunAppl name (tm ! name) pos args tce
+        else fail $ "name " ++ name ++ " at " ++ show pos ++  " is not registered"
+-- checkAnyType a tce = traceD a undefined
+
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
-checkFunctionApplicationType funName (FTypeT _ []) "print" _ [_] tce = return ()
+checkFunctionApplicationType funName (FTypeT _ []) "print" _ [x] tce = 
+    checkAnyType x tce
 checkFunctionApplicationType funName (FTypeT _ []) "yield" _ [] _ = return ()
 checkFunctionApplicationType funName (FTypeT _ []) "v" _ [x] tce =
     checkFunctionBody funName (FTypeB Nothing "Semaphore" []) x tce

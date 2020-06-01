@@ -241,6 +241,8 @@ instance Eq FValueStatementExpr where
   FENE{} == _ = False
 
 instance Eq FType where
+  (FTypeT _ [t1]) == t2 = t1 == t2
+  t1 == (FTypeT _ [t2]) = t1 == t2
   (FTypeT _ l1) == (FTypeT _ l2) = l1 == l2
   (FTypeB _ tName1 tArgs1) == (FTypeB _ tName2 tArgs2) = tName1 == tName2 && tArgs1 == tArgs2
   (FunFType _ t11 t12) == (FunFType _ t21 t22) = t11 == t21 && t12 == t22

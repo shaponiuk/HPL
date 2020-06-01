@@ -762,15 +762,20 @@ appendFAVS queueId (loc:xs) addVss state = do
     (fits, state, addVss) <- fitPatternMatchs queueId state e argNames addVss
     if fits
         then do
-            let (appendedVS, b, pms) = appendFAVSInt vs addVss
-            return (e, appendedVS, b, pms, state)
+            (addVss, state) <- wrapArgsInApplR addVss state e
+            let (ne, appendedVS, b, pms) = appendFAVSInt vs addVss e state
+            return (ne, appendedVS, b, pms, state)
         else 
             appendFAVS queueId xs addVss state
 
-appendFAVSInt :: FValueStatement -> [FValueStatement] -> (FValueStatement, Bool, [FPatternMatch])
-appendFAVSInt (FAValueStatement _ (FFunApplicationB _ funName vss)) addVss = (FAValueStatement Nothing $ FFunApplicationB Nothing funName (vss ++ addVss), False, [])
-appendFAVSInt (FFValueStatement _ name vs) addVSS = (vs, True, [FPatternMatchB Nothing name])
-appendFAVSInt _ _ = traceD "shouldn't be here" undefined
+appendFAVSInt :: FValueStatement -> [FValueStatement] -> E -> S -> (E, FValueStatement, Bool, [FPatternMatch])
+appendFAVSInt (FAValueStatement _ (FFunApplicationB _ funName vss)) addVss env _ = (env, FAValueStatement Nothing $ FFunApplicationB Nothing funName (vss ++ addVss), False, [])
+appendFAVSInt (FFValueStatement _ name vs) addVSS env _ = (env, vs, True, [FPatternMatchB Nothing name])
+appendFAVSInt (FAValueStatement _ (FFunApplicationR loc)) addVss env state =
+    let
+        (nenv, vs) = stateLookup loc state
+    in appendFAVSInt vs addVss nenv state
+appendFAVSInt a b e s = traceD (show a ++ show b ++ show e ++ show s) undefined
 
 fitPatternMatchs :: Int -> S -> E -> [FPatternMatch] -> [FValueStatement] -> IO (Bool, S, [FValueStatement])
 fitPatternMatchs _ s e _ [] = return (True, s, [])
