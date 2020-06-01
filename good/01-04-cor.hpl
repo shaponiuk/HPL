@@ -1,0 +1,21 @@
+sus fun (Int () -> Int ()) fib (x) =
+        force let
+            () :: () = print ("Computing fib of");
+            () :: () = print (x());
+            Int() :: ans =
+                if x() == 0 then 0 else
+                if x() == 1 then 1 else
+                force let
+                    Int() :: x1 = fib(x() - 1);
+                    Int() :: x12 = x1();
+                    () :: () = yield();
+                    Int() :: x2 = fib(x() - 2);
+                    Int() :: x22 = x2();
+                in x12() + x22();
+        in ans();
+
+    fun (Int()) main() = 
+    force let
+        Int () :: ans = fib(9);
+        () :: () = print (ans());
+    in 0;

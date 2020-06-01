@@ -1,0 +1,29 @@
+sus fun
+        (Int () -> (Ref (Semaphore ()) -> (Ref (Semaphore ()) -> ())))
+        philosopher (id, s1, s2) = force let
+            () :: () = print("starting philosopher");
+            () :: () = print(id ());
+            () :: () = yield();
+            () :: () = print("after yielding philosopher");
+            () :: () = print(id ());
+            () :: () = p (get (s1()));
+            () :: () = yield();
+            () :: () = p (get (s2())); 
+            () :: () = yield();
+            () :: () = print (id());
+            () :: () = print ("eating");
+            () :: () = yield();
+            () :: () = v (get (s1()));
+            () :: () = yield();
+            () :: () = v (get (s2()));
+            () :: () = philosopher (id(), s1(), s2());
+        in ();
+
+    sus fun (Int()) main () = force let
+        Ref (Semaphore()) :: s1 = make_semaphore();
+        Ref (Semaphore()) :: s2 = make_semaphore();
+        Ref (Semaphore()) :: s3 = make_semaphore();
+        () :: () = philosopher(1, s1(), s2());
+        () :: () = philosopher(2, s2(), s3());
+        () :: () = philosopher(3, s3(), s1());
+    in 0;

@@ -1,0 +1,11 @@
+    sus fun
+        (Int () -> (Ref (Semaphore ()) -> (Ref (Semaphore ()) -> ())))
+        philosopher (id, s1, s2) = force let
+        in ();
+
+    sus fun (Int()) main () = force let
+
+        Ref (Semaphore()) :: s1 = make_semaphore();
+        Ref (Semaphore()) :: s3 = make_semaphore();
+        () :: () = philosopher(3, s3(), s1(), 1);
+    in ();
