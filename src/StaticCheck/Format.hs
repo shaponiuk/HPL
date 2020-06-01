@@ -64,7 +64,6 @@ data FType =
     FTypeB (Maybe (Int, Int)) String [FType]
   | FunFType (Maybe (Int, Int)) FType FType
   | FTypeT (Maybe (Int, Int)) [FType]
-  deriving (Show)
 
 data FValueStatement =
     FValueStatementB (Maybe (Int, Int)) [FAssignment] FValueStatement
@@ -150,6 +149,11 @@ showTupleList (x:x2:xs) =
 getFunctionName :: FFunctionDef -> String
 getFunctionName (NonSusFFunctionDef _ _ name _ _) = name
 getFunctionName (SusFFunctionDef fd) = getFunctionName fd
+
+instance Show FType where
+  show (FTypeB _ name args) = name ++ " " ++ showTupleList args
+  show (FunFType _ t1 t2) = "(" ++ show t1 ++ " -> " ++ show t2 ++ ")"
+  show (FTypeT _ ts) = showTupleList ts
 
 instance Show FPatternMatch where
   show (FPatternMatchB _ x) = x
