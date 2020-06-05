@@ -390,6 +390,10 @@ checkAnyType (FCValueStatement (Just loc) name args) tce =
 checkAnyType FCValueStatement{} _ = undefined
 checkAnyType vs@(FExpr (Just loc) _) tce = checkFunctionBody ("expression at " ++ show loc) (FTypeB Nothing "Int" []) vs tce
 checkAnyType FExpr{} tce = undefined
+checkAnyType (FValueStatementB (Just loc) assignments vs) tce = do
+    tce <- registerAssignments ("let statement at " ++ show loc) assignments tce
+    checkAnyType vs tce
+checkAnyType (FValueStatementB Nothing _ _) _ = undefined
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [x] tce =
