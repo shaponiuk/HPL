@@ -377,6 +377,8 @@ checkAnyType FAValueStatement{} _ = undefined
 checkAnyType (FCValueStatement (Just loc) name args) tce =
     checkAnyTypeValidTypeConstuctor loc name args tce
 checkAnyType FCValueStatement{} _ = undefined
+checkAnyType vs@(FExpr (Just loc) _) tce = checkFunctionBody ("expression at " ++ show loc) (FTypeB Nothing "Int" []) vs tce
+checkAnyType FExpr{} tce = undefined
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [x] tce =
