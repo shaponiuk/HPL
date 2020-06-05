@@ -330,8 +330,8 @@ isLowercaseString :: String -> Bool
 isLowercaseString [] = undefined
 isLowercaseString (x:xs) = not $ isUpper x
 
-tryRegisterVariableArg :: String -> FType -> TCE -> Err TCE
-tryRegisterVariableArg argName t@(FTypeB (Just loc) _ _) tce@(TCE tm atm) =
+tryRegisterVariableArgUnwrappedLoc :: String -> (Int, Int) -> FType -> TCE -> Err TCE
+tryRegisterVariableArgUnwrappedLoc argName loc t tce@(TCE tm atm) =
     if member argName tm
         then do
             let registeredType = tm ! argName
@@ -341,12 +341,23 @@ tryRegisterVariableArg argName t@(FTypeB (Just loc) _ _) tce@(TCE tm atm) =
         else
             return $ TCE (insert argName t tm) atm
 
+tryRegisterVariableArg :: String -> FType -> TCE -> Err TCE
+tryRegisterVariableArg argName t@(FTypeB (Just loc) _ _) = tryRegisterVariableArgUnwrappedLoc argName loc t
+tryRegisterVariableArg _ (FTypeB Nothing _ _) = undefined
+tryRegisterVariableArg argName t@(FunFType (Just loc) _ _) = tryRegisterVariableArgUnwrappedLoc argName loc t
+tryRegisterVariableArg _ (FunFType Nothing _ _) = undefined
+tryRegisterVariableArg argName t@(FTypeT (Just loc) _) = tryRegisterVariableArgUnwrappedLoc argName loc t
+tryRegisterVariableArg _ (FTypeT Nothing _) = undefined
+
 checkValidConstructorForType :: (Int, Int) -> FValueStatement -> FType -> TCE -> Err TCE
 checkValidConstructorForType loc (FCValueStatement _ name args) t@(FTypeB _ tName tArgs) tce@(TCE tm atm) = do
     checkExistingType t tce
     let at = atm ! tName
     (FAlgTypeVal _ _ atvTArg) <- getATVOfTypeWithName name at
     validateAlgTypeArgsForType loc args atvTArg tce
+checkValidConstructorForType loc vs@FCValueStatement{} (FTypeT _ [t]) tce = checkValidConstructorForType loc vs t tce
+checkValidConstructorForType loc FCValueStatement{} _ _ = fail $ "wrong constructor type at " ++ show loc
+checkValidConstructorForType _ _ _ _ = undefined
 
 validateAlgTypeArgsForType :: (Int, Int) -> [FValueStatement] -> FType -> TCE -> Err TCE
 validateAlgTypeArgsForType _ [] (FTypeT _ []) tce = return tce
