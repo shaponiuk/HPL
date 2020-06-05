@@ -290,114 +290,22 @@ checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 [] _ =
 checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 _ _ = fail $ "too many arguments applied for function " ++ show funName ++ " at " ++ show pos
 checkFunctionApplicationTypeInt funName t1 name posM t2 vss tce = traceD (funName ++ show t1 ++ name ++ show posM ++ show t2 ++ show vss) undefined
 
-checkAnyTypeFunAppl :: String -> FType -> (Int, Int) -> [FValueStatement] -> TCE -> Err ()
-checkAnyTypeFunAppl funName (FunFType _ t1 t2) pos (vs:vss) tce = do
-    checkExistingType t1 tce
-    checkFunctionBody funName t1 vs tce
-    checkAnyTypeFunAppl funName t2 pos vss tce
-checkAnyTypeFunAppl funName t _ [] tce = checkExistingType t tce
-checkAnyTypeFunAppl funName t loc _ _ = fail $ "too many arguments for function " ++ funName ++ " at " ++ show loc
+checkPrintableTypeSListTail :: FValueStatement -> FType -> TCE -> Err ()
+checkPrintableTypeSListTail (FCValueStatement _ "SEmptyListC" []) (FTypeB _ "SList" []) _ = return ()
 
-checkConstructorNameOfType :: String -> FAlgType -> Bool
-checkConstructorNameOfType _ (FAlgType _ _ _ []) = False
-checkConstructorNameOfType name (FAlgType pos n a (FAlgTypeVal _ cName _:xs)) =
-    if name == cName
-        then True
-        else checkConstructorNameOfType name (FAlgType pos n a xs)
+getPrintableType :: FValueStatement -> TCE -> Err FType
+getPrintableType FIValueStatement{} _ = return $ FTypeB Nothing "Int" []
 
-getATVOfTypeWithName :: String -> FAlgType -> Err FAlgTypeVal
-getATVOfTypeWithName name (FAlgType _ n _ []) = fail $ "algebraic type " ++ n ++ " doesn't have a type constructor named " ++ name
-getATVOfTypeWithName name (FAlgType pos n a (atv@(FAlgTypeVal _ cName _):xs)) =
-    if name == cName
-        then return atv
-        else getATVOfTypeWithName name (FAlgType pos n a xs)
-
-checkAnyTypeValidTypeConstructorGetATVInt :: (Int, Int) -> String -> [(String, FAlgType)] -> Err FAlgTypeVal
-checkAnyTypeValidTypeConstructorGetATVInt loc name [] = fail $ "constructor name " ++ name ++ " at " ++ show loc ++ " is unregistered"
-checkAnyTypeValidTypeConstructorGetATVInt loc name ((_,x):xs) =
-    if checkConstructorNameOfType name x
-        then getATVOfTypeWithName name x
-        else checkAnyTypeValidTypeConstructorGetATVInt loc name xs
-
-checkAnyTypeValidTypeConstructorGetATV :: (Int, Int) -> String -> TCE -> Err FAlgTypeVal
-checkAnyTypeValidTypeConstructorGetATV loc name tce@(TCE tm atm) = do
-    checkAnyTypeValidTypeConstructorGetATVInt loc name $ toList atm
-
-checkAnyTypeValidTypeConstructorCheckArgs :: (Int, Int) -> [FValueStatement] -> FAlgTypeVal -> TCE -> Err ()
-checkAnyTypeValidTypeConstructorCheckArgs loc args (FAlgTypeVal _ _ t) tce = (validateAlgTypeArgsForType loc args t tce) >> return ()
-
-isLowercaseString :: String -> Bool
-isLowercaseString [] = undefined
-isLowercaseString (x:xs) = not $ isUpper x
-
-tryRegisterVariableArgUnwrappedLoc :: String -> (Int, Int) -> FType -> TCE -> Err TCE
-tryRegisterVariableArgUnwrappedLoc argName loc t tce@(TCE tm atm) =
-    if member argName tm
-        then do
-            let registeredType = tm ! argName
-            if t == registeredType
-                then return tce
-                else fail $ "type " ++ show t ++ " at " ++ show loc ++ " is already registered for type " ++ show registeredType ++ " as a type variable " ++ argName
-        else
-            return $ TCE (insert argName t tm) atm
-
-tryRegisterVariableArg :: String -> FType -> TCE -> Err TCE
-tryRegisterVariableArg argName t@(FTypeB (Just loc) _ _) = tryRegisterVariableArgUnwrappedLoc argName loc t
-tryRegisterVariableArg _ (FTypeB Nothing _ _) = undefined
-tryRegisterVariableArg argName t@(FunFType (Just loc) _ _) = tryRegisterVariableArgUnwrappedLoc argName loc t
-tryRegisterVariableArg _ (FunFType Nothing _ _) = undefined
-tryRegisterVariableArg argName t@(FTypeT (Just loc) _) = tryRegisterVariableArgUnwrappedLoc argName loc t
-tryRegisterVariableArg _ (FTypeT Nothing _) = undefined
-
-checkValidConstructorForType :: (Int, Int) -> FValueStatement -> FType -> TCE -> Err TCE
-checkValidConstructorForType loc (FCValueStatement _ name args) t@(FTypeB _ tName tArgs) tce@(TCE tm atm) = do
-    checkExistingType t tce
-    let at = atm ! tName
-    (FAlgTypeVal _ _ atvTArg) <- getATVOfTypeWithName name at
-    validateAlgTypeArgsForType loc args atvTArg tce
-checkValidConstructorForType loc vs@FCValueStatement{} (FTypeT _ [t]) tce = checkValidConstructorForType loc vs t tce
-checkValidConstructorForType loc FCValueStatement{} _ _ = fail $ "wrong constructor type at " ++ show loc
-checkValidConstructorForType _ _ _ _ = undefined
-
-validateAlgTypeArgsForType :: (Int, Int) -> [FValueStatement] -> FType -> TCE -> Err TCE
-validateAlgTypeArgsForType _ [] (FTypeT _ []) tce = return tce
-validateAlgTypeArgsForType _ [FIValueStatement _ _] (FTypeB _ "Int" []) tce = return tce
-validateAlgTypeArgsForType loc [c@(FCValueStatement _ name args)] t@(FTypeB _ tName tArgs) tce =
-    if isLowercaseString tName 
-        then do
-            tce <- tryRegisterVariableArg name t tce
-            validateAlgTypeArgsForType loc args (FTypeT Nothing tArgs) tce
-        else do
-            checkValidConstructorForType loc c t tce
-validateAlgTypeArgsForType loc (x:xs) (FTypeT tLoc (t:ts)) tce = do
-    tce <- validateAlgTypeArgsForType loc [x] t tce
-    validateAlgTypeArgsForType loc xs (FTypeT tLoc ts) tce
-validateAlgTypeArgsForType _ a b _ = traceD (show a ++ show b) undefined
-
-checkAnyTypeValidTypeConstuctor :: (Int, Int) -> String -> [FValueStatement] -> TCE -> Err ()
-checkAnyTypeValidTypeConstuctor loc name args tce = do
-    atv <- checkAnyTypeValidTypeConstructorGetATV loc name tce
-    checkAnyTypeValidTypeConstructorCheckArgs loc args atv tce
-
-checkAnyType :: FValueStatement -> TCE -> Err ()
-checkAnyType (FAValueStatement _ (FFunApplicationB (Just pos) name args)) tce@(TCE tm atm) =
-    if member name tm
-        then checkAnyTypeFunAppl name (tm ! name) pos args tce
-        else fail $ "name " ++ name ++ " at " ++ show pos ++  " is not registered"
-checkAnyType FAValueStatement{} _ = undefined
-checkAnyType (FCValueStatement (Just loc) name args) tce =
-    checkAnyTypeValidTypeConstuctor loc name args tce
-checkAnyType FCValueStatement{} _ = undefined
-checkAnyType vs@(FExpr (Just loc) _) tce = checkFunctionBody ("expression at " ++ show loc) (FTypeB Nothing "Int" []) vs tce
-checkAnyType FExpr{} tce = undefined
-checkAnyType (FValueStatementB (Just loc) assignments vs) tce = do
-    tce <- registerAssignments ("let statement at " ++ show loc) assignments tce
-    checkAnyType vs tce
-checkAnyType (FValueStatementB Nothing _ _) _ = undefined
+checkPrintableType :: FValueStatement -> TCE -> Err ()
+checkPrintableType FIValueStatement{} _ = return ()
+checkPrintableType (FCValueStatement _ "SListC" [h, t]) tce = do
+    t_ <- getPrintableType h tce
+    checkPrintableTypeSListTail t t_ tce
+checkPrintableType (FAValueStatement (Just loc) (FFunApplicationB _ name args)) _ = traceD a undefined
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [x] tce =
-    checkAnyType x tce
+    checkPrintableType x tce -- (Int / Slist / List / Maybe / Either) of printable types
 checkFunctionApplicationType funName (FTypeT _ []) "yield" _ [] _ = return ()
 checkFunctionApplicationType funName (FTypeT _ []) "v" _ [x] tce =
     checkFunctionBody funName (FTypeB Nothing "Semaphore" []) x tce
