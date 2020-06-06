@@ -1,7 +1,5 @@
-sus fun 
-(Maybe (Int ()) -> (Maybe (Int ()) -> Maybe (Int ()))) 
-addMaybe (Nothing (), Nothing ()) = Nothing ();
+sus fun (Maybe (Int ()) -> (Maybe (Int ()) -> Maybe (Int ()))) addMaybe (Nothing (), Nothing ()) = Nothing ();
 
 sus fun (Int ()) main () = force let
-    () :: () = print (addMaybe (Just (1)));
+    () :: () = print (addMaybe (Just (1), Nothing ()));
 in 0;

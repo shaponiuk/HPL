@@ -5,6 +5,7 @@ import Bnfc.ErrM
 import Util.Util
 import Data.Map
 import Data.Char
+import Control.Monad
 
 data TCE = TCE (Map String FType) (Map String FAlgType)
     deriving (Show)
@@ -290,18 +291,42 @@ checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 [] _ =
 checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 _ _ = fail $ "too many arguments applied for function " ++ show funName ++ " at " ++ show pos
 checkFunctionApplicationTypeInt funName t1 name posM t2 vss tce = traceD (funName ++ show t1 ++ name ++ show posM ++ show t2 ++ show vss) undefined
 
+checkIfTypeIsPrintable :: FType -> TCE -> Err ()
+checkIfTypeIsPrintable (FTypeB _ "Int" []) _ = return ()
+checkIfTypeIsPrintable (FTypeB _ "Maybe" [t]) tce = checkIfTypeIsPrintable t tce
+checkIfTypeIsPrintable (FunFType _ t1 t2) tce = do
+    checkIfTypeIsPrintable t1 tce
+    checkIfTypeIsPrintable t2 tce
+
 checkPrintableTypeSListTail :: FValueStatement -> FType -> TCE -> Err ()
 checkPrintableTypeSListTail (FCValueStatement _ "SEmptyListC" []) (FTypeB _ "SList" []) _ = return ()
 
 getPrintableType :: FValueStatement -> TCE -> Err FType
 getPrintableType FIValueStatement{} _ = return $ FTypeB Nothing "Int" []
 
+checkFunctionApplicationTypePrintable :: FType -> String -> (Int, Int) -> [FValueStatement] -> TCE -> Err ()
+checkFunctionApplicationTypePrintable (FunFType _ t1 t2) name loc (vs:vss) tce = do
+    checkFunctionBody "print" t1 vs tce
+    checkFunctionApplicationTypePrintable t2 name loc vss tce
+checkFunctionApplicationTypePrintable FunFType{} _ loc [] _ = fail $ "functions are not printable (at " ++ show loc ++ ")"
+checkFunctionApplicationTypePrintable (FTypeB _ "Int" []) _ _ [] _ = return ()
+checkFunctionApplicationTypePrintable (FTypeB _ "Maybe" [t]) name loc [] tce = checkFunctionApplicationTypePrintable t name loc [] tce
+checkFunctionApplicationTypePrintable (FTypeT _ [t]) name loc args tce = checkFunctionApplicationTypePrintable t name loc args tce
+checkFunctionApplicationTypePrintable (FTypeT _ ts) name loc args tce = 
+    forM_ ts (\x -> checkFunctionApplicationTypePrintable x name loc [] tce)
+
 checkPrintableType :: FValueStatement -> TCE -> Err ()
 checkPrintableType FIValueStatement{} _ = return ()
 checkPrintableType (FCValueStatement _ "SListC" [h, t]) tce = do
     t_ <- getPrintableType h tce
     checkPrintableTypeSListTail t t_ tce
-checkPrintableType (FAValueStatement (Just loc) (FFunApplicationB _ name args)) _ = traceD a undefined
+checkPrintableType (FAValueStatement (Just loc) (FFunApplicationB _ name args)) tce@(TCE tm atm) =
+    if member name tm
+        then do
+            let t = tm ! name
+            checkIfTypeIsPrintable t tce
+            checkFunctionApplicationTypePrintable t name loc args tce
+        else fail $ "name " ++ name ++ " at " ++ show loc ++ " is not registered"
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [x] tce =
