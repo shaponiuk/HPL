@@ -306,62 +306,62 @@ checkIfTypeIsPrintable (FunFType _ t1 t2) tce = do
     checkIfTypeIsPrintable t2 tce
 checkIfTypeIsPrintable (FTypeT _ ts) tce = forM_ ts (`checkIfTypeIsPrintable` tce)
 
-checkPrintableTypeSListTail :: FValueStatement -> FType -> TCE -> Err ()
-checkPrintableTypeSListTail (FCValueStatement _ "SEmptyListC" []) (FTypeB _ "SList" []) _ = return ()
-checkPrintableTypeSListTail (FCValueStatement _ "SListC" [x, tailVS]) t@(FTypeB _ "SList" []) tce = do
-    checkFunctionBody "print" (FTypeB Nothing "Int" []) x tce
-    checkPrintableTypeSListTail tailVS t tce
-checkPrintableTypeSListTail vs t@(FTypeB _ "SList" []) tce = checkFunctionBody "print" t vs tce
-checkPrintableTypeSListTail vs t _ = 
-    case getVSLoc vs of
-        Just (loc) -> fail $ "wrong printable type at " ++ show loc
-        Nothing -> fail "wrong printable type"
+-- getPrintableTypeFA :: FFunApplication -> FType -> TCE -> Err FType
+-- getPrintableTypeFA (FFunApplicationB _ _ []) t tce = do
+--     checkIfTypeIsPrintable t tce
+--     return t
+-- getPrintableTypeFA (FFunApplicationB locM name (vs:vss)) (FunFType _ t1 t2) tce = do
+--     checkFunctionBody "print" t1 vs tce
+--     getPrintableTypeFA (FFunApplicationB locM name vss) t2 tce
+-- getPrintableTypeFA fa (FTypeT _ [t]) tce = getPrintableTypeFA fa t tce
+-- getPrintableTypeFA (FFunApplicationB locM name (_:_)) _ _ =
+--     fail $ "too many arguments for function application of " ++ name ++ " " ++ (case locM of
+--         Just loc -> "at " ++ show loc
+--         Nothing -> "")
+-- getPrintableTypeFA FFunApplicationR{} _ _ = undefined
 
-getPrintableTypeFA :: FFunApplication -> FType -> TCE -> Err FType
-getPrintableTypeFA (FFunApplicationB _ _ []) t tce = do
-    checkIfTypeIsPrintable t tce
-    return t
-getPrintableTypeFA (FFunApplicationB locM name (vs:vss)) (FunFType _ t1 t2) tce = do
-    checkFunctionBody "print" t1 vs tce
-    getPrintableTypeFA (FFunApplicationB locM name vss) t2 tce
-getPrintableTypeFA fa (FTypeT _ [t]) tce = getPrintableTypeFA fa t tce
-getPrintableTypeFA (FFunApplicationB locM name []) (FunFType _ _ _) tce =
-    fail $ "functions are not printable " ++ (case locM)
-getPrintableTypeFA (FFunApplicationB locM name (_:_) _ _ =
-    fail $ "too many arguments for function application of " ++ name ++ " " ++ (case locM of
-        Just loc -> "at " ++ show loc
-        Nothing -> "")
-getPrintableTypeFA FFunApplicationR{} _ _ = undefined
-
-getPrintableType :: FValueStatement -> TCE -> Err FType
-getPrintableType FIValueStatement{} _ = return $ FTypeB Nothing "Int" []
-getPrintableType (FValueStatementB _ assignments vs) tce = do
-    tce <- registerAssignments "print" assignments tce
-    getPrintableType vs tce
-getPrintableType (FForceValueStatement _ assignments vs) tce = do
-    tce <- registerAssignments "print" assignments tce
-    getPrintableType vs tce
-getPrintableType (FIfValueStatement locM condVS vs1 vs2) tce = do
-    checkFunctionBody "print" (FTypeB Nothing "Int" []) condVS tce
-    t1 <- getPrintableType vs1 tce
-    t2 <- getPrintableType vs2 tce
-    if t1 == t2
-        then return t1
-        else case locM of
-            Just loc -> fail $ "if statement return types at " ++ show loc ++ " don't match"
-            Nothing -> fail "if statement return types in print function don't match"
-getPrintableType (FTValueStatement _ ts) tce = do
-    ts_ <- forM ts (`getPrintableType` tce)
-    return $ FTypeT Nothing ts_
-getPrintableType (FAValueStatement locM fa@(FFunApplicationB _ name _)) tce@(TCE tm _) = do
-    if member name tm
-        then getPrintableTypeFA fa (tm ! name) tce
-        else fail $ "unknown function name" ++ (case locM of
-            Just loc -> "at " ++ show loc
-            Nothing -> "")
-getPrintableType (FAValueStatement _ FFunApplicationR{}) _ = undefined
-getPrintableType (FFValueStatement locM _ _) _ =
-    fail $ "lambdas are not"
+-- getPrintableType :: FValueStatement -> TCE -> Err FType
+-- getPrintableType FIValueStatement{} _ = return $ FTypeB Nothing "Int" []
+-- getPrintableType (FValueStatementB _ assignments vs) tce = do
+--     tce <- registerAssignments "print" assignments tce
+--     getPrintableType vs tce
+-- getPrintableType (FForceValueStatement _ assignments vs) tce = do
+--     tce <- registerAssignments "print" assignments tce
+--     getPrintableType vs tce
+-- getPrintableType (FIfValueStatement locM condVS vs1 vs2) tce = do
+--     checkFunctionBody "print" (FTypeB Nothing "Int" []) condVS tce
+--     t1 <- getPrintableType vs1 tce
+--     t2 <- getPrintableType vs2 tce
+--     if t1 == t2
+--         then return t1
+--         else case locM of
+--             Just loc -> fail $ "if statement return types at " ++ show loc ++ " don't match"
+--             Nothing -> fail "if statement return types in print function don't match"
+-- getPrintableType (FTValueStatement _ ts) tce = do
+--     ts_ <- forM ts (`getPrintableType` tce)
+--     return $ FTypeT Nothing ts_
+-- getPrintableType (FAValueStatement locM fa@(FFunApplicationB _ name _)) tce@(TCE tm _) = do
+--     if member name tm
+--         then getPrintableTypeFA fa (tm ! name) tce
+--         else fail $ "unknown function name" ++ (case locM of
+--             Just loc -> "at " ++ show loc
+--             Nothing -> "")
+-- getPrintableType (FAValueStatement _ FFunApplicationR{}) _ = undefined
+-- getPrintableType (FFValueStatement locM _ _) _ =
+--     fail $ "lambdas are not"
+-- getPrintableType (FCValueStatement _ "Just" [mvs]) tce = do
+--     t <- getPrintableType mvs tce
+--     return $ FType Nothing "Maybe" [t]
+-- getPrintableType (FCValueStatement _ "Either" [mvs1, mvs2]) tce = do
+--     t1 <- getPrintableType mvs1 tce
+--     t2 <- getPrintableType mvs2 tce
+--     return $ FType Nothing "Either" [t1, t2]
+-- getPrintableType (FCValueStatement _ "Maybe" [mvs]) tce = do
+--     t <- getPrintableType mvs tce
+--     return $ FType Nothing "Maybe" [t]
+-- getPrintableType (FCValueStatement _ "Maybe" [mvs]) tce = do
+--     t <- getPrintableType mvs tce
+--     return $ FType Nothing "Maybe" [t]
 
 checkFunctionApplicationTypePrintable :: FType -> String -> (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypePrintable (FunFType _ t1 t2) name loc (vs:vss) tce = do
@@ -370,6 +370,13 @@ checkFunctionApplicationTypePrintable (FunFType _ t1 t2) name loc (vs:vss) tce =
 checkFunctionApplicationTypePrintable FunFType{} _ loc [] _ = fail $ "functions are not printable (at " ++ show loc ++ ")"
 checkFunctionApplicationTypePrintable (FTypeB _ "Int" []) _ _ [] _ = return ()
 checkFunctionApplicationTypePrintable (FTypeB _ "Maybe" [t]) name loc [] tce = checkFunctionApplicationTypePrintable t name loc [] tce
+checkFunctionApplicationTypePrintable (FTypeB _ "Either" [t1, t2]) name loc [] tce = do
+    checkFunctionApplicationTypePrintable t1 name loc [] tce
+    checkFunctionApplicationTypePrintable t2 name loc [] tce
+checkFunctionApplicationTypePrintable (FTypeB _ "List" [t]) name loc [] tce = checkFunctionApplicationTypePrintable t name loc [] tce
+checkFunctionApplicationTypePrintable (FTypeB _ "SList" [t]) name loc [] tce = checkFunctionApplicationTypePrintable t name loc [] tce
+checkFunctionApplicationTypePrintable t@FTypeB{} _ loc [] _ = fail $ "type " ++ show t ++ " at " ++ show loc ++ " is not printable"
+checkFunctionApplicationTypePrintable FTypeB{} name loc (_:_) _ = fail $ "too many arguments applied for function " ++ name ++ " at " ++ show loc 
 checkFunctionApplicationTypePrintable (FTypeT _ [t]) name loc args tce = checkFunctionApplicationTypePrintable t name loc args tce
 checkFunctionApplicationTypePrintable (FTypeT _ ts) name loc args tce = 
     forM_ ts (\x -> checkFunctionApplicationTypePrintable x name loc [] tce)
@@ -377,8 +384,19 @@ checkFunctionApplicationTypePrintable (FTypeT _ ts) name loc args tce =
 checkPrintableType :: FValueStatement -> TCE -> Err ()
 checkPrintableType FIValueStatement{} _ = return ()
 checkPrintableType (FCValueStatement _ "SListC" [h, t]) tce = do
-    t_ <- getPrintableType h tce
-    checkPrintableTypeSListTail t t_ tce
+    checkFunctionBody "print" (FTypeB Nothing "Int" []) h tce
+    checkFunctionBody "print" (FTypeB Nothing "SList" []) t tce
+checkPrintableType (FCValueStatement _ "SEmptyList" []) _ = return ()
+checkPrintableType (FCValueStatement _ "Just" [vs]) tce = checkPrintableType vs tce
+checkPrintableType (FCValueStatement _ "Nothing" []) _ = return ()
+checkPrintableType (FCValueStatement _ "ListC" [h, t]) tce = do
+    checkPrintableType h tce
+    checkPrintableType t tce
+checkPrintableType (FCValueStatement _ "EmptyListC" []) _ = return ()
+checkPrintableType (FCValueStatement _ "Left" [vs]) tce = checkPrintableType vs tce
+checkPrintableType (FCValueStatement _ "Right" [vs]) tce = checkPrintableType vs tce
+checkPrintableType c@(FCValueStatement (Just loc) _ _) _ = fail $ show c ++ " at " ++ show loc ++ " is not printable"
+checkPrintableType c@(FCValueStatement Nothing _ _) _ = fail $ show c ++ " is not printable"
 checkPrintableType (FAValueStatement (Just loc) (FFunApplicationB _ name args)) tce@(TCE tm atm) =
     if member name tm
         then do
@@ -386,6 +404,9 @@ checkPrintableType (FAValueStatement (Just loc) (FFunApplicationB _ name args)) 
             checkIfTypeIsPrintable t tce
             checkFunctionApplicationTypePrintable t name loc args tce
         else fail $ "name " ++ name ++ " at " ++ show loc ++ " is not registered"
+checkPrintableType (FValueStatementB _ assignments vs) tce = do
+    tce <- registerAssignments "print" assignments tce
+    checkPrintableType vs tce
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [x] tce =
