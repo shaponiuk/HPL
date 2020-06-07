@@ -197,22 +197,6 @@ mergeCmpVss ([], []) = undefined
 mergeCmpVss ([], _:_:_) = undefined
 mergeCmpVss (_:_, _) = undefined
 
-getVSLoc :: FValueStatement -> Maybe (Int, Int)
-getVSLoc (FAValueStatement loc _) = loc
-getVSLoc (FValueStatementB loc _ _) = loc
-getVSLoc (FForceValueStatement loc _ _) = loc
-getVSLoc (FIfValueStatement loc _ _ _) = loc
-getVSLoc (FTValueStatement loc _) = loc
-getVSLoc (FIValueStatement loc _) = loc
-getVSLoc (FFValueStatement loc _ _) = loc
-getVSLoc (FCValueStatement loc _ _) = loc
-getVSLoc (FExpr loc _) = loc
-getVSLoc FRefAddr{} = Nothing
-getVSLoc FSusValueStatement{} = Nothing
-getVSLoc FSuspendedValue{} = Nothing
-getVSLoc FSemaphore{} = Nothing
-getVSLoc FNTValueStatement{} = Nothing
-
 makeExprLists :: ValueStatement (Maybe (Int, Int)) -> ValueStatementExpr (Maybe (Int, Int)) -> ([String], [ValueStatement (Maybe (Int, Int))])
 makeExprLists vs1 vs2 = (signs, vs1:vss) where
   (signs, vss) = makeExprListsAux vs2

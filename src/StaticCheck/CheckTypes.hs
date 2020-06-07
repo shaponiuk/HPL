@@ -294,15 +294,74 @@ checkFunctionApplicationTypeInt funName t1 name posM t2 vss tce = traceD (funNam
 checkIfTypeIsPrintable :: FType -> TCE -> Err ()
 checkIfTypeIsPrintable (FTypeB _ "Int" []) _ = return ()
 checkIfTypeIsPrintable (FTypeB _ "Maybe" [t]) tce = checkIfTypeIsPrintable t tce
+checkIfTypeIsPrintable (FTypeB _ "Either" [t1, t2]) tce = do
+    checkIfTypeIsPrintable t1 tce
+    checkIfTypeIsPrintable t2 tce
+checkIfTypeIsPrintable (FTypeB _ "List" [t]) tce = checkIfTypeIsPrintable t tce
+checkIfTypeIsPrintable (FTypeB _ "SList" []) _ = return ()
+checkIfTypeIsPrintable t@(FTypeB (Just loc) _ _) _ = fail $ "type " ++ show t ++ " at " ++ show loc ++ " is not printable"
+checkIfTypeIsPrintable t@(FTypeB Nothing _ _) _ = fail $ "type " ++ show t ++ " is not printable"
 checkIfTypeIsPrintable (FunFType _ t1 t2) tce = do
     checkIfTypeIsPrintable t1 tce
     checkIfTypeIsPrintable t2 tce
+checkIfTypeIsPrintable (FTypeT _ ts) tce = forM_ ts (`checkIfTypeIsPrintable` tce)
 
 checkPrintableTypeSListTail :: FValueStatement -> FType -> TCE -> Err ()
 checkPrintableTypeSListTail (FCValueStatement _ "SEmptyListC" []) (FTypeB _ "SList" []) _ = return ()
+checkPrintableTypeSListTail (FCValueStatement _ "SListC" [x, tailVS]) t@(FTypeB _ "SList" []) tce = do
+    checkFunctionBody "print" (FTypeB Nothing "Int" []) x tce
+    checkPrintableTypeSListTail tailVS t tce
+checkPrintableTypeSListTail vs t@(FTypeB _ "SList" []) tce = checkFunctionBody "print" t vs tce
+checkPrintableTypeSListTail vs t _ = 
+    case getVSLoc vs of
+        Just (loc) -> fail $ "wrong printable type at " ++ show loc
+        Nothing -> fail "wrong printable type"
+
+getPrintableTypeFA :: FFunApplication -> FType -> TCE -> Err FType
+getPrintableTypeFA (FFunApplicationB _ _ []) t tce = do
+    checkIfTypeIsPrintable t tce
+    return t
+getPrintableTypeFA (FFunApplicationB locM name (vs:vss)) (FunFType _ t1 t2) tce = do
+    checkFunctionBody "print" t1 vs tce
+    getPrintableTypeFA (FFunApplicationB locM name vss) t2 tce
+getPrintableTypeFA fa (FTypeT _ [t]) tce = getPrintableTypeFA fa t tce
+getPrintableTypeFA (FFunApplicationB locM name []) (FunFType _ _ _) tce =
+    fail $ "functions are not printable " ++ (case locM)
+getPrintableTypeFA (FFunApplicationB locM name (_:_) _ _ =
+    fail $ "too many arguments for function application of " ++ name ++ " " ++ (case locM of
+        Just loc -> "at " ++ show loc
+        Nothing -> "")
+getPrintableTypeFA FFunApplicationR{} _ _ = undefined
 
 getPrintableType :: FValueStatement -> TCE -> Err FType
 getPrintableType FIValueStatement{} _ = return $ FTypeB Nothing "Int" []
+getPrintableType (FValueStatementB _ assignments vs) tce = do
+    tce <- registerAssignments "print" assignments tce
+    getPrintableType vs tce
+getPrintableType (FForceValueStatement _ assignments vs) tce = do
+    tce <- registerAssignments "print" assignments tce
+    getPrintableType vs tce
+getPrintableType (FIfValueStatement locM condVS vs1 vs2) tce = do
+    checkFunctionBody "print" (FTypeB Nothing "Int" []) condVS tce
+    t1 <- getPrintableType vs1 tce
+    t2 <- getPrintableType vs2 tce
+    if t1 == t2
+        then return t1
+        else case locM of
+            Just loc -> fail $ "if statement return types at " ++ show loc ++ " don't match"
+            Nothing -> fail "if statement return types in print function don't match"
+getPrintableType (FTValueStatement _ ts) tce = do
+    ts_ <- forM ts (`getPrintableType` tce)
+    return $ FTypeT Nothing ts_
+getPrintableType (FAValueStatement locM fa@(FFunApplicationB _ name _)) tce@(TCE tm _) = do
+    if member name tm
+        then getPrintableTypeFA fa (tm ! name) tce
+        else fail $ "unknown function name" ++ (case locM of
+            Just loc -> "at " ++ show loc
+            Nothing -> "")
+getPrintableType (FAValueStatement _ FFunApplicationR{}) _ = undefined
+getPrintableType (FFValueStatement locM _ _) _ =
+    fail $ "lambdas are not"
 
 checkFunctionApplicationTypePrintable :: FType -> String -> (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypePrintable (FunFType _ t1 t2) name loc (vs:vss) tce = do
