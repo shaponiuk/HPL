@@ -3,56 +3,57 @@ module StaticCheck.CheckTypes where
 import StaticCheck.Format
 import Bnfc.ErrM
 import Util.Util
-import Data.Map
+import Data.Map as M
 import Data.Char
+import Data.Set as S
 import Control.Monad
 
 data TCE = TCE (Map String FType) (Map String FAlgType)
     deriving (Show)
 
 newTCE :: TCE
-newTCE = TCE empty $ insert "List" 
+newTCE = TCE M.empty $ M.insert "List" 
     (FAlgType Nothing "List" ["a"] 
         [
             FAlgTypeVal Nothing "ListC" $ FTypeT Nothing [FTypeB Nothing "a" [], FTypeB Nothing "List" [FTypeB Nothing "a" []]],
             FAlgTypeVal Nothing "EmptyListC" $ FTypeT Nothing []
         ]
-    ) $ insert "SList"
+    ) $ M.insert "SList"
     (FAlgType Nothing "SList" []
         [
             FAlgTypeVal Nothing "SListC" $ FTypeT Nothing [FTypeB Nothing "Int" [], FTypeB Nothing "SList" []],
             FAlgTypeVal Nothing "SEmptyListC" $ FTypeT Nothing []
         ]
-    ) $ insert "Maybe"
+    ) $ M.insert "Maybe"
     (FAlgType Nothing "Maybe" ["a"]
         [
             FAlgTypeVal Nothing "Just" $ FTypeT Nothing [FTypeB Nothing "a" []],
             FAlgTypeVal Nothing "Nothing" $ FTypeT Nothing []
         ]
-    ) $ insert "Either" 
+    ) $ M.insert "Either" 
     (FAlgType Nothing "Either" ["a", "b"]
         [
             FAlgTypeVal Nothing "Left" $ FTypeT Nothing [FTypeB Nothing "a" []],
             FAlgTypeVal Nothing "Right" $ FTypeT Nothing [FTypeB Nothing "b" []]
         ]
-    ) empty
+    ) M.empty
 
 registerAlgTypes :: [FAlgType] -> TCE -> TCE
 registerAlgTypes [] tce = tce
 registerAlgTypes (at@(FAlgType _ name _ _):algTypes) (TCE mt mat) =
-    registerAlgTypes algTypes $ TCE mt (insert name at mat)
+    registerAlgTypes algTypes $ TCE mt (M.insert name at mat)
 
 registerFunctionDefs :: [FFunctionDef] -> TCE -> TCE
 registerFunctionDefs [] tce = tce
 registerFunctionDefs (NonSusFFunctionDef _ t name _ _:functionDefs) (TCE mt mat) =
-    registerFunctionDefs functionDefs $ TCE (insert name t mt) mat
+    registerFunctionDefs functionDefs $ TCE (M.insert name t mt) mat
 registerFunctionDefs (SusFFunctionDef fd:functionDefs) tce =
     registerFunctionDefs (fd:functionDefs) tce
 
 registerRefDefs :: [FRefDef] -> TCE -> TCE
 registerRefDefs [] tce = tce
 registerRefDefs (FRefDef _ t name _:refDefs) (TCE mt mat) =
-    registerRefDefs refDefs $ TCE (insert name (FTypeB Nothing "Ref" [t]) mt) mat
+    registerRefDefs refDefs $ TCE (M.insert name (FTypeB Nothing "Ref" [t]) mt) mat
 
 extractTypes :: String -> FType -> [FPatternMatch] -> Err ([FType], FType)
 extractTypes name (FunFType _ t1 t2) (_:xs) = do
@@ -117,7 +118,7 @@ checkExistingType (FTypeT _ (x:xs)) tce = do
     checkExistingType x tce
     checkExistingType (FTypeT Nothing xs) tce
 checkExistingType (FTypeB (Just pos) name args) tce@(TCE _ atm) =
-    if member name atm
+    if M.member name atm
         then do
             let (FAlgType _ name_ argTypes _) = atm ! name
             if length argTypes == length args
@@ -146,7 +147,7 @@ checkConstructorExistence _ _ _ _ = undefined
 mapType :: FType -> Map String FType -> FType
 mapType (FTypeT pos types) m = FTypeT pos $ Prelude.map (`mapType` m) types
 mapType (FTypeB pos typeName typeArgs) m =
-    if member typeName m
+    if M.member typeName m
         then m ! typeName
         else FTypeB pos typeName $ Prelude.map (`mapType` m) typeArgs
 mapType (FunFType pos t1 t2) m =
@@ -154,7 +155,7 @@ mapType (FunFType pos t1 t2) m =
 
 getCorrectedConstructor :: FAlgTypeVal -> FAlgType -> [FType] -> Err FAlgTypeVal
 getCorrectedConstructor atv@(FAlgTypeVal pos cName ct) at@(FAlgType _ tName tArgs atvs) types = do
-    let m = fromList $ dList tArgs types
+    let m = M.fromList $ dList tArgs types
     return $ FAlgTypeVal pos cName $ mapType ct m
     
 checkMatchingType :: FType -> FPatternMatch -> TCE -> Err ()
@@ -239,15 +240,15 @@ registerConstructor _ _ _ = undefined
 registerArg :: FType -> FPatternMatch -> TCE -> Err TCE
 registerArg t@FTypeB{} (FPatternMatchB _ x) tce@(TCE tm atm) = do
     checkExistingType t tce
-    return $ TCE (insert x t tm) atm
+    return $ TCE (M.insert x t tm) atm
 registerArg (FTypeT _ ts) (FPatternMatchT _ pms) tce = registerArgs ts pms tce
 registerArg t@(FunFType _ t1 t2) (FPatternMatchB _ x) tce@(TCE tm atm) = do
     checkExistingType t1 tce
     checkExistingType t2 tce
-    return $ TCE (insert x t tm) atm
+    return $ TCE (M.insert x t tm) atm
 registerArg t@(FTypeT _ _) (FPatternMatchB _ x) tce@(TCE tm atm) = do
     checkExistingType t tce
-    return $ TCE (insert x t tm) atm
+    return $ TCE (M.insert x t tm) atm
 registerArg t@(FTypeB _ name args) pmc@(FPatternMatchC _ (FPatternMatchB _ cName) cArgs) tce@(TCE tm atm) = do
     let argCount = length cArgs
     checkExistingType t tce
@@ -306,63 +307,6 @@ checkIfTypeIsPrintable (FunFType _ t1 t2) tce = do
     checkIfTypeIsPrintable t2 tce
 checkIfTypeIsPrintable (FTypeT _ ts) tce = forM_ ts (`checkIfTypeIsPrintable` tce)
 
--- getPrintableTypeFA :: FFunApplication -> FType -> TCE -> Err FType
--- getPrintableTypeFA (FFunApplicationB _ _ []) t tce = do
---     checkIfTypeIsPrintable t tce
---     return t
--- getPrintableTypeFA (FFunApplicationB locM name (vs:vss)) (FunFType _ t1 t2) tce = do
---     checkFunctionBody "print" t1 vs tce
---     getPrintableTypeFA (FFunApplicationB locM name vss) t2 tce
--- getPrintableTypeFA fa (FTypeT _ [t]) tce = getPrintableTypeFA fa t tce
--- getPrintableTypeFA (FFunApplicationB locM name (_:_)) _ _ =
---     fail $ "too many arguments for function application of " ++ name ++ " " ++ (case locM of
---         Just loc -> "at " ++ show loc
---         Nothing -> "")
--- getPrintableTypeFA FFunApplicationR{} _ _ = undefined
-
--- getPrintableType :: FValueStatement -> TCE -> Err FType
--- getPrintableType FIValueStatement{} _ = return $ FTypeB Nothing "Int" []
--- getPrintableType (FValueStatementB _ assignments vs) tce = do
---     tce <- registerAssignments "print" assignments tce
---     getPrintableType vs tce
--- getPrintableType (FForceValueStatement _ assignments vs) tce = do
---     tce <- registerAssignments "print" assignments tce
---     getPrintableType vs tce
--- getPrintableType (FIfValueStatement locM condVS vs1 vs2) tce = do
---     checkFunctionBody "print" (FTypeB Nothing "Int" []) condVS tce
---     t1 <- getPrintableType vs1 tce
---     t2 <- getPrintableType vs2 tce
---     if t1 == t2
---         then return t1
---         else case locM of
---             Just loc -> fail $ "if statement return types at " ++ show loc ++ " don't match"
---             Nothing -> fail "if statement return types in print function don't match"
--- getPrintableType (FTValueStatement _ ts) tce = do
---     ts_ <- forM ts (`getPrintableType` tce)
---     return $ FTypeT Nothing ts_
--- getPrintableType (FAValueStatement locM fa@(FFunApplicationB _ name _)) tce@(TCE tm _) = do
---     if member name tm
---         then getPrintableTypeFA fa (tm ! name) tce
---         else fail $ "unknown function name" ++ (case locM of
---             Just loc -> "at " ++ show loc
---             Nothing -> "")
--- getPrintableType (FAValueStatement _ FFunApplicationR{}) _ = undefined
--- getPrintableType (FFValueStatement locM _ _) _ =
---     fail $ "lambdas are not"
--- getPrintableType (FCValueStatement _ "Just" [mvs]) tce = do
---     t <- getPrintableType mvs tce
---     return $ FType Nothing "Maybe" [t]
--- getPrintableType (FCValueStatement _ "Either" [mvs1, mvs2]) tce = do
---     t1 <- getPrintableType mvs1 tce
---     t2 <- getPrintableType mvs2 tce
---     return $ FType Nothing "Either" [t1, t2]
--- getPrintableType (FCValueStatement _ "Maybe" [mvs]) tce = do
---     t <- getPrintableType mvs tce
---     return $ FType Nothing "Maybe" [t]
--- getPrintableType (FCValueStatement _ "Maybe" [mvs]) tce = do
---     t <- getPrintableType mvs tce
---     return $ FType Nothing "Maybe" [t]
-
 checkFunctionApplicationTypePrintable :: FType -> String -> (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypePrintable (FunFType _ t1 t2) name loc (vs:vss) tce = do
     checkFunctionBody "print" t1 vs tce
@@ -398,15 +342,64 @@ checkPrintableType (FCValueStatement _ "Right" [vs]) tce = checkPrintableType vs
 checkPrintableType c@(FCValueStatement (Just loc) _ _) _ = fail $ show c ++ " at " ++ show loc ++ " is not printable"
 checkPrintableType c@(FCValueStatement Nothing _ _) _ = fail $ show c ++ " is not printable"
 checkPrintableType (FAValueStatement (Just loc) (FFunApplicationB _ name args)) tce@(TCE tm atm) =
-    if member name tm
+    if M.member name tm
         then do
             let t = tm ! name
             checkIfTypeIsPrintable t tce
             checkFunctionApplicationTypePrintable t name loc args tce
         else fail $ "name " ++ name ++ " at " ++ show loc ++ " is not registered"
+checkPrintableType FAValueStatement{} _ = undefined
 checkPrintableType (FValueStatementB _ assignments vs) tce = do
     tce <- registerAssignments "print" assignments tce
     checkPrintableType vs tce
+checkPrintableType (FForceValueStatement _ assignments vs) tce = do
+    tce <- registerAssignments "print" assignments tce
+    checkPrintableType vs tce
+checkPrintableType (FIfValueStatement _ condVS vs1 vs2) tce = do
+    checkFunctionBody "print" (FTypeB Nothing "Int" []) condVS tce
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FTValueStatement _ ts) tce = forM_ ts (`checkPrintableType` tce)
+checkPrintableType (FFValueStatement (Just loc) _ _) _ = fail $ "lambda (at " ++ show loc ++ ") is not printable"
+checkPrintableType (FFValueStatement Nothing _ _) _ = undefined
+checkPrintableType (FExpr _ (FEAdd vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FESub vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FEMul vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FEDiv vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FEMod vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FEL vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FELQ vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FEG vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FEGQ vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FEEQ vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType (FExpr _ (FENE vs1 vs2)) tce = do
+    checkPrintableType vs1 tce
+    checkPrintableType vs2 tce
+checkPrintableType FRefAddr{} _ = undefined
+checkPrintableType FSusValueStatement{} _ = undefined
+checkPrintableType FSuspendedValue{} _ = undefined
+checkPrintableType FSemaphore{} _ = undefined
+checkPrintableType FNTValueStatement{} _ = undefined
 
 checkFunctionApplicationType :: String -> FType -> String -> Maybe (Int, Int) -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationType funName (FTypeT _ []) "print" _ [x] tce =
@@ -419,7 +412,7 @@ checkFunctionApplicationType funName (FTypeT _ []) "p" _ [x] tce =
 checkFunctionApplicationType funName t "get" _ [x] tce =
     checkFunctionBody funName (FTypeB Nothing "Ref" [t]) x tce
 checkFunctionApplicationType funName (FTypeT _ []) "set" (Just pos) [FAValueStatement _ (FFunApplicationB _ name []), value] tce@(TCE tm atm) =
-    if member name tm
+    if M.member name tm
         then
             case tm ! name of
                 FTypeB _ "Ref" [t] ->
@@ -431,7 +424,7 @@ checkFunctionApplicationType funName (FTypeB _ "SList" []) "getline" _ [] _ = re
 checkFunctionApplicationType funName (FTypeB _ "SList" []) "gets" _ [x] tce =
     checkFunctionBody funName (FTypeB Nothing "Int" []) x tce
 checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
-    if member name tm
+    if M.member name tm
         then checkFunctionApplicationTypeInt funName t name (Just pos) (tm ! name) args tce
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
 checkFunctionApplicationType _ _ _ Nothing _ _ = undefined
@@ -539,13 +532,32 @@ checkFunctionDefs (NonSusFFunctionDef _ t name pms vs:functionDefs) tce = do
 checkFunctionDefs (SusFFunctionDef fd:functionDefs) tce = checkFunctionDefs (fd:functionDefs) tce
 
 checkRefDefs :: [FRefDef] -> TCE -> Err ()
-checkRefDefs _ _ = return ()
+checkRefDefs [] _ = return ()
+checkRefDefs (FRefDef _ t name vs:refDefs) tce = do
+    checkFunctionBody name t vs tce
+    checkRefDefs refDefs tce
 
-checkTypes :: ProgramFormat -> Err ProgramFormat
+gatherArgPms :: String -> [FFunctionDef] -> [[FPatternMatch]]
+gatherArgPms = undefined
+
+checkPatternMatch :: String -> [[FPatternMatch]] -> String
+checkPatternMatch = undefined
+
+checkPatternMatches :: [FFunctionDef] -> TCE -> Set String -> [String]
+checkPatternMatches [] _ _ = []
+checkPatternMatches (NonSusFFunctionDef _ _ name argPms _:fDefs) tce set =
+    if S.member name set
+        then checkPatternMatches fDefs tce set
+        else
+            let 
+                argPmsList = argPms:gatherArgPms name fDefs
+            in checkPatternMatch name argPmsList : checkPatternMatches fDefs tce (S.insert name set) 
+
+checkTypes :: ProgramFormat -> Err (ProgramFormat, [String])
 checkTypes pf@(SITList functionDefs refDefs algTypes) = do
     let tce0 = registerAlgTypes algTypes newTCE
     let tce1 = registerFunctionDefs functionDefs tce0
     let tce2 = registerRefDefs refDefs tce1
     checkFunctionDefs functionDefs tce2
     checkRefDefs refDefs tce2
-    return pf
+    return (pf, checkPatternMatches functionDefs tce2 S.empty)

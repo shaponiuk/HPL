@@ -9,11 +9,11 @@ import StaticCheck.CheckMainFunction
 import Bnfc.ErrM
 import Util.Util
 
-checkProgramFormat :: ProgramFormat -> Err ProgramFormat
+checkProgramFormat :: ProgramFormat -> Err (ProgramFormat, [String])
 checkProgramFormat pf = do
     checkDoubleSus pf
     checkCase pf
     checkUniqueDefinitions pf
-    checkTypes pf
+    (_, warnings) <- checkTypes pf
     checkMainFunction pf
-    return pf
+    return (pf, warnings)
