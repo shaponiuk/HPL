@@ -290,7 +290,7 @@ runVSSusVal _ _ _ _ = undefined
 runVSLazyLet :: Int -> FValueStatement -> E -> S -> IO (S, FValueStatement)
 runVSLazyLet queueId (FValueStatementB _ assignments vs) env state = do
     (newState, newEnv) <- lazyRegisterAssignments queueId assignments state env
-    seq newState $ runVS queueId vs newEnv newState
+    runVS queueId vs newEnv newState
 runVSLazyLet _ _ _ _ = undefined
 
 runVSInFoldF :: E -> IO (S, [FValueStatement]) -> FValueStatement -> IO (S, [FValueStatement])
@@ -386,6 +386,8 @@ setPM qId pm@FPatternMatchC{} vs state env = do
 setPMLazy :: Int -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPMLazy queueId pm vs state env = do
     (e, s) <- registerArgs queueId env env state [pm] [vs]
+    print e
+    print s
     return (s, e)
 
 setPMInFoldF :: Int -> IO (S, E) -> (FPatternMatch, FValueStatement) -> IO (S, E)
@@ -709,9 +711,11 @@ registerArgsInFoldF :: Int -> E -> IO (E, S) -> (FPatternMatch, FValueStatement)
 registerArgsInFoldF queueId argEnv acc (FPatternMatchB _ str, vs) = do
     (e, s) <- acc
     let (newLoc, newState) = getNewLoc s
+    let (newLoc2, newState2) = getNewLoc newState
     let newEnv = registerLoc False e str newLoc
-    let newerState = putInLoc newLoc (argEnv, vs) newState
-    return (newEnv, newerState)
+    let newerState = putInLoc newLoc2 (argEnv, vs) newState2
+    let newerState2 = putInLoc newLoc (argEnv, FAValueStatement Nothing $ FFunApplicationR newLoc2) newerState
+    return (newEnv, newerState2)
 registerArgsInFoldF queueId _ acc (FPatternMatchI _ _, _) = acc
 registerArgsInFoldF queueId argEnv acc (FPatternMatchC _ _ pms, FCValueStatement _ _ vss) = do
     (e, s) <- acc

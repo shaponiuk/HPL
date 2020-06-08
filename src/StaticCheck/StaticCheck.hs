@@ -10,6 +10,6 @@ import Util.Util
 staticCheck :: Program (Maybe (Int, Int)) -> Err (NProgramFormat, [String])
 staticCheck p = do
   let pf = initialConvertToProgramFormat p
-  (cpf, warnings) <- traceD pf $  checkProgramFormat pf
+  (cpf, warnings) <- checkProgramFormat pf
   let npf = convertToNPF cpf
   return (npf, warnings)

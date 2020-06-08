@@ -133,11 +133,11 @@ checkExistingType (FTypeB Nothing _ _) _ = undefined
 checkConstructorExistence :: String -> String -> [FAlgTypeVal] -> Err FAlgTypeVal
 checkConstructorExistence typeName cName [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
 checkConstructorExistence typeName cName (atv@(FAlgTypeVal _ cName_ FTypeB{}):atvs) =
-    traceD "one" $ if cName == cName_
+    if cName == cName_
         then return atv
         else checkConstructorExistence typeName cName atvs
 checkConstructorExistence typeName cName (atv@(FAlgTypeVal _ cName_ (FTypeT _ types)):atvs) =
-    traceD ("two" ++ cName ++ show atv) $ if cName == cName_
+    if cName == cName_
         then return atv
         else checkConstructorExistence typeName cName atvs
 checkConstructorExistence _ _ (FAlgTypeVal (Just pos) _ FunFType{}:_) = 
@@ -184,7 +184,7 @@ checkMatchingType (FTypeB _ "Int" []) FPatternMatchI{} _ = return ()
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchB _ _) _ = return ()
 checkMatchingType t@(FTypeB _ atName atArgs) atvPM@(FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce =
     case atvPMMatchingType t atvPM tce of
-        Just (FTypeT _ ts) -> traceD ("here" ++ show t ++ show atvPM) $ checkMatchingTypes ts cArgs tce
+        Just (FTypeT _ ts) -> checkMatchingTypes ts cArgs tce
         Just t -> checkMatchingTypes [t] cArgs tce
         Nothing -> fail $ "wrong constructor name at " ++ show pos
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) _ _) _ =
@@ -216,7 +216,7 @@ checkMatchingType FTypeT{} (FPatternMatchC (Just loc) _ _) _ =
 checkMatchingTypes :: [FType] -> [FPatternMatch] -> TCE -> Err ()
 checkMatchingTypes [] [] _ = return ()
 checkMatchingTypes (x:xs) (y:ys) tce = do
-    traceD (show (x:xs) ++ show (y:ys)) $ checkMatchingType x y tce
+    checkMatchingType x y tce
     checkMatchingTypes xs ys tce
 checkMatchingTypes (FTypeB (Just pos) _ _:_) [] _ = 
     fail $ "too many type arguments at " ++ show pos
@@ -296,8 +296,8 @@ registerArg _ (FPatternMatchC Nothing _ _) _ = undefined
 registerAssignments :: String -> [FAssignment] -> TCE -> Err TCE
 registerAssignments _ [] tce = return tce
 registerAssignments funName (FAssignmentB (Just pos) t pm vs:assignments) tce = do
-    traceD (FAssignmentB (Just pos) t pm vs) $ checkFunctionBody ("being an assignment " ++ show pos ++ " " ++ show pm ++ " in function " ++ funName) t vs tce
-    tce2 <- traceD "wow" $ registerArg t pm tce
+    checkFunctionBody ("being an assignment " ++ show pos ++ " " ++ show pm ++ " in function " ++ funName) t vs tce
+    tce2 <- registerArg t pm tce
     registerAssignments funName assignments tce2
 registerAssignments _ (FAssignmentB Nothing _ _ _:_) _ = undefined 
 registerAssignments funName (FRefAssignment (Just pos) (FRefDef refDefPos t name vs):assignments) tce = do
@@ -308,7 +308,7 @@ registerAssignments funName (FRefAssignment Nothing _:_) tce = undefined
 
 checkFunctionApplicationTypeInt :: String -> FType -> String -> (Int, Int) -> FType -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypeInt funName t1 name posM (FunFType _ t21 t22) (vs:vss) tce = do
-    traceD (show vs ++ show t21 ++ show name ++ show t1) $ checkFunctionBody funName t21 vs tce
+    checkFunctionBody funName t21 vs tce
     checkFunctionApplicationTypeInt funName t1 name posM t22 vss tce
 checkFunctionApplicationTypeInt funName t1 name pos t2 [] _ =
     if t1 == t2
@@ -449,7 +449,7 @@ checkFunctionApplicationType funName (FTypeB _ "SList" []) "gets" _ [x] tce =
     checkFunctionBody funName (FTypeB Nothing "Int" []) x tce
 checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if M.member name tm
-        then traceD (show t ++ show (tm ! name) ++ show args) $ checkFunctionApplicationTypeInt funName t name pos (tm ! name) args tce
+        then checkFunctionApplicationTypeInt funName t name pos (tm ! name) args tce
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
 checkFunctionApplicationType _ _ _ Nothing _ _ = undefined
 
@@ -470,7 +470,7 @@ checkFunctionBody funName t (FForceValueStatement _ assignments vs) tce = do
     tce2 <- registerAssignments funName assignments tce
     checkFunctionBody funName t vs tce2
 checkFunctionBody funName t (FAValueStatement _ ap@(FFunApplicationB pos name args)) tce =
-    traceD ("\nhaheho" ++ funName ++ show t ++ name ++ show args) checkFunctionApplicationType funName t name pos args tce
+    checkFunctionApplicationType funName t name pos args tce
 checkFunctionBody funName t (FIfValueStatement posM ifvs vs1 vs2) tce = do
     checkFunctionBody funName (FTypeB posM "Int" []) ifvs tce
     checkFunctionBody funName t vs1 tce
@@ -484,10 +484,10 @@ checkFunctionBody funName t (FValueStatementB _ assignments vs) tce = do
 checkFunctionBody funName t@(FTypeB tPos atName atArgs) fc@(FCValueStatement pos cName cArgs) tce@(TCE tm atm) = do
     checkExistingType t tce
     let at@(FAlgType _ _ _ atvs) = atm ! atName
-    atm <- traceD ("here3 " ++ funName ++ show fc ++ show atName ++ show cName ++ show atvs) $ checkConstructorExistence atName cName atvs
+    atm <- checkConstructorExistence atName cName atvs
     (FAlgTypeVal _ _ atmArgs) <- getCorrectedConstructor atm at atArgs
-    traceD atmArgs $ case atmArgs of
-        tt@(FTypeT _ ts) -> traceD ("here4 " ++ show ts ++ show cArgs) $ 
+    case atmArgs of
+        tt@(FTypeT _ ts) ->
             if length ts == length cArgs 
                 then checkTupleFunctionBody funName ts cArgs tce
                 else case cArgs of
