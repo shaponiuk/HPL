@@ -5,5 +5,3 @@ sus fun (Int ()) main () =
         Int () :: list = sum_list (EmptyListC (()));
         () :: () = print (list ());
     in 0;
-
-data List (a) = ListC ((a (), List (a ()))) | EmptyListC (());

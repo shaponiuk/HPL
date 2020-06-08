@@ -157,15 +157,35 @@ getCorrectedConstructor :: FAlgTypeVal -> FAlgType -> [FType] -> Err FAlgTypeVal
 getCorrectedConstructor atv@(FAlgTypeVal pos cName ct) at@(FAlgType _ tName tArgs atvs) types = do
     let m = M.fromList $ dList tArgs types
     return $ FAlgTypeVal pos cName $ mapType ct m
+
+atvPMMatchingType :: FType -> FPatternMatch -> TCE -> Bool
+atvPMMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce@(TCE tm atm) = 
+    if M.member atName atm
+        then
+            let
+                (FAlgType _ _ tVars atvs) = atm ! atName  
+            in if length tVars == length atArgs
+                then
+                    let 
+                        m = M.fromList $ dList tVars atArgs
+                    in case Prelude.filter (\(FAlgTypeVal _ name _) -> name == cName) atvs of
+                            (FAlgTypeVal _ _ atvArg:_) ->
+                                case checkMatchingType (mapType atvArg m) (FPatternMatchT (Just pos) cArgs) tce of
+                                    Bad _ -> False
+                                    Ok () -> True
+                            [] -> False
+                else False
+        else False
+atvPMMatchingType _ _ _ = undefined
     
 checkMatchingType :: FType -> FPatternMatch -> TCE -> Err ()
 checkMatchingType (FTypeB _ "Int" []) FPatternMatchB{} _ = return ()
 checkMatchingType (FTypeB _ "Int" []) FPatternMatchI{} _ = return ()
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchB _ _) _ = return ()
-checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce =
-    if atName /= cName
-        then fail $ "wrong constructor name at " ++ show pos
-        else checkMatchingTypes atArgs cArgs tce
+checkMatchingType t@(FTypeB _ atName atArgs) atvPM@(FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce =
+    if atvPMMatchingType t atvPM tce
+        then checkMatchingTypes atArgs cArgs tce
+        else fail $ "wrong constructor name at " ++ show pos
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) _ _) _ =
     fail $ "wrong constructor syntax at " ++ show pos
 checkMatchingType _ (FPatternMatchC Nothing _ _) _ = undefined
@@ -183,7 +203,7 @@ checkMatchingType FunFType{} (FPatternMatchI (Just loc) _) _ =
 checkMatchingType FunFType{} (FPatternMatchT (Just loc) _) _ =
     fail $ "tuple value at " ++ show loc ++ " is not of the function type"
 checkMatchingType (FTypeT _ ts) (FPatternMatchT (Just loc) ts_) tce =
-    if length ts /= length ts_
+    if length ts /= length ts_ 
         then fail $ "tuple length at " ++ show loc ++ " doesn't match the tuple length in its type declaration"
         else checkMatchingTypes ts ts_ tce
 checkMatchingType FTypeT{} FPatternMatchB{} _ = return ()
@@ -228,7 +248,12 @@ checkMatchingConstructors (FAlgTypeVal _ cName tArg) (FPatternMatchC (Just pos) 
     if 1 /= length cArgs 
         then fail $ "number of type arguments at " ++ show pos ++ " doesn't match the correct number of arguments for constructor " ++ cName
         else checkMatchingTypes [tArg] cArgs tce
-checkMatchingConstructors a b c = traceD (show a ++ show b) undefined
+checkMatchingConstructors _ (FPatternMatchC Nothing _ _) _ = undefined
+checkMatchingConstructors (FAlgTypeVal _ cName _) (FPatternMatchI (Just pos) _) _ = fail $ "wrong pattern match type for constructor " ++ cName ++ " at " ++ show pos
+checkMatchingConstructors _ (FPatternMatchI Nothing _) _ = undefined
+checkMatchingConstructors (FAlgTypeVal _ cName _) (FPatternMatchT (Just pos) _) _ = fail $ "wrong pattern match type for constructor " ++ cName ++ " at " ++ show pos
+checkMatchingConstructors _ (FPatternMatchT Nothing _) _ = undefined
+checkMatchingConstructors _ FPatternMatchB{} _ = return ()
 
 registerConstructor :: FAlgTypeVal -> FPatternMatch -> TCE -> Err TCE
 registerConstructor (FAlgTypeVal _ _ (FTypeT _ tArgs)) (FPatternMatchC _ _ cArgs) tce =
@@ -281,16 +306,15 @@ registerAssignments funName (FRefAssignment (Just pos) (FRefDef refDefPos t name
     registerAssignments funName assignments tce2
 registerAssignments funName (FRefAssignment Nothing _:_) tce = undefined
 
-checkFunctionApplicationTypeInt :: String -> FType -> String -> Maybe (Int, Int) -> FType -> [FValueStatement] -> TCE -> Err ()
+checkFunctionApplicationTypeInt :: String -> FType -> String -> (Int, Int) -> FType -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypeInt funName t1 name posM (FunFType _ t21 t22) (vs:vss) tce = do
     checkFunctionBody funName t21 vs tce
     checkFunctionApplicationTypeInt funName t1 name posM t22 vss tce
-checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 [] _ =
+checkFunctionApplicationTypeInt funName t1 name pos t2 [] _ =
     if t1 == t2
         then return ()
         else fail $ "wrong types in function apllication of " ++ name ++ " in " ++ funName ++ " " ++ show pos ++ show t1 ++ show t2
-checkFunctionApplicationTypeInt funName t1 name (Just pos) t2 _ _ = fail $ "too many arguments applied for function " ++ show funName ++ " at " ++ show pos
-checkFunctionApplicationTypeInt funName t1 name posM t2 vss tce = traceD (funName ++ show t1 ++ name ++ show posM ++ show t2 ++ show vss) undefined
+checkFunctionApplicationTypeInt funName t1 name pos t2 _ _ = fail $ "too many arguments applied for function " ++ show funName ++ " at " ++ show pos
 
 checkIfTypeIsPrintable :: FType -> TCE -> Err ()
 checkIfTypeIsPrintable (FTypeB _ "Int" []) _ = return ()
@@ -318,7 +342,7 @@ checkFunctionApplicationTypePrintable (FTypeB _ "Either" [t1, t2]) name loc [] t
     checkFunctionApplicationTypePrintable t1 name loc [] tce
     checkFunctionApplicationTypePrintable t2 name loc [] tce
 checkFunctionApplicationTypePrintable (FTypeB _ "List" [t]) name loc [] tce = checkFunctionApplicationTypePrintable t name loc [] tce
-checkFunctionApplicationTypePrintable (FTypeB _ "SList" [t]) name loc [] tce = checkFunctionApplicationTypePrintable t name loc [] tce
+checkFunctionApplicationTypePrintable (FTypeB _ "SList" []) _ _ [] _ = return ()
 checkFunctionApplicationTypePrintable t@FTypeB{} _ loc [] _ = fail $ "type " ++ show t ++ " at " ++ show loc ++ " is not printable"
 checkFunctionApplicationTypePrintable FTypeB{} name loc (_:_) _ = fail $ "too many arguments applied for function " ++ name ++ " at " ++ show loc 
 checkFunctionApplicationTypePrintable (FTypeT _ [t]) name loc args tce = checkFunctionApplicationTypePrintable t name loc args tce
@@ -425,7 +449,7 @@ checkFunctionApplicationType funName (FTypeB _ "SList" []) "gets" _ [x] tce =
     checkFunctionBody funName (FTypeB Nothing "Int" []) x tce
 checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if M.member name tm
-        then checkFunctionApplicationTypeInt funName t name (Just pos) (tm ! name) args tce
+        then checkFunctionApplicationTypeInt funName t name pos (tm ! name) args tce
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
 checkFunctionApplicationType _ _ _ Nothing _ _ = undefined
 
@@ -537,127 +561,6 @@ checkRefDefs (FRefDef _ t name vs:refDefs) tce = do
     checkFunctionBody name t vs tce
     checkRefDefs refDefs tce
 
-gatherArgPms :: String -> [FFunctionDef] -> [[FPatternMatch]]
-gatherArgPms name [] = []
-gatherArgPms name (NonSusFFunctionDef _ _ name_ pms _:fdefs) =
-    let
-        rest = gatherArgPms name fdefs
-    in if name == name_
-        then pms : rest
-        else rest
-gatherArgPms name (SusFFunctionDef fd:fdefs) = gatherArgPms name (fd:fdefs)
-
-hasVariablePM :: [FPatternMatch] -> Bool
-hasVariablePM = any (
-    \pm -> case pm of
-        FPatternMatchB{} -> True
-        _ -> False
-    )
-
-updateATVSInt :: [FAlgTypeVal] -> M.Map String FType -> [FAlgTypeVal]
-updateATVSInt [] _ = []
-updateATVSInt (FAlgTypeVal locM name t:atvs) m = 
-    (FAlgTypeVal locM name $ mapType t m) : updateATVSInt atvs m
-
-updateATVS :: [String] -> [FType] -> [FAlgTypeVal] -> [FAlgTypeVal]
-updateATVS tVars tArgs atvs = updateATVSInt atvs (M.fromList $ dList tVars tArgs)
-
-findCPMs :: String -> [FPatternMatch] -> [FPatternMatch]
-findCPMs _ [] = []
-findCPMs name (pm@(FPatternMatchC _ (FPatternMatchB _ name_) _):pms) =
-    if name == name_
-        then pm:findCPMs name pms
-        else findCPMs name pms
-findCPMs name (FPatternMatchC{}:pms) = findCPMs name pms
-findCPMs name (FPatternMatchI{}:pms) = findCPMs name pms
-findCPMs name (FPatternMatchB{}:pms) = findCPMs name pms
-findCPMs name (FPatternMatchT _ [pm]:pms) = findCPMs name (pm:pms)
-findCPMs name (FPatternMatchT{}:pms) = findCPMs name pms
-
-checkCPMs :: String -> TCE -> FAlgTypeVal -> [FPatternMatch] -> Maybe String
-checkCPMs name tce (FAlgTypeVal _ name_ (FTypeT _ [])) _ = Nothing
-checkCPMs name tce (FAlgTypeVal _ name_ _) [] = Nothing
-checkCPMs name tce (FAlgTypeVal locM name_ (FTypeT tLocM (t:ts))) pms@(_:pmss) = 
-    let
-        (pm:pmArgList) = Prelude.map (\(FPatternMatchC _ _ l) -> l) pms
-    in case checkPatternMatchSingleArg name t tce pm of
-        Nothing -> checkCPMs name tce (FAlgTypeVal locM name_ (FTypeT tLocM ts)) pmss
-        Just warning -> Just warning
-checkCPMs name tce (FAlgTypeVal locM name_ t@FTypeB{}) pms = checkCPMs name tce (FAlgTypeVal locM name_ (FTypeT Nothing [t])) pms
-checkCPMs name tce (FAlgTypeVal locM name_ t@FunFType{}) pms = checkCPMs name tce (FAlgTypeVal locM name_ (FTypeT Nothing [t])) pms
-
-checkPatternMatchSingleATV :: String -> TCE -> FAlgTypeVal -> [FPatternMatch] -> Maybe String
-checkPatternMatchSingleATV name tce atv@FAlgTypeVal{} pms =
-    if hasVariablePM pms
-        then Nothing
-        else 
-            let
-                cPMs = findCPMs name pms
-            in checkCPMs name tce atv cPMs
-
-checkPatternMatchSingleArgATVS :: String -> TCE -> [FAlgTypeVal] -> [FPatternMatch] -> Maybe String
-checkPatternMatchSingleArgATVS _ _ [] _ = Nothing
-checkPatternMatchSingleArgATVS name tce (atv:atvs) pms =
-    case checkPatternMatchSingleATV name tce atv pms of
-        Nothing -> checkPatternMatchSingleArgATVS name tce atvs pms
-        Just warning -> Just warning
-
-checkPatternMatchSingleArgTuple :: String -> [FType] -> TCE -> [[FPatternMatch]] -> Maybe String
-checkPatternMatchSingleArgTuple _ [] _ _ = Nothing
-checkPatternMatchSingleArgTuple _ _ _ [] = Nothing
-checkPatternMatchSingleArgTuple name (t:ts) tce (pm:pms) =
-    case checkPatternMatchSingleArg name t tce pm of
-        Nothing -> checkPatternMatchSingleArgTuple name ts tce pms
-        Just warning -> Just warning
-
-checkPatternMatchSingleArg :: String -> FType -> TCE -> [FPatternMatch] -> Maybe String
-checkPatternMatchSingleArg name _ _ [] = Nothing
-checkPatternMatchSingleArg name (FTypeB _ "Int" []) tce pms =
-    if hasVariablePM pms
-        then Nothing
-        else Just $ "function " ++ name ++ " has non exhaustive pattern matching"
-checkPatternMatchSingleArg name (FTypeB _ cName cArgs) tce@(TCE tm atm) pms =
-    if hasVariablePM pms
-        then Nothing
-        else
-            let
-                (FAlgType _ _ tArgs atvs) = atm ! cName
-                atvs_ = updateATVS tArgs cArgs atvs
-            in checkPatternMatchSingleArgATVS name tce atvs_ pms
-checkPatternMatchSingleArg name (FunFType _ t1 t2) tce pms = Nothing -- otherwise error
-checkPatternMatchSingleArg name (FTypeT _ ts) tce pms =
-    if hasVariablePM pms
-        then Nothing
-        else checkPatternMatchSingleArgTuple name ts tce $ Prelude.map (\(FPatternMatchT _ ts) -> ts) pms
-
-checkPatternMatch :: String -> FType -> TCE -> [[FPatternMatch]] -> Maybe String
-checkPatternMatch _ _ _ [] = Nothing
-checkPatternMatch name (FunFType _ t1 t2) tce pmSets =
-    let
-        (firsts, lasts) = getFirsts pmSets
-    in case checkPatternMatchSingleArg name t1 tce firsts of
-        Nothing -> checkPatternMatch name t2 tce lasts
-        Just warning -> Just warning
-checkPatternMatch name (FTypeT _ [t]) tce pmSets = checkPatternMatch name t tce pmSets
-checkPatternMatch _ (FTypeT _ []) _ _ = Nothing
-checkPatternMatch _ (FTypeB _ "Int" []) _ _ = Nothing
-checkPatternMatch name FTypeT{} _ _ = Just $ "not exhaustive pattern match in function " ++ name
-checkPatternMatch name FTypeB{} _ _ = Just $ "not exhaustive pattern match in function " ++ name
-
-checkPatternMatches :: [FFunctionDef] -> TCE -> Set String -> [String]
-checkPatternMatches [] _ _ = []
-checkPatternMatches (NonSusFFunctionDef _ t name argPms _:fDefs) tce set =
-    if S.member name set
-        then checkPatternMatches fDefs tce set
-        else
-            let 
-                argPmsList = argPms:gatherArgPms name fDefs
-                rest = checkPatternMatches fDefs tce (S.insert name set)
-            in case checkPatternMatch name t tce argPmsList of
-                Nothing -> rest
-                Just warning -> warning : rest
-checkPatternMatches (SusFFunctionDef fd:fdefs) tce set = checkPatternMatches (fd:fdefs) tce set
-
 checkTypes :: ProgramFormat -> Err (ProgramFormat, [String])
 checkTypes pf@(SITList functionDefs refDefs algTypes) = do
     let tce0 = registerAlgTypes algTypes newTCE
@@ -665,4 +568,4 @@ checkTypes pf@(SITList functionDefs refDefs algTypes) = do
     let tce2 = registerRefDefs refDefs tce1
     checkFunctionDefs functionDefs tce2
     checkRefDefs refDefs tce2
-    return (pf, checkPatternMatches functionDefs tce2 S.empty)
+    return (pf, [])

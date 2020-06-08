@@ -72,3 +72,14 @@ getFirsts ((x:xs):xss) =
     let
         (firsts, lasts) = getFirsts xss
     in (x:firsts, xs:lasts)
+
+getIndexedInt :: Int -> [a] -> [Int] -> [a]
+getIndexedInt _ [] _ = []
+getIndexedInt _ _ [] = []
+getIndexedInt id (x:xs) (id_:ids) =
+    if id == id_
+        then x : getIndexedInt (id + 1) xs ids
+        else getIndexedInt (id + 1) xs (id_:ids)
+
+getIndexed :: [a] -> [Int] -> [a]
+getIndexed = getIndexedInt 0
