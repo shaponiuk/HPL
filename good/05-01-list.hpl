@@ -2,6 +2,6 @@ fun (List (Int ()) -> Int ()) sum_list (EmptyListC (())) = 0;
     
 sus fun (Int ()) main () =
     force let
-        Int () :: list = sum_list (EmptyListC ;
+        Int () :: list = sum_list (EmptyListC (()));
         () :: () = print (list ());
     in 0;

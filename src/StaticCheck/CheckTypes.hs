@@ -136,6 +136,10 @@ checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal _ cName_ FTy
     traceD "one" $ if cName == cName_ && argCount == 1
         then return atv
         else checkConstructorExistence typeName cName argCount atvs
+checkConstructorExistence typeName cName 1 (atv@(FAlgTypeVal _ cName_ (FTypeT _ [])):atvs) =
+    if cName == cName_
+        then return atv
+        else checkConstructorExistence typeName cName 1 atvs
 checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal _ cName_ (FTypeT _ types)):atvs) =
     traceD "two" $ if cName == cName_ && argCount == length types
         then return atv
