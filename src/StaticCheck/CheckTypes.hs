@@ -133,11 +133,11 @@ checkExistingType (FTypeB Nothing _ _) _ = undefined
 checkConstructorExistence :: String -> String -> Int -> [FAlgTypeVal] -> Err FAlgTypeVal
 checkConstructorExistence typeName cName _ [] = fail $ "constructor " ++ cName ++ " is not from the type " ++ typeName
 checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal _ cName_ FTypeB{}):atvs) =
-    if cName == cName_ && argCount == 1
+    traceD "one" $ if cName == cName_ && argCount == 1
         then return atv
         else checkConstructorExistence typeName cName argCount atvs
 checkConstructorExistence typeName cName argCount (atv@(FAlgTypeVal _ cName_ (FTypeT _ types)):atvs) =
-    if cName == cName_ && argCount == length types
+    traceD "two" $ if cName == cName_ && argCount == length types
         then return atv
         else checkConstructorExistence typeName cName argCount atvs
 checkConstructorExistence _ _ _ (FAlgTypeVal (Just pos) _ FunFType{}:_) = 
@@ -185,6 +185,7 @@ checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchB _ _) _ = return ()
 checkMatchingType t@(FTypeB _ atName atArgs) atvPM@(FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce =
     case atvPMMatchingType t atvPM tce of
         Just (FTypeT _ ts) -> traceD ("here" ++ show t ++ show atvPM) $ checkMatchingTypes ts cArgs tce
+        Just t -> checkMatchingTypes [t] cArgs tce
         Nothing -> fail $ "wrong constructor name at " ++ show pos
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) _ _) _ =
     fail $ "wrong constructor syntax at " ++ show pos
@@ -480,15 +481,13 @@ checkFunctionBody funName (FTypeT _ types) (FTValueStatement _ vss) tce = checkT
 checkFunctionBody funName t (FValueStatementB _ assignments vs) tce = do
     tce2 <- registerAssignments funName assignments tce
     checkFunctionBody funName t vs tce2
--- checkFunctionBody funName t@FTypeB{} (FCValueStatement pos cName [FTValueStatement _ cArgs]) tce =
-    -- checkFunctionBody funName t (FCValueStatement pos cName cArgs) tce
 checkFunctionBody funName t@(FTypeB tPos atName atArgs) fc@(FCValueStatement pos cName cArgs) tce@(TCE tm atm) = do
     let argCount = length cArgs
     checkExistingType t tce
     let at@(FAlgType _ _ _ atvs) = atm ! atName
-    atm <- traceD ("here" ++ funName ++ show fc ++ show atName ++ show cName ++ show argCount ++ show atvs) $ checkConstructorExistence atName cName argCount atvs
+    atm <- traceD ("here " ++ funName ++ show fc ++ show atName ++ show cName ++ show argCount ++ show atvs) $ checkConstructorExistence atName cName argCount atvs
     (FAlgTypeVal _ _ atmArgs) <- getCorrectedConstructor atm at atArgs
-    case atmArgs of
+    traceD atmArgs $ case atmArgs of
         FTypeT _ ts -> checkTupleFunctionBody funName ts cArgs tce
         _ -> checkTupleFunctionBody funName [atmArgs] cArgs tce
 checkFunctionBody funName t@(FunFType _ t1 t2) vs@(FIValueStatement (Just posVS) _) _ =
