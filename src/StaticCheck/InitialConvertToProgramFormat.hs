@@ -5,6 +5,7 @@ import Bnfc.AbsHpl
 import Util.State
 import Data.Char
 import Debug.Trace
+import Util.Util
 
 initialConvertToProgramFormat :: Program (Maybe (Int, Int)) -> ProgramFormat
 initialConvertToProgramFormat p = 
@@ -114,7 +115,7 @@ convertArgList = map convertFunctionArg
 convertValueStatement :: ValueStatement (Maybe (Int, Int)) -> FValueStatement
 convertValueStatement (ValueStatementB pos assignments vs) = 
   FValueStatementB pos (convertAssignmentList assignments) (convertValueStatement vs)
-convertValueStatement (ForceValueStatement pos assignements vs) =
+convertValueStatement (ForceValueStatement pos assignements vs) = traceD (convertAssignmentList assignements) $
   FForceValueStatement pos (convertAssignmentList assignements) (convertValueStatement vs)
 convertValueStatement (IfValueStatement pos condvs ifvs elsevs) =
   FIfValueStatement pos (convertValueStatement condvs) (convertValueStatement ifvs) (convertValueStatement elsevs)
@@ -244,7 +245,7 @@ convertValueStatementList :: [ValueStatement (Maybe (Int, Int))] -> [FValueState
 convertValueStatementList = map convertValueStatement
 
 convertAssignment :: Assignment (Maybe (Int, Int)) -> FAssignment
-convertAssignment (AssignmentB pos t pm vs) = FAssignmentB pos (convertType t) (convertPatternMatch pm) (convertValueStatement vs)
+convertAssignment a@(AssignmentB pos t pm vs) = FAssignmentB pos (convertType t) (convertPatternMatch pm) (convertValueStatement vs)
 convertAssignment (RefAssignment pos refdef) = FRefAssignment pos $ convertRefDef refdef
 
 convertAssignmentList :: [Assignment (Maybe (Int, Int))] -> [FAssignment]

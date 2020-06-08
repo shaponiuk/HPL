@@ -1,13 +1,17 @@
-sus fun (Maybe (Int ()) -> (Maybe (Int ()) -> Maybe (Int ()))) addMaybe (Nothing (), Nothing ()) = Nothing ();
-//sus fun (Maybe (Int ()) -> (Maybe (Int ()) -> Maybe (Int ()))) addMaybe (Just (a), Nothing ()) = Nothing ();
-//sus fun (Maybe (Int ()) -> (Maybe (Int ()) -> Maybe (Int ()))) addMaybe (Nothing (), Just (a)) = Nothing ();
-sus fun (Maybe (Int ()) -> (Maybe (Int ()) -> Maybe (Int ()))) addMaybe (Just (a), Just (b)) = Just (a () + b ());
-
-sus fun (Maybe ((Maybe (Int ()), Maybe (()))) -> ()) f (Nothing ()) = ();
-sus fun (Maybe ((Maybe (Int ()), Maybe (()))) -> ()) f (Just ((x, Nothing ()))) = ();
+sus fun (Maybe (
+    (
+        Maybe (Int ()), 
+        Maybe (())
+    )
+) -> ()) f (Nothing ()) = ();
+sus fun (Maybe (
+    (
+        Maybe (Int ()), 
+        Maybe (())
+    )
+) -> ()) f (Just (((x, Nothing ())))) = ();
 
 sus fun (Int ()) main () = force let
-    () :: () = print (addMaybe (Just (1), Just (13)));
     () :: () = f (Nothing ());
     () :: () = f (Just ((Nothing (), Nothing ())));
 in 0;

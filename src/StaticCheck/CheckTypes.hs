@@ -125,7 +125,7 @@ checkExistingType (FTypeB (Just pos) name args) tce@(TCE _ atm) =
                 then
                     checkExistingTypes args tce
                 else
-                    fail $ "received wrong number of arguments for type " ++ name ++ " " ++ show pos
+                    fail $ "received wrong number of arguments for type " ++ name ++ " " ++ show pos ++ show argTypes ++ show args
         else 
             fail $ "type " ++ name ++ " doesn't exist " ++ show pos
 checkExistingType (FTypeB Nothing _ _) _ = undefined
@@ -158,7 +158,7 @@ getCorrectedConstructor atv@(FAlgTypeVal pos cName ct) at@(FAlgType _ tName tArg
     let m = M.fromList $ dList tArgs types
     return $ FAlgTypeVal pos cName $ mapType ct m
 
-atvPMMatchingType :: FType -> FPatternMatch -> TCE -> Bool
+atvPMMatchingType :: FType -> FPatternMatch -> TCE -> Maybe FType
 atvPMMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce@(TCE tm atm) = 
     if M.member atName atm
         then
@@ -171,11 +171,11 @@ atvPMMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) (FPatternM
                     in case Prelude.filter (\(FAlgTypeVal _ name _) -> name == cName) atvs of
                             (FAlgTypeVal _ _ atvArg:_) ->
                                 case checkMatchingType (mapType atvArg m) (FPatternMatchT (Just pos) cArgs) tce of
-                                    Bad _ -> False
-                                    Ok () -> True
-                            [] -> False
-                else False
-        else False
+                                    Bad _ -> Nothing
+                                    Ok () -> Just (mapType atvArg m)
+                            [] -> Nothing
+                else Nothing
+        else Nothing
 atvPMMatchingType _ _ _ = undefined
     
 checkMatchingType :: FType -> FPatternMatch -> TCE -> Err ()
@@ -183,9 +183,9 @@ checkMatchingType (FTypeB _ "Int" []) FPatternMatchB{} _ = return ()
 checkMatchingType (FTypeB _ "Int" []) FPatternMatchI{} _ = return ()
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchB _ _) _ = return ()
 checkMatchingType t@(FTypeB _ atName atArgs) atvPM@(FPatternMatchC (Just pos) (FPatternMatchB _ cName) cArgs) tce =
-    if atvPMMatchingType t atvPM tce
-        then checkMatchingTypes atArgs cArgs tce
-        else fail $ "wrong constructor name at " ++ show pos
+    case atvPMMatchingType t atvPM tce of
+        Just (FTypeT _ ts) -> traceD ("here" ++ show t ++ show atvPM) $ checkMatchingTypes ts cArgs tce
+        Nothing -> fail $ "wrong constructor name at " ++ show pos
 checkMatchingType (FTypeB _ atName atArgs) (FPatternMatchC (Just pos) _ _) _ =
     fail $ "wrong constructor syntax at " ++ show pos
 checkMatchingType _ (FPatternMatchC Nothing _ _) _ = undefined
@@ -215,7 +215,7 @@ checkMatchingType FTypeT{} (FPatternMatchC (Just loc) _ _) _ =
 checkMatchingTypes :: [FType] -> [FPatternMatch] -> TCE -> Err ()
 checkMatchingTypes [] [] _ = return ()
 checkMatchingTypes (x:xs) (y:ys) tce = do
-    checkMatchingType x y tce
+    traceD (show (x:xs) ++ show (y:ys)) $ checkMatchingType x y tce
     checkMatchingTypes xs ys tce
 checkMatchingTypes (FTypeB (Just pos) _ _:_) [] _ = 
     fail $ "too many type arguments at " ++ show pos
@@ -296,8 +296,8 @@ registerArg _ (FPatternMatchC Nothing _ _) _ = undefined
 registerAssignments :: String -> [FAssignment] -> TCE -> Err TCE
 registerAssignments _ [] tce = return tce
 registerAssignments funName (FAssignmentB (Just pos) t pm vs:assignments) tce = do
-    checkFunctionBody ("being an assignment " ++ show pos ++ " " ++ show pm ++ " in function " ++ funName) t vs tce
-    tce2 <- registerArg t pm tce
+    traceD (FAssignmentB (Just pos) t pm vs) $ checkFunctionBody ("being an assignment " ++ show pos ++ " " ++ show pm ++ " in function " ++ funName) t vs tce
+    tce2 <- traceD "wow" $ registerArg t pm tce
     registerAssignments funName assignments tce2
 registerAssignments _ (FAssignmentB Nothing _ _ _:_) _ = undefined 
 registerAssignments funName (FRefAssignment (Just pos) (FRefDef refDefPos t name vs):assignments) tce = do
@@ -308,7 +308,7 @@ registerAssignments funName (FRefAssignment Nothing _:_) tce = undefined
 
 checkFunctionApplicationTypeInt :: String -> FType -> String -> (Int, Int) -> FType -> [FValueStatement] -> TCE -> Err ()
 checkFunctionApplicationTypeInt funName t1 name posM (FunFType _ t21 t22) (vs:vss) tce = do
-    checkFunctionBody funName t21 vs tce
+    traceD (show vs ++ show t21 ++ show name ++ show t1) $ checkFunctionBody funName t21 vs tce
     checkFunctionApplicationTypeInt funName t1 name posM t22 vss tce
 checkFunctionApplicationTypeInt funName t1 name pos t2 [] _ =
     if t1 == t2
@@ -449,7 +449,7 @@ checkFunctionApplicationType funName (FTypeB _ "SList" []) "gets" _ [x] tce =
     checkFunctionBody funName (FTypeB Nothing "Int" []) x tce
 checkFunctionApplicationType funName t name (Just pos) args tce@(TCE tm atm) =
     if M.member name tm
-        then checkFunctionApplicationTypeInt funName t name pos (tm ! name) args tce
+        then traceD (show t ++ show (tm ! name) ++ show args) $ checkFunctionApplicationTypeInt funName t name pos (tm ! name) args tce
         else fail $ "use of undeclared function name " ++ name ++ " in function " ++ funName ++ " " ++ show pos
 checkFunctionApplicationType _ _ _ Nothing _ _ = undefined
 
@@ -468,8 +468,8 @@ checkFunctionBody funName t FFValueStatement{} _ = fail $ "function " ++ funName
 checkFunctionBody funName t (FForceValueStatement _ assignments vs) tce = do
     tce2 <- registerAssignments funName assignments tce
     checkFunctionBody funName t vs tce2
-checkFunctionBody funName t (FAValueStatement _ (FFunApplicationB pos name args)) tce =
-    checkFunctionApplicationType funName t name pos args tce
+checkFunctionBody funName t (FAValueStatement _ ap@(FFunApplicationB pos name args)) tce =
+    traceD ("\n" ++ funName ++ show t ++ name ++ show args) checkFunctionApplicationType funName t name pos args tce
 checkFunctionBody funName t (FIfValueStatement posM ifvs vs1 vs2) tce = do
     checkFunctionBody funName (FTypeB posM "Int" []) ifvs tce
     checkFunctionBody funName t vs1 tce
@@ -480,19 +480,21 @@ checkFunctionBody funName (FTypeT _ types) (FTValueStatement _ vss) tce = checkT
 checkFunctionBody funName t (FValueStatementB _ assignments vs) tce = do
     tce2 <- registerAssignments funName assignments tce
     checkFunctionBody funName t vs tce2
-checkFunctionBody funName t@FTypeB{} (FCValueStatement pos cName [FTValueStatement _ cArgs]) tce =
-    checkFunctionBody funName t (FCValueStatement pos cName cArgs) tce
-checkFunctionBody funName t@(FTypeB _ atName atArgs) (FCValueStatement pos cName cArgs) tce@(TCE tm atm) = do
+-- checkFunctionBody funName t@FTypeB{} (FCValueStatement pos cName [FTValueStatement _ cArgs]) tce =
+    -- checkFunctionBody funName t (FCValueStatement pos cName cArgs) tce
+checkFunctionBody funName t@(FTypeB tPos atName atArgs) fc@(FCValueStatement pos cName cArgs) tce@(TCE tm atm) = do
     let argCount = length cArgs
     checkExistingType t tce
     let at@(FAlgType _ _ _ atvs) = atm ! atName
-    atm <- checkConstructorExistence atName cName argCount atvs
+    atm <- traceD ("here" ++ funName ++ show fc ++ show atName ++ show cName ++ show argCount ++ show atvs) $ checkConstructorExistence atName cName argCount atvs
     (FAlgTypeVal _ _ atmArgs) <- getCorrectedConstructor atm at atArgs
-    checkFunctionBody funName atmArgs (FTValueStatement pos cArgs) tce
+    case atmArgs of
+        FTypeT _ ts -> checkTupleFunctionBody funName ts cArgs tce
+        _ -> checkTupleFunctionBody funName [atmArgs] cArgs tce
 checkFunctionBody funName t@(FunFType _ t1 t2) vs@(FIValueStatement (Just posVS) _) _ =
     fail $ show vs ++ " " ++ show posVS ++ " is not of the type " ++ show t
 checkFunctionBody funName t@FTypeB{} (FTValueStatement _ [vs]) tce = checkFunctionBody funName t vs tce
-checkFunctionBody funName FTypeB{} (FTValueStatement (Just pos) _) tce =
+checkFunctionBody funName t@FTypeB{} vs@(FTValueStatement (Just pos) _) tce =
     fail $ "tuple at " ++ show pos ++ " in function " ++ funName ++ " has a non tuple type"
 checkFunctionBody _ _ (FAValueStatement _ FFunApplicationR{}) _ = undefined
 checkFunctionBody funName t (FIValueStatement (Just loc) i) _ =

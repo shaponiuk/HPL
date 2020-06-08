@@ -35,7 +35,6 @@ data NProgramFormat = NSIT E S
   deriving (Show)
 
 data ProgramFormat = SITList [FFunctionDef] [FRefDef] [FAlgType]
-  deriving (Show)
 
 convertStringToPM :: String -> FPatternMatch
 convertStringToPM = FPatternMatchB Nothing
@@ -115,7 +114,7 @@ instance Show FValueStatement where
   show (FCValueStatement _ constructorName args) = constructorName ++ " " ++ showTupleList args
   show (FExpr _ expr) = show expr
   show FValueStatementB{} = "let statement"
-  show FForceValueStatement{} = "force let statement"
+  show (FForceValueStatement _ assignments vs) = "force let statement:\n" ++ showRowList assignments ++ "\n" ++ show vs
   show FIfValueStatement{} = "if statement"
   show (FAValueStatement _ (FFunApplicationB _ funName vss)) = "function application: " ++ funName ++ " with args: " ++ show vss
   show (FAValueStatement _ (FFunApplicationR loc)) = "function application located at: " ++ show loc
@@ -253,6 +252,11 @@ instance Eq FType where
   FTypeT{} == FTypeB{} = False
   FTypeT{} == FunFType{} = False
 
+instance Show ProgramFormat where
+  show (SITList l1 l2 l3) = "SITList\n" ++ showRowList l1 ++ "\n" ++ showRowList l2 ++ "\n" ++ showRowList l3
+
+showRowList [] = ""
+showRowList (x:xs) = show x ++ "\n" ++ showRowList xs
 
 convertString :: Maybe (Int, Int) -> String -> FValueStatement
 convertString pos [] = FCValueStatement pos "SEmptyListC" []

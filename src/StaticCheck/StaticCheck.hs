@@ -5,10 +5,11 @@ import StaticCheck.NConvert (convertToNPF)
 import StaticCheck.CheckProgramFormat (checkProgramFormat)
 import Bnfc.AbsHpl
 import Bnfc.ErrM
+import Util.Util
 
 staticCheck :: Program (Maybe (Int, Int)) -> Err (NProgramFormat, [String])
 staticCheck p = do
   let pf = initialConvertToProgramFormat p
-  (cpf, warnings) <- checkProgramFormat pf
+  (cpf, warnings) <- traceD pf $  checkProgramFormat pf
   let npf = convertToNPF cpf
   return (npf, warnings)
