@@ -115,7 +115,7 @@ convertArgList = map convertFunctionArg
 convertValueStatement :: ValueStatement (Maybe (Int, Int)) -> FValueStatement
 convertValueStatement (ValueStatementB pos assignments vs) = 
   FValueStatementB pos (convertAssignmentList assignments) (convertValueStatement vs)
-convertValueStatement (ForceValueStatement pos assignements vs) = traceD (convertAssignmentList assignements) $
+convertValueStatement (ForceValueStatement pos assignements vs) =
   FForceValueStatement pos (convertAssignmentList assignements) (convertValueStatement vs)
 convertValueStatement (IfValueStatement pos condvs ifvs elsevs) =
   FIfValueStatement pos (convertValueStatement condvs) (convertValueStatement ifvs) (convertValueStatement elsevs)

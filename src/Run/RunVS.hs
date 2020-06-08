@@ -386,8 +386,6 @@ setPM qId pm@FPatternMatchC{} vs state env = do
 setPMLazy :: Int -> FPatternMatch -> FValueStatement -> S -> E -> IO (S, E)
 setPMLazy queueId pm vs state env = do
     (e, s) <- registerArgs queueId env env state [pm] [vs]
-    print e
-    print s
     return (s, e)
 
 setPMInFoldF :: Int -> IO (S, E) -> (FPatternMatch, FValueStatement) -> IO (S, E)

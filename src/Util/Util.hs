@@ -4,7 +4,7 @@ import Debug.Trace
 import Control.Monad
 
 debug :: [Int]
-debug = [2]
+debug = [0]
 
 printD :: Show a => Int -> a -> IO ()
 printD debugFrequency a = when (debugFrequency `elem` debug) $ print a
