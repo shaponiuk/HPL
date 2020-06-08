@@ -538,20 +538,125 @@ checkRefDefs (FRefDef _ t name vs:refDefs) tce = do
     checkRefDefs refDefs tce
 
 gatherArgPms :: String -> [FFunctionDef] -> [[FPatternMatch]]
-gatherArgPms = undefined
+gatherArgPms name [] = []
+gatherArgPms name (NonSusFFunctionDef _ _ name_ pms _:fdefs) =
+    let
+        rest = gatherArgPms name fdefs
+    in if name == name_
+        then pms : rest
+        else rest
+gatherArgPms name (SusFFunctionDef fd:fdefs) = gatherArgPms name (fd:fdefs)
 
-checkPatternMatch :: String -> [[FPatternMatch]] -> String
-checkPatternMatch = undefined
+hasVariablePM :: [FPatternMatch] -> Bool
+hasVariablePM = any (
+    \pm -> case pm of
+        FPatternMatchB{} -> True
+        _ -> False
+    )
+
+updateATVSInt :: [FAlgTypeVal] -> M.Map String FType -> [FAlgTypeVal]
+updateATVSInt [] _ = []
+updateATVSInt (FAlgTypeVal locM name t:atvs) m = 
+    (FAlgTypeVal locM name $ mapType t m) : updateATVSInt atvs m
+
+updateATVS :: [String] -> [FType] -> [FAlgTypeVal] -> [FAlgTypeVal]
+updateATVS tVars tArgs atvs = updateATVSInt atvs (M.fromList $ dList tVars tArgs)
+
+findCPMs :: String -> [FPatternMatch] -> [FPatternMatch]
+findCPMs _ [] = []
+findCPMs name (pm@(FPatternMatchC _ (FPatternMatchB _ name_) _):pms) =
+    if name == name_
+        then pm:findCPMs name pms
+        else findCPMs name pms
+findCPMs name (FPatternMatchC{}:pms) = findCPMs name pms
+findCPMs name (FPatternMatchI{}:pms) = findCPMs name pms
+findCPMs name (FPatternMatchB{}:pms) = findCPMs name pms
+findCPMs name (FPatternMatchT _ [pm]:pms) = findCPMs name (pm:pms)
+findCPMs name (FPatternMatchT{}:pms) = findCPMs name pms
+
+checkCPMs :: String -> TCE -> FAlgTypeVal -> [FPatternMatch] -> Maybe String
+checkCPMs name tce (FAlgTypeVal _ name_ (FTypeT _ [])) _ = Nothing
+checkCPMs name tce (FAlgTypeVal _ name_ _) [] = Nothing
+checkCPMs name tce (FAlgTypeVal locM name_ (FTypeT tLocM (t:ts))) pms@(_:pmss) = 
+    let
+        (pm:pmArgList) = Prelude.map (\(FPatternMatchC _ _ l) -> l) pms
+    in case checkPatternMatchSingleArg name t tce pm of
+        Nothing -> checkCPMs name tce (FAlgTypeVal locM name_ (FTypeT tLocM ts)) pmss
+        Just warning -> Just warning
+checkCPMs name tce (FAlgTypeVal locM name_ t@FTypeB{}) pms = checkCPMs name tce (FAlgTypeVal locM name_ (FTypeT Nothing [t])) pms
+checkCPMs name tce (FAlgTypeVal locM name_ t@FunFType{}) pms = checkCPMs name tce (FAlgTypeVal locM name_ (FTypeT Nothing [t])) pms
+
+checkPatternMatchSingleATV :: String -> TCE -> FAlgTypeVal -> [FPatternMatch] -> Maybe String
+checkPatternMatchSingleATV name tce atv@FAlgTypeVal{} pms =
+    if hasVariablePM pms
+        then Nothing
+        else 
+            let
+                cPMs = findCPMs name pms
+            in checkCPMs name tce atv cPMs
+
+checkPatternMatchSingleArgATVS :: String -> TCE -> [FAlgTypeVal] -> [FPatternMatch] -> Maybe String
+checkPatternMatchSingleArgATVS _ _ [] _ = Nothing
+checkPatternMatchSingleArgATVS name tce (atv:atvs) pms =
+    case checkPatternMatchSingleATV name tce atv pms of
+        Nothing -> checkPatternMatchSingleArgATVS name tce atvs pms
+        Just warning -> Just warning
+
+checkPatternMatchSingleArgTuple :: String -> [FType] -> TCE -> [[FPatternMatch]] -> Maybe String
+checkPatternMatchSingleArgTuple _ [] _ _ = Nothing
+checkPatternMatchSingleArgTuple _ _ _ [] = Nothing
+checkPatternMatchSingleArgTuple name (t:ts) tce (pm:pms) =
+    case checkPatternMatchSingleArg name t tce pm of
+        Nothing -> checkPatternMatchSingleArgTuple name ts tce pms
+        Just warning -> Just warning
+
+checkPatternMatchSingleArg :: String -> FType -> TCE -> [FPatternMatch] -> Maybe String
+checkPatternMatchSingleArg name _ _ [] = Nothing
+checkPatternMatchSingleArg name (FTypeB _ "Int" []) tce pms =
+    if hasVariablePM pms
+        then Nothing
+        else Just $ "function " ++ name ++ " has non exhaustive pattern matching"
+checkPatternMatchSingleArg name (FTypeB _ cName cArgs) tce@(TCE tm atm) pms =
+    if hasVariablePM pms
+        then Nothing
+        else
+            let
+                (FAlgType _ _ tArgs atvs) = atm ! cName
+                atvs_ = updateATVS tArgs cArgs atvs
+            in checkPatternMatchSingleArgATVS name tce atvs_ pms
+checkPatternMatchSingleArg name (FunFType _ t1 t2) tce pms = Nothing -- otherwise error
+checkPatternMatchSingleArg name (FTypeT _ ts) tce pms =
+    if hasVariablePM pms
+        then Nothing
+        else checkPatternMatchSingleArgTuple name ts tce $ Prelude.map (\(FPatternMatchT _ ts) -> ts) pms
+
+checkPatternMatch :: String -> FType -> TCE -> [[FPatternMatch]] -> Maybe String
+checkPatternMatch _ _ _ [] = Nothing
+checkPatternMatch name (FunFType _ t1 t2) tce pmSets =
+    let
+        (firsts, lasts) = getFirsts pmSets
+    in case checkPatternMatchSingleArg name t1 tce firsts of
+        Nothing -> checkPatternMatch name t2 tce lasts
+        Just warning -> Just warning
+checkPatternMatch name (FTypeT _ [t]) tce pmSets = checkPatternMatch name t tce pmSets
+checkPatternMatch _ (FTypeT _ []) _ _ = Nothing
+checkPatternMatch _ (FTypeB _ "Int" []) _ _ = Nothing
+checkPatternMatch name FTypeT{} _ _ = Just $ "not exhaustive pattern match in function " ++ name
+checkPatternMatch name FTypeB{} _ _ = Just $ "not exhaustive pattern match in function " ++ name
 
 checkPatternMatches :: [FFunctionDef] -> TCE -> Set String -> [String]
 checkPatternMatches [] _ _ = []
-checkPatternMatches (NonSusFFunctionDef _ _ name argPms _:fDefs) tce set =
+checkPatternMatches (NonSusFFunctionDef _ t name argPms _:fDefs) tce set =
     if S.member name set
         then checkPatternMatches fDefs tce set
         else
             let 
                 argPmsList = argPms:gatherArgPms name fDefs
-            in checkPatternMatch name argPmsList : checkPatternMatches fDefs tce (S.insert name set) 
+                rest = checkPatternMatches fDefs tce (S.insert name set)
+            in case checkPatternMatch name t tce argPmsList of
+                Nothing -> rest
+                Just warning -> warning : rest
+checkPatternMatches (SusFFunctionDef fd:fdefs) tce set = checkPatternMatches (fd:fdefs) tce set
 
 checkTypes :: ProgramFormat -> Err (ProgramFormat, [String])
 checkTypes pf@(SITList functionDefs refDefs algTypes) = do

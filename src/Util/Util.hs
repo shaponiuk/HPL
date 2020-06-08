@@ -65,3 +65,10 @@ takeNth 0 (x:_) = x
 takeNth d (_:xs) = takeNth (d - 1) xs
 takeNth _ [] = undefined
 
+getFirsts :: [[a]] -> ([a], [[a]])
+getFirsts [] = ([], [])
+getFirsts ([]:xs) = getFirsts xs
+getFirsts ((x:xs):xss) =
+    let
+        (firsts, lasts) = getFirsts xss
+    in (x:firsts, xs:lasts)
